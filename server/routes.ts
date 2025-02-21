@@ -17,34 +17,77 @@ export async function registerRoutes(app: Express) {
 
       // Parse the request using Claude Haiku
       const parsed = await parseItineraryRequest(query);
+      console.log("Parsed request:", parsed); // Debug log
 
-      // Verify all locations
+      // Verify all locations and find appropriate places
       const verifiedPlaces = [];
-      const locations = [parsed.startLocation, ...parsed.destinations];
 
-      for (const location of locations) {
-        const placeDetails = await searchPlace(location);
-        if (!placeDetails) continue;
+      // First verify the start location
+      const startPlace = await searchPlace(parsed.startLocation);
+      if (!startPlace) {
+        throw new Error(`Could not find starting location: ${parsed.startLocation}`);
+      }
+      verifiedPlaces.push(await storage.createPlace({
+        placeId: parsed.startLocation,
+        name: startPlace.name,
+        address: startPlace.formatted_address,
+        location: startPlace.geometry.location,
+        details: startPlace,
+      }));
 
-        const place = await storage.createPlace({
-          placeId: location,
-          name: placeDetails.name,
-          address: placeDetails.formatted_address,
-          location: placeDetails.geometry.location,
-          details: placeDetails,
-        });
-        verifiedPlaces.push(place);
+      // Handle fixed-time destinations
+      for (const timeSlot of parsed.fixedTimes) {
+        const place = await searchPlace(timeSlot.location);
+        if (!place) {
+          throw new Error(`Could not find location: ${timeSlot.location}`);
+        }
+        verifiedPlaces.push(await storage.createPlace({
+          placeId: timeSlot.location,
+          name: place.name,
+          address: place.formatted_address,
+          location: place.geometry.location,
+          details: place,
+        }));
+      }
+
+      // Find places matching preferences if specified
+      if (parsed.preferences.type) {
+        const searchQuery = `${parsed.preferences.type} near ${parsed.startLocation}`;
+        const suggestedPlace = await searchPlace(searchQuery);
+        if (suggestedPlace) {
+          verifiedPlaces.push(await storage.createPlace({
+            placeId: searchQuery,
+            name: suggestedPlace.name,
+            address: suggestedPlace.formatted_address,
+            location: suggestedPlace.geometry.location,
+            details: suggestedPlace,
+          }));
+        }
+      }
+
+      // Add other specified destinations
+      for (const destination of parsed.destinations) {
+        const place = await searchPlace(destination);
+        if (place) {
+          verifiedPlaces.push(await storage.createPlace({
+            placeId: destination,
+            name: place.name,
+            address: place.formatted_address,
+            location: place.geometry.location,
+            details: place,
+          }));
+        }
       }
 
       if (verifiedPlaces.length < 2) {
-        throw new Error("Please provide more specific London locations");
+        throw new Error("Could not find enough valid locations. Please provide more specific places in London.");
       }
 
-      // Calculate travel times
+      // Calculate travel times between consecutive places
       const travelTimes = [];
       for (let i = 0; i < verifiedPlaces.length - 1; i++) {
-        const from = verifiedPlaces[i].details as any; //Type assertion added to address potential type error.
-        const to = verifiedPlaces[i + 1].details as any; //Type assertion added to address potential type error.
+        const from = verifiedPlaces[i].details as any;
+        const to = verifiedPlaces[i + 1].details as any;
         const time = calculateTravelTime(from, to);
         travelTimes.push({
           from: verifiedPlaces[i].placeId,
@@ -61,6 +104,7 @@ export async function registerRoutes(app: Express) {
 
       res.json(itinerary);
     } catch (error: any) {
+      console.error("Error creating itinerary:", error);
       res.status(400).json({ message: error.message });
     }
   });

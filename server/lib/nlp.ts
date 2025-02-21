@@ -26,13 +26,22 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       messages: [{
         role: "user",
         content: `Extract locations and times from this London itinerary request. Format as JSON with:
-        - startLocation: starting point or current location
-        - destinations: array of places to visit
-        - fixedTimes: array of {location, time} for specific time commitments
-        - preferences: any requirements for places (type, requirements array)
-        
+        - startLocation: the user's current or starting location
+        - destinations: array of specific places they want to visit
+        - fixedTimes: array of {location, time} pairs for any time-specific commitments
+        - preferences: object containing:
+          - type: type of place they're looking for (e.g. "coffee shop", "restaurant")
+          - requirements: array of specific requirements (e.g. ["quiet", "work-friendly"])
+
+        For example, if input is "I'm at Green Park and need a quiet coffee shop to work until my dinner at Duck & Waffle at 8pm",
+        you should identify:
+        - Green Park as startLocation
+        - Duck & Waffle in destinations
+        - fixedTimes with Duck & Waffle at 8pm
+        - preferences for a quiet, work-friendly coffee shop
+
         Request: ${query}
-        
+
         Return only JSON, no other text.`
       }],
       max_tokens: 1000,
