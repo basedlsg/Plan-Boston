@@ -6,6 +6,7 @@ import { calculateTravelTime } from "./lib/itinerary";
 import { parseItineraryRequest } from "./lib/nlp";
 import { insertPlaceSchema, insertItinerarySchema } from "@shared/schema";
 import { z } from "zod";
+import { format } from 'date-fns';
 
 // Improved time parsing and validation
 function parseTimeString(timeStr: string, baseDate?: Date): Date {
@@ -43,19 +44,54 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
   throw new Error(`Invalid time format: ${timeStr}. Please use either "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour) format.`);
 }
 
-function findInterestingActivities(location: string, duration: number) {
-  const activities = [
-    'art gallery',
-    'museum',
-    'bookstore',
-    'park',
-    'local market',
-    'historic site'
-  ];
+function findInterestingActivities(location: string, duration: number, timeOfDay: string): string[] {
+  // Activities categorized by time of day and duration
+  const activities = {
+    morning: [
+      'farmers market',
+      'artisan cafe',
+      'local bakery',
+      'yoga studio',
+      'specialty coffee roaster'
+    ],
+    afternoon: [
+      'art gallery',
+      'museum',
+      'boutique shopping',
+      'historic site',
+      'park',
+      'craft brewery',
+      'tea room',
+      'bookstore'
+    ],
+    evening: [
+      'wine bar',
+      'jazz club',
+      'rooftop bar',
+      'comedy club',
+      'theater'
+    ]
+  };
 
-  // Randomly select an activity type based on available time
-  const activityType = activities[Math.floor(Math.random() * activities.length)];
-  return `${activityType} near ${location}`;
+  // Select appropriate activities based on time of day
+  let timeSlot = 'afternoon';
+  if (timeOfDay.includes('AM') || parseInt(timeOfDay) < 12) {
+    timeSlot = 'morning';
+  } else if (parseInt(timeOfDay) >= 17) {
+    timeSlot = 'evening';
+  }
+
+  // For longer durations (>3 hours), suggest multiple activities
+  const activityCount = duration > 3 ? 2 : 1;
+  const selectedActivities = [];
+
+  for (let i = 0; i < activityCount; i++) {
+    const availableActivities = activities[timeSlot].filter(a => !selectedActivities.includes(a));
+    const activity = availableActivities[Math.floor(Math.random() * availableActivities.length)];
+    selectedActivities.push(activity);
+  }
+
+  return selectedActivities.map(activity => `${activity} near ${location}`);
 }
 
 export async function registerRoutes(app: Express) {
@@ -165,27 +201,38 @@ export async function registerRoutes(app: Express) {
         // Calculate gap between activities
         const gap = next.time.getTime() - (current.time.getTime() + 90 * 60 * 1000); // 90 min for current activity
 
-        // If we have more than 2 hours between activities, add something interesting
-        if (gap > 2 * 60 * 60 * 1000) {
+        // If we have more than 1.5 hours between activities, add something interesting
+        if (gap > 1.5 * 60 * 60 * 1000) {
           const activityTime = new Date(current.time.getTime() + 90 * 60 * 1000);
-          const activityQuery = findInterestingActivities(current.place.name, gap / (60 * 60 * 1000));
+          const timeStr = format(activityTime, 'HH:mm');
 
-          const suggestedActivity = await searchPlace(activityQuery);
-          if (suggestedActivity) {
-            const newPlace = await storage.createPlace({
-              placeId: `activity-${Date.now()}-${i}`,
-              name: suggestedActivity.name,
-              address: suggestedActivity.formatted_address,
-              location: suggestedActivity.geometry.location,
-              details: suggestedActivity,
-              scheduledTime: activityTime.toISOString(),
-            });
+          const activityQueries = findInterestingActivities(
+            current.place.name,
+            gap / (60 * 60 * 1000),
+            timeStr
+          );
 
-            filledSchedule.push({
-              place: newPlace,
-              time: activityTime,
-              isFixed: false
-            });
+          for (const query of activityQueries) {
+            const suggestedActivity = await searchPlace(query);
+            if (suggestedActivity) {
+              const newPlace = await storage.createPlace({
+                placeId: `activity-${Date.now()}-${i}`,
+                name: suggestedActivity.name,
+                address: suggestedActivity.formatted_address,
+                location: suggestedActivity.geometry.location,
+                details: suggestedActivity,
+                scheduledTime: activityTime.toISOString(),
+              });
+
+              filledSchedule.push({
+                place: newPlace,
+                time: new Date(activityTime),
+                isFixed: false
+              });
+
+              // Move time forward for next activity if multiple activities
+              activityTime.setMinutes(activityTime.getMinutes() + 90);
+            }
           }
         }
       }
