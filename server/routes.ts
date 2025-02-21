@@ -112,7 +112,34 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-      // Add flexible destinations around fixed appointments
+      // If we have preferences, find and schedule a place that matches
+      if (parsed.preferences?.type) {
+        const preferenceQuery = `${parsed.preferences.type} ${parsed.preferences.requirements?.join(' ')} near ${parsed.startLocation}`;
+        const suggestedPlace = await searchPlace(preferenceQuery);
+
+        if (suggestedPlace) {
+          // Schedule the suggested place for the current time
+          const newPlace = await storage.createPlace({
+            placeId: `preference-${Date.now()}`,
+            name: suggestedPlace.name,
+            address: suggestedPlace.formatted_address,
+            location: suggestedPlace.geometry.location,
+            details: suggestedPlace,
+            scheduledTime: currentTime.toISOString(),
+          });
+
+          scheduledPlaces.push({
+            place: newPlace,
+            time: new Date(currentTime),
+            isFixed: false
+          });
+
+          // Move current time forward by 90 minutes for the coffee shop visit
+          currentTime.setMinutes(currentTime.getMinutes() + 90);
+        }
+      }
+
+      // Add remaining flexible destinations
       for (const destination of parsed.destinations) {
         // Skip if already scheduled as fixed time
         if (scheduledPlaces.some(p => p.place.placeId === destination)) continue;
@@ -145,8 +172,12 @@ export async function registerRoutes(app: Express) {
 
       // Calculate travel times between sorted places
       const travelTimes = [];
-      let lastPlace = await searchPlace(parsed.startLocation);
+      const startPlace = await searchPlace(parsed.startLocation);
+      if (!startPlace) {
+        throw new Error(`Could not find start location: ${parsed.startLocation}`);
+      }
 
+      let lastPlace = startPlace;
       for (const scheduledPlace of scheduledPlaces) {
         if (lastPlace && scheduledPlace.place.details) {
           const travelTime = calculateTravelTime(lastPlace, scheduledPlace.place.details);
