@@ -9,6 +9,7 @@ export const places = pgTable("places", {
   address: text("address").notNull(),
   location: jsonb("location").notNull(),
   details: jsonb("details").notNull(),
+  scheduledTime: text("scheduled_time"),
 });
 
 export const itineraries = pgTable("itineraries", {

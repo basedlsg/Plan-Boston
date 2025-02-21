@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { generateICS } from "@/lib/ics";
 import type { Itinerary } from "@shared/schema";
+import { format } from "date-fns";
 
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
@@ -74,7 +75,7 @@ export default function Home() {
                   <FormItem>
                     <FormControl>
                       <Input
-                        placeholder="e.g. Start at British Museum at 10am, lunch at Borough Market, then dinner at Duck & Waffle"
+                        placeholder="e.g. I'm at Green Park and need a quiet coffee shop to work until my dinner at Duck & Waffle at 8pm"
                         className="h-20"
                         {...field}
                       />
@@ -108,24 +109,34 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {itinerary.places.map((place, index) => (
-                    <div key={place.placeId}>
+                  {itinerary.places.map((place: any, index: number) => (
+                    <div key={`${place.placeId}-${index}`} className="relative">
+                      {index > 0 && (
+                        <div className="absolute top-0 left-7 h-full w-px bg-border -translate-x-1/2" />
+                      )}
                       <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 p-2 bg-primary/5 rounded-full">
-                          <MapPin className="w-5 h-5 text-primary" />
+                        <div className="flex-shrink-0 p-2 bg-primary/5 rounded-full relative z-10">
+                          <Clock className="w-5 h-5 text-primary" />
                         </div>
-                        <div>
-                          <h3 className="font-semibold">{place.name}</h3>
-                          <p className="text-sm text-muted-foreground">
+                        <div className="flex-1">
+                          <div className="flex items-baseline justify-between">
+                            <h3 className="font-semibold">{place.name}</h3>
+                            {place.scheduledTime && (
+                              <span className="text-sm text-muted-foreground">
+                                {format(new Date(place.scheduledTime), 'h:mm a')}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
                             {place.address}
                           </p>
                         </div>
                       </div>
                       {index < itinerary.travelTimes.length && (
                         <div className="ml-7 my-4 flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          {itinerary.travelTimes[index].duration} minutes to next
-                          destination
+                          <MapPin className="w-4 h-4" />
+                          {itinerary.travelTimes[index].duration} minutes to{" "}
+                          {itinerary.travelTimes[index].to}
                         </div>
                       )}
                     </div>

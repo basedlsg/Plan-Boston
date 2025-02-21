@@ -17,30 +17,29 @@ export async function registerRoutes(app: Express) {
 
       // Parse the request using Claude Haiku
       const parsed = await parseItineraryRequest(query);
-      console.log("Parsed request:", parsed); // Debug log
+      console.log("Parsed request:", parsed);
 
-      // Verify all locations and find appropriate places
       const verifiedPlaces = [];
+      const scheduledTimes = new Map(); // Track scheduled times for each place
 
-      // First verify the start location
-      const startPlace = await searchPlace(parsed.startLocation);
-      if (!startPlace) {
-        throw new Error(`Could not find starting location: ${parsed.startLocation}`);
-      }
-      verifiedPlaces.push(await storage.createPlace({
-        placeId: parsed.startLocation,
-        name: startPlace.name,
-        address: startPlace.formatted_address,
-        location: startPlace.geometry.location,
-        details: startPlace,
-      }));
+      // Start time defaults to 9 AM if not specified
+      let currentTime = new Date();
+      currentTime.setHours(9, 0, 0, 0);
 
-      // Handle fixed-time destinations
+      // First handle fixed-time appointments to anchor the schedule
       for (const timeSlot of parsed.fixedTimes) {
         const place = await searchPlace(timeSlot.location);
         if (!place) {
           throw new Error(`Could not find location: ${timeSlot.location}`);
         }
+
+        // Parse the time and set it
+        const [hours, minutes] = timeSlot.time.split(':').map(Number);
+        const appointmentTime = new Date(currentTime);
+        appointmentTime.setHours(hours, minutes, 0, 0);
+
+        scheduledTimes.set(timeSlot.location, appointmentTime);
+
         verifiedPlaces.push(await storage.createPlace({
           placeId: timeSlot.location,
           name: place.name,
@@ -50,25 +49,28 @@ export async function registerRoutes(app: Express) {
         }));
       }
 
-      // Find places matching preferences if specified
+      // Find and add places matching preferences
       if (parsed.preferences.type) {
         const searchQuery = `${parsed.preferences.type} near ${parsed.startLocation}`;
         const suggestedPlace = await searchPlace(searchQuery);
         if (suggestedPlace) {
-          verifiedPlaces.push(await storage.createPlace({
-            placeId: searchQuery,
-            name: suggestedPlace.name,
-            address: suggestedPlace.formatted_address,
-            location: suggestedPlace.geometry.location,
-            details: suggestedPlace,
-          }));
+          // Avoid duplicates
+          if (!verifiedPlaces.some(p => p.name === suggestedPlace.name)) {
+            verifiedPlaces.push(await storage.createPlace({
+              placeId: searchQuery,
+              name: suggestedPlace.name,
+              address: suggestedPlace.formatted_address,
+              location: suggestedPlace.geometry.location,
+              details: suggestedPlace,
+            }));
+          }
         }
       }
 
       // Add other specified destinations
       for (const destination of parsed.destinations) {
         const place = await searchPlace(destination);
-        if (place) {
+        if (place && !verifiedPlaces.some(p => p.name === place.name)) {
           verifiedPlaces.push(await storage.createPlace({
             placeId: destination,
             name: place.name,
@@ -79,26 +81,47 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-      if (verifiedPlaces.length < 2) {
+      if (verifiedPlaces.length < 1) {
         throw new Error("Could not find enough valid locations. Please provide more specific places in London.");
       }
 
-      // Calculate travel times between consecutive places
+      // Calculate travel times and schedule remaining places
       const travelTimes = [];
-      for (let i = 0; i < verifiedPlaces.length - 1; i++) {
-        const from = verifiedPlaces[i].details as any;
-        const to = verifiedPlaces[i + 1].details as any;
-        const time = calculateTravelTime(from, to);
-        travelTimes.push({
-          from: verifiedPlaces[i].placeId,
-          to: verifiedPlaces[i + 1].placeId,
-          duration: time,
-        });
+      let lastPlace = await searchPlace(parsed.startLocation); // Start location for first travel time
+
+      for (let i = 0; i < verifiedPlaces.length; i++) {
+        const currentPlace = verifiedPlaces[i];
+
+        // Calculate travel time from previous location
+        if (lastPlace) {
+          const time = calculateTravelTime(lastPlace, currentPlace.details as any);
+          travelTimes.push({
+            from: lastPlace.name,
+            to: currentPlace.name,
+            duration: time,
+          });
+
+          // Schedule time if not already set
+          if (!scheduledTimes.has(currentPlace.placeId)) {
+            const visitTime = new Date(currentTime);
+            visitTime.setMinutes(visitTime.getMinutes() + time); // Add travel time
+            scheduledTimes.set(currentPlace.placeId, visitTime);
+          }
+
+          // Update current time for next iteration
+          currentTime = new Date(scheduledTimes.get(currentPlace.placeId)!);
+          currentTime.setMinutes(currentTime.getMinutes() + 90); // Default 90 min for each visit
+        }
+
+        lastPlace = currentPlace.details as any;
       }
 
       const itinerary = await storage.createItinerary({
         query,
-        places: verifiedPlaces,
+        places: verifiedPlaces.map(place => ({
+          ...place,
+          scheduledTime: scheduledTimes.get(place.placeId)?.toISOString(),
+        })),
         travelTimes,
       });
 
