@@ -2,9 +2,6 @@ import type { Itinerary } from "@shared/schema";
 import { saveAs } from "file-saver";
 
 export function generateICS(itinerary: Itinerary): void {
-  const places = itinerary.places;
-  const travelTimes = itinerary.travelTimes;
-
   let icsContent = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -12,25 +9,20 @@ export function generateICS(itinerary: Itinerary): void {
     "CALSCALE:GREGORIAN",
   ];
 
-  // Use today's date for the itinerary
-  const date = new Date();
-  date.setHours(9, 0, 0); // Start at 9 AM
+  itinerary.places.forEach((place) => {
+    if (!place.scheduledTime) return;
 
-  places.forEach((place, index) => {
-    const startTime = new Date(date);
-    const duration = index < travelTimes.length ? travelTimes[index].duration : 60;
-    const endTime = new Date(date.getTime() + duration * 60000);
+    const startTime = new Date(place.scheduledTime);
+    const endTime = new Date(startTime.getTime() + 90 * 60000); // 90 minutes default duration
 
     icsContent = icsContent.concat([
       "BEGIN:VEVENT",
-      `DTSTART:${startTime.toISOString().replace(/[-:]/g, "").split(".")[0]}`,
-      `DTEND:${endTime.toISOString().replace(/[-:]/g, "").split(".")[0]}`,
+      `DTSTART:${startTime.toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
+      `DTEND:${endTime.toISOString().replace(/[-:]/g, "").split(".")[0]}Z`,
       `SUMMARY:${place.name}`,
       `LOCATION:${place.address}`,
       "END:VEVENT",
     ]);
-
-    date.setTime(endTime.getTime() + 30 * 60000); // Add 30 min buffer
   });
 
   icsContent.push("END:VCALENDAR");
