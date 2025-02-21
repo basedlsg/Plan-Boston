@@ -15,38 +15,56 @@ export async function registerRoutes(app: Express) {
       const querySchema = z.object({ query: z.string() });
       const { query } = querySchema.parse(req.body);
 
-      // Parse the request using Claude Haiku
+      // Parse the request using Claude
       const parsed = await parseItineraryRequest(query);
       console.log("Parsed request:", parsed);
 
       const verifiedPlaces = [];
-      const scheduledTimes = new Map(); // Track scheduled times for each place
+      const scheduledTimes = new Map<string, Date>();
 
-      // Start time defaults to 9 AM if not specified
-      let currentTime = new Date();
-      currentTime.setHours(9, 0, 0, 0);
+      // Initialize base date as today at 9 AM if no fixed times
+      const baseDate = new Date();
+      baseDate.setHours(9, 0, 0, 0);
+      let currentTime = new Date(baseDate);
 
-      // First handle fixed-time appointments to anchor the schedule
+      // First handle fixed-time appointments
       for (const timeSlot of parsed.fixedTimes) {
         const place = await searchPlace(timeSlot.location);
         if (!place) {
           throw new Error(`Could not find location: ${timeSlot.location}`);
         }
 
-        // Parse the time and set it
-        const [hours, minutes] = timeSlot.time.split(':').map(Number);
-        const appointmentTime = new Date(currentTime);
-        appointmentTime.setHours(hours, minutes, 0, 0);
+        // Parse time in "HH:MM AM/PM" format
+        const timeMatch = timeSlot.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
+        if (!timeMatch) {
+          throw new Error(`Invalid time format for ${timeSlot.location}: ${timeSlot.time}`);
+        }
 
+        let [_, hours, minutes, period] = timeMatch;
+        let hour = parseInt(hours);
+
+        // Convert to 24-hour format
+        if (period.toUpperCase() === 'PM' && hour !== 12) {
+          hour += 12;
+        } else if (period.toUpperCase() === 'AM' && hour === 12) {
+          hour = 0;
+        }
+
+        const appointmentTime = new Date(baseDate);
+        appointmentTime.setHours(hour, parseInt(minutes), 0, 0);
+
+        // Store the scheduled time
         scheduledTimes.set(timeSlot.location, appointmentTime);
 
-        verifiedPlaces.push(await storage.createPlace({
+        const newPlace = await storage.createPlace({
           placeId: timeSlot.location,
           name: place.name,
           address: place.formatted_address,
           location: place.geometry.location,
           details: place,
-        }));
+          scheduledTime: appointmentTime.toISOString(),
+        });
+        verifiedPlaces.push(newPlace);
       }
 
       // Find and add places matching preferences
@@ -62,22 +80,32 @@ export async function registerRoutes(app: Express) {
               address: suggestedPlace.formatted_address,
               location: suggestedPlace.geometry.location,
               details: suggestedPlace,
+              scheduledTime: currentTime.toISOString(),
             }));
+
+            // Update current time
+            currentTime.setMinutes(currentTime.getMinutes() + 90); // Default 90 min visit
           }
         }
       }
 
-      // Add other specified destinations
+      // Add remaining destinations
       for (const destination of parsed.destinations) {
+        if (scheduledTimes.has(destination)) continue; // Skip if already scheduled
+
         const place = await searchPlace(destination);
         if (place && !verifiedPlaces.some(p => p.name === place.name)) {
+          const placeTime = new Date(currentTime);
           verifiedPlaces.push(await storage.createPlace({
             placeId: destination,
             name: place.name,
             address: place.formatted_address,
             location: place.geometry.location,
             details: place,
+            scheduledTime: placeTime.toISOString(),
           }));
+
+          currentTime.setMinutes(currentTime.getMinutes() + 90); // Default 90 min visit
         }
       }
 
@@ -85,43 +113,28 @@ export async function registerRoutes(app: Express) {
         throw new Error("Could not find enough valid locations. Please provide more specific places in London.");
       }
 
-      // Calculate travel times and schedule remaining places
+      // Calculate travel times and update schedule
       const travelTimes = [];
-      let lastPlace = await searchPlace(parsed.startLocation); // Start location for first travel time
+      let lastPlace = await searchPlace(parsed.startLocation);
 
       for (let i = 0; i < verifiedPlaces.length; i++) {
         const currentPlace = verifiedPlaces[i];
 
-        // Calculate travel time from previous location
-        if (lastPlace) {
-          const time = calculateTravelTime(lastPlace, currentPlace.details as any);
+        if (lastPlace && currentPlace.details) {
+          const travelTime = calculateTravelTime(lastPlace, currentPlace.details);
           travelTimes.push({
             from: lastPlace.name,
             to: currentPlace.name,
-            duration: time,
+            duration: travelTime
           });
-
-          // Schedule time if not already set
-          if (!scheduledTimes.has(currentPlace.placeId)) {
-            const visitTime = new Date(currentTime);
-            visitTime.setMinutes(visitTime.getMinutes() + time); // Add travel time
-            scheduledTimes.set(currentPlace.placeId, visitTime);
-          }
-
-          // Update current time for next iteration
-          currentTime = new Date(scheduledTimes.get(currentPlace.placeId)!);
-          currentTime.setMinutes(currentTime.getMinutes() + 90); // Default 90 min for each visit
         }
 
-        lastPlace = currentPlace.details as any;
+        lastPlace = currentPlace.details;
       }
 
       const itinerary = await storage.createItinerary({
         query,
-        places: verifiedPlaces.map(place => ({
-          ...place,
-          scheduledTime: scheduledTimes.get(place.placeId)?.toISOString(),
-        })),
+        places: verifiedPlaces,
         travelTimes,
       });
 

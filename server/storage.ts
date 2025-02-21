@@ -26,7 +26,11 @@ export class MemStorage implements IStorage {
 
   async createPlace(insertPlace: InsertPlace): Promise<Place> {
     const id = this.currentPlaceId++;
-    const place: Place = { ...insertPlace, id };
+    const place: Place = {
+      ...insertPlace,
+      id,
+      scheduledTime: insertPlace.scheduledTime || null
+    };
     this.places.set(insertPlace.placeId, place);
     return place;
   }
