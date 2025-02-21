@@ -7,6 +7,40 @@ import { parseItineraryRequest } from "./lib/nlp";
 import { insertPlaceSchema, insertItinerarySchema } from "@shared/schema";
 import { z } from "zod";
 
+function parseTimeString(timeStr: string): Date {
+  const baseDate = new Date();
+  baseDate.setHours(9, 0, 0, 0);  // Start day at 9 AM by default
+
+  // Try 24-hour format first (HH:MM)
+  const military = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (military) {
+    const [_, hours, minutes] = military;
+    const date = new Date(baseDate);
+    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return date;
+  }
+
+  // Try 12-hour format (HH:MM AM/PM)
+  const standard = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (standard) {
+    let [_, hours, minutes, period] = standard;
+    let hour = parseInt(hours);
+
+    // Convert to 24-hour format
+    if (period.toUpperCase() === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (period.toUpperCase() === 'AM' && hour === 12) {
+      hour = 0;
+    }
+
+    const date = new Date(baseDate);
+    date.setHours(hour, parseInt(minutes), 0, 0);
+    return date;
+  }
+
+  throw new Error(`Invalid time format: ${timeStr}. Please use either "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour) format.`);
+}
+
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -22,11 +56,6 @@ export async function registerRoutes(app: Express) {
       const verifiedPlaces = [];
       const scheduledTimes = new Map<string, Date>();
 
-      // Initialize base date as today at 9 AM if no fixed times
-      const baseDate = new Date();
-      baseDate.setHours(9, 0, 0, 0);
-      let currentTime = new Date(baseDate);
-
       // First handle fixed-time appointments
       for (const timeSlot of parsed.fixedTimes) {
         const place = await searchPlace(timeSlot.location);
@@ -34,38 +63,28 @@ export async function registerRoutes(app: Express) {
           throw new Error(`Could not find location: ${timeSlot.location}`);
         }
 
-        // Parse time in "HH:MM AM/PM" format
-        const timeMatch = timeSlot.time.match(/(\d+):(\d+)\s*(AM|PM)/i);
-        if (!timeMatch) {
-          throw new Error(`Invalid time format for ${timeSlot.location}: ${timeSlot.time}`);
+        try {
+          const appointmentTime = parseTimeString(timeSlot.time);
+          scheduledTimes.set(timeSlot.location, appointmentTime);
+
+          const newPlace = await storage.createPlace({
+            placeId: timeSlot.location,
+            name: place.name,
+            address: place.formatted_address,
+            location: place.geometry.location,
+            details: place,
+            scheduledTime: appointmentTime.toISOString(),
+          });
+          verifiedPlaces.push(newPlace);
+        } catch (error: any) {
+          throw new Error(`Error scheduling ${timeSlot.location}: ${error.message}`);
         }
-
-        let [_, hours, minutes, period] = timeMatch;
-        let hour = parseInt(hours);
-
-        // Convert to 24-hour format
-        if (period.toUpperCase() === 'PM' && hour !== 12) {
-          hour += 12;
-        } else if (period.toUpperCase() === 'AM' && hour === 12) {
-          hour = 0;
-        }
-
-        const appointmentTime = new Date(baseDate);
-        appointmentTime.setHours(hour, parseInt(minutes), 0, 0);
-
-        // Store the scheduled time
-        scheduledTimes.set(timeSlot.location, appointmentTime);
-
-        const newPlace = await storage.createPlace({
-          placeId: timeSlot.location,
-          name: place.name,
-          address: place.formatted_address,
-          location: place.geometry.location,
-          details: place,
-          scheduledTime: appointmentTime.toISOString(),
-        });
-        verifiedPlaces.push(newPlace);
       }
+
+      // Initialize current time to 9 AM if no fixed appointments
+      let currentTime = new Date();
+      currentTime.setHours(9, 0, 0, 0);
+
 
       // Find and add places matching preferences
       if (parsed.preferences.type) {

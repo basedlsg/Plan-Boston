@@ -11,7 +11,7 @@ export type StructuredRequest = {
   destinations: string[];
   fixedTimes: Array<{
     location: string;
-    time: string;
+    time: string;  // Format: "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour)
   }>;
   preferences: {
     type?: string;
@@ -29,6 +29,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         - startLocation: the user's current or starting location
         - destinations: array of specific places they want to visit
         - fixedTimes: array of {location, time} pairs for any time-specific commitments
+          Time should be in 24-hour format (e.g., "21:00") or 12-hour format with AM/PM (e.g., "9:00 PM")
         - preferences: object containing:
           - type: type of place they're looking for (e.g. "coffee shop", "restaurant")
           - requirements: array of specific requirements (e.g. ["quiet", "work-friendly"])
@@ -37,7 +38,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         you should identify:
         - Green Park as startLocation
         - Duck & Waffle in destinations
-        - fixedTimes with Duck & Waffle at 8pm
+        - fixedTimes with Duck & Waffle at "20:00" or "8:00 PM"
         - preferences for a quiet, work-friendly coffee shop
 
         Request: ${query}
