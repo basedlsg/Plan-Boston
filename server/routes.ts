@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { storage } from "./storage";
 import { searchPlace } from "./lib/googlePlaces";
 import { calculateTravelTime } from "./lib/itinerary";
+import { parseItineraryRequest } from "./lib/nlp";
 import { insertPlaceSchema, insertItinerarySchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -14,17 +15,13 @@ export async function registerRoutes(app: Express) {
       const querySchema = z.object({ query: z.string() });
       const { query } = querySchema.parse(req.body);
 
-      // Mock natural language processing
-      const locations = query.match(/(?:in|at|from|to)\s+([^,\.]+)(?:[,\.]|\s+and\s+|$)/g)
-        ?.map(match => match.replace(/^(?:in|at|from|to)\s+/, '').trim())
-        ?? [];
+      // Parse the request using Claude Haiku
+      const parsed = await parseItineraryRequest(query);
 
-      if (locations.length === 0) {
-        throw new Error("No locations found in query");
-      }
-
-      // Verify places
+      // Verify all locations
       const verifiedPlaces = [];
+      const locations = [parsed.startLocation, ...parsed.destinations];
+
       for (const location of locations) {
         const placeDetails = await searchPlace(location);
         if (!placeDetails) continue;
@@ -40,14 +37,14 @@ export async function registerRoutes(app: Express) {
       }
 
       if (verifiedPlaces.length < 2) {
-        throw new Error("Not enough valid locations found");
+        throw new Error("Please provide more specific London locations");
       }
 
       // Calculate travel times
       const travelTimes = [];
       for (let i = 0; i < verifiedPlaces.length - 1; i++) {
-        const from = verifiedPlaces[i].details;
-        const to = verifiedPlaces[i + 1].details;
+        const from = verifiedPlaces[i].details as any; //Type assertion added to address potential type error.
+        const to = verifiedPlaces[i + 1].details as any; //Type assertion added to address potential type error.
         const time = calculateTravelTime(from, to);
         travelTimes.push({
           from: verifiedPlaces[i].placeId,
@@ -71,7 +68,7 @@ export async function registerRoutes(app: Express) {
   app.get("/api/itinerary/:id", async (req, res) => {
     const id = parseInt(req.params.id);
     const itinerary = await storage.getItinerary(id);
-    
+
     if (!itinerary) {
       res.status(404).json({ message: "Itinerary not found" });
       return;
