@@ -4,33 +4,52 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { MapPin, Clock, Calendar } from "lucide-react";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { generateICS } from "@/lib/ics";
-import type { Itinerary } from "@shared/schema";
+import type { Itinerary, Place } from "@shared/schema";
 import { format } from "date-fns";
 
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
+  date: z.string().optional(),
+  startTime: z.string().optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export default function Home() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const { toast } = useToast();
+  const [currentTime, setCurrentTime] = useState<string>("");
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  // Fetch current server time when component mounts
+  useState(() => {
+    fetch("/api/time")
+      .then(res => res.json())
+      .then(data => {
+        const date = new Date(data.currentTime);
+        setCurrentTime(format(date, "yyyy-MM-dd'T'HH:mm"));
+      })
+      .catch(console.error);
+  });
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       query: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      startTime: "09:00",
     },
   });
 
   const planMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
+    mutationFn: async (data: FormValues) => {
       const res = await apiRequest("POST", "/api/plan", data);
       return res.json();
     },
@@ -66,23 +85,57 @@ export default function Home() {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
-              className="space-y-4"
+              className="space-y-6"
             >
               <FormField
                 control={form.control}
-                name="query"
+                name="date"
                 render={({ field }) => (
                   <FormItem>
+                    <FormLabel>Date</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. I'm at Green Park and need a quiet coffee shop to work until my dinner at Duck & Waffle at 8pm"
-                        className="h-20"
+                        type="date"
                         {...field}
                       />
                     </FormControl>
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="startTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="query"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Your Plans</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="e.g. I'm at Green Park and need a quiet coffee shop to work until my dinner at Duck & Waffle at 8pm"
+                        className="min-h-[120px] resize-y"
+                        {...field}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
               <Button
                 type="submit"
                 className="w-full"
@@ -109,7 +162,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {itinerary.places.map((place: any, index: number) => (
+                  {(itinerary.places as Place[]).map((place, index) => (
                     <div key={`${place.placeId}-${index}`} className="relative">
                       {index > 0 && (
                         <div className="absolute top-0 left-7 h-full w-px bg-border -translate-x-1/2" />
@@ -132,7 +185,12 @@ export default function Home() {
                           </p>
                         </div>
                       </div>
-                      {index < itinerary.travelTimes.length && (
+                      {index < (itinerary.travelTimes as Array<{
+                        from: string;
+                        to: string;
+                        duration: number;
+                        arrivalTime: string;
+                      }>).length && (
                         <div className="ml-7 my-4 flex items-center gap-2 text-sm text-muted-foreground">
                           <MapPin className="w-4 h-4" />
                           {itinerary.travelTimes[index].duration} minutes to{" "}
