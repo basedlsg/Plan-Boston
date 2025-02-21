@@ -48,47 +48,74 @@ function findInterestingActivities(location: string, duration: number, timeOfDay
   // Activities categorized by time of day and duration
   const activities = {
     morning: [
+      'artisan bakery',
       'farmers market',
-      'artisan cafe',
-      'local bakery',
       'yoga studio',
-      'specialty coffee roaster'
+      'morning walking tour',
+      'specialty coffee roaster',
+      'local breakfast spot'
     ],
-    afternoon: [
+    midday: [
       'art gallery',
       'museum',
-      'boutique shopping',
       'historic site',
+      'garden',
       'park',
-      'craft brewery',
+      'cultural center',
+      'exhibition space'
+    ],
+    afternoon: [
+      'boutique shopping',
+      'craft workshop',
       'tea room',
-      'bookstore'
+      'bookstore',
+      'local market',
+      'riverside walk',
+      'antique shop'
     ],
     evening: [
       'wine bar',
       'jazz club',
-      'rooftop bar',
+      'theater',
       'comedy club',
-      'theater'
+      'rooftop bar',
+      'live music venue',
+      'cocktail bar'
     ]
   };
 
   // Select appropriate activities based on time of day
-  let timeSlot = 'afternoon';
-  if (timeOfDay.includes('AM') || parseInt(timeOfDay) < 12) {
+  let timeSlot: 'morning' | 'midday' | 'afternoon' | 'evening' = 'midday';
+  const hour = parseInt(timeOfDay.split(':')[0]);
+
+  if (hour < 12) {
     timeSlot = 'morning';
-  } else if (parseInt(timeOfDay) >= 17) {
+  } else if (hour < 14) {
+    timeSlot = 'midday';
+  } else if (hour < 17) {
+    timeSlot = 'afternoon';
+  } else {
     timeSlot = 'evening';
   }
 
-  // For longer durations (>3 hours), suggest multiple activities
-  const activityCount = duration > 3 ? 2 : 1;
+  // For longer durations (>3 hours), suggest multiple varied activities
+  const activityCount = Math.min(Math.floor(duration / 1.5), 3); // Max 3 activities
   const selectedActivities = [];
 
-  for (let i = 0; i < activityCount; i++) {
-    const availableActivities = activities[timeSlot].filter(a => !selectedActivities.includes(a));
-    const activity = availableActivities[Math.floor(Math.random() * availableActivities.length)];
-    selectedActivities.push(activity);
+  // First, try to get an activity from the current time slot
+  const currentTimeSlotActivities = activities[timeSlot];
+  const activity = currentTimeSlotActivities[Math.floor(Math.random() * currentTimeSlotActivities.length)];
+  selectedActivities.push(activity);
+
+  // If we need more activities, get them from appropriate time slots
+  if (activityCount > 1) {
+    const nextTimeSlot = timeSlot === 'morning' ? 'midday' : 
+                        timeSlot === 'midday' ? 'afternoon' : 
+                        timeSlot === 'afternoon' ? 'evening' : 'evening';
+
+    const nextSlotActivities = activities[nextTimeSlot].filter(a => !selectedActivities.includes(a));
+    const nextActivity = nextSlotActivities[Math.floor(Math.random() * nextSlotActivities.length)];
+    selectedActivities.push(nextActivity);
   }
 
   return selectedActivities.map(activity => `${activity} near ${location}`);
@@ -165,7 +192,7 @@ export async function registerRoutes(app: Express) {
       // Sort fixed appointments to find gaps
       scheduledPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
-      // If we have preferences (like coffee shop), schedule it
+      // If we have preferences (like coffee shop), schedule it first
       if (parsed.preferences?.type) {
         const preferenceQuery = `${parsed.preferences.type} ${parsed.preferences.requirements?.join(' ')} near ${parsed.startLocation}`;
         const suggestedPlace = await searchPlace(preferenceQuery);
