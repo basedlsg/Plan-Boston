@@ -43,6 +43,21 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
   throw new Error(`Invalid time format: ${timeStr}. Please use either "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour) format.`);
 }
 
+function findInterestingActivities(location: string, duration: number) {
+  const activities = [
+    'art gallery',
+    'museum',
+    'bookstore',
+    'park',
+    'local market',
+    'historic site'
+  ];
+
+  // Randomly select an activity type based on available time
+  const activityType = activities[Math.floor(Math.random() * activities.length)];
+  return `${activityType} near ${location}`;
+}
+
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -80,7 +95,6 @@ export async function registerRoutes(app: Express) {
         currentTime.setHours(9, 0, 0, 0); // Default to 9 AM
       }
 
-      // Store all places with their times for sorting
       const scheduledPlaces = [];
 
       // First handle fixed-time appointments
@@ -112,13 +126,15 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-      // If we have preferences, find and schedule a place that matches
+      // Sort fixed appointments to find gaps
+      scheduledPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
+
+      // If we have preferences (like coffee shop), schedule it
       if (parsed.preferences?.type) {
         const preferenceQuery = `${parsed.preferences.type} ${parsed.preferences.requirements?.join(' ')} near ${parsed.startLocation}`;
         const suggestedPlace = await searchPlace(preferenceQuery);
 
         if (suggestedPlace) {
-          // Schedule the suggested place for the current time
           const newPlace = await storage.createPlace({
             placeId: `preference-${Date.now()}`,
             name: suggestedPlace.name,
@@ -134,43 +150,50 @@ export async function registerRoutes(app: Express) {
             isFixed: false
           });
 
-          // Move current time forward by 90 minutes for the coffee shop visit
+          // Move current time forward
           currentTime.setMinutes(currentTime.getMinutes() + 90);
         }
       }
 
-      // Add remaining flexible destinations
-      for (const destination of parsed.destinations) {
-        // Skip if already scheduled as fixed time
-        if (scheduledPlaces.some(p => p.place.placeId === destination)) continue;
+      // Find and fill time gaps with interesting activities
+      const filledSchedule = [...scheduledPlaces].sort((a, b) => a.time.getTime() - b.time.getTime());
 
-        const place = await searchPlace(destination);
-        if (place) {
-          scheduledPlaces.push({
-            place: await storage.createPlace({
-              placeId: destination,
-              name: place.name,
-              address: place.formatted_address,
-              location: place.geometry.location,
-              details: place,
-              scheduledTime: currentTime.toISOString(),
-            }),
-            time: new Date(currentTime),
-            isFixed: false
-          });
+      for (let i = 0; i < filledSchedule.length - 1; i++) {
+        const current = filledSchedule[i];
+        const next = filledSchedule[i + 1];
 
-          // Increment time for next flexible destination
-          currentTime.setMinutes(currentTime.getMinutes() + 90); // Default 90 min visit
+        // Calculate gap between activities
+        const gap = next.time.getTime() - (current.time.getTime() + 90 * 60 * 1000); // 90 min for current activity
+
+        // If we have more than 2 hours between activities, add something interesting
+        if (gap > 2 * 60 * 60 * 1000) {
+          const activityTime = new Date(current.time.getTime() + 90 * 60 * 1000);
+          const activityQuery = findInterestingActivities(current.place.name, gap / (60 * 60 * 1000));
+
+          const suggestedActivity = await searchPlace(activityQuery);
+          if (suggestedActivity) {
+            const newPlace = await storage.createPlace({
+              placeId: `activity-${Date.now()}-${i}`,
+              name: suggestedActivity.name,
+              address: suggestedActivity.formatted_address,
+              location: suggestedActivity.geometry.location,
+              details: suggestedActivity,
+              scheduledTime: activityTime.toISOString(),
+            });
+
+            filledSchedule.push({
+              place: newPlace,
+              time: activityTime,
+              isFixed: false
+            });
+          }
         }
       }
 
-      // Sort places by time
-      scheduledPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
+      // Final sort of all activities
+      filledSchedule.sort((a, b) => a.time.getTime() - b.time.getTime());
 
-      // Extract the sorted places
-      const verifiedPlaces = scheduledPlaces.map(sp => sp.place);
-
-      // Calculate travel times between sorted places
+      // Calculate travel times between places
       const travelTimes = [];
       const startPlace = await searchPlace(parsed.startLocation);
       if (!startPlace) {
@@ -178,7 +201,7 @@ export async function registerRoutes(app: Express) {
       }
 
       let lastPlace = startPlace;
-      for (const scheduledPlace of scheduledPlaces) {
+      for (const scheduledPlace of filledSchedule) {
         if (lastPlace && scheduledPlace.place.details) {
           const travelTime = calculateTravelTime(lastPlace, scheduledPlace.place.details);
           travelTimes.push({
@@ -193,7 +216,7 @@ export async function registerRoutes(app: Express) {
 
       const itinerary = await storage.createItinerary({
         query,
-        places: verifiedPlaces,
+        places: filledSchedule.map(sp => sp.place),
         travelTimes,
       });
 
