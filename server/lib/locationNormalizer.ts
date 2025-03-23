@@ -1,4 +1,4 @@
-import { londonAreas } from "../data/london-areas";
+import { londonAreas, LondonArea } from "../data/london-areas";
 
 // Common London stations that should always have "station" appended
 const COMMON_STATIONS = [
@@ -9,10 +9,10 @@ const COMMON_STATIONS = [
   "Victoria",
   "Waterloo",
   "London Bridge"
-];
+] as const;
 
 // Common activity mappings to Google Places API types
-const ACTIVITY_TYPE_MAPPINGS: Record<string, string> = {
+export const ACTIVITY_TYPE_MAPPINGS = {
   "lunch": "restaurant",
   "dinner": "restaurant",
   "breakfast": "restaurant",
@@ -21,7 +21,10 @@ const ACTIVITY_TYPE_MAPPINGS: Record<string, string> = {
   "shopping": "shopping_mall",
   "culture": "museum",
   "art": "art_gallery"
-};
+} as const;
+
+type ActivityType = keyof typeof ACTIVITY_TYPE_MAPPINGS;
+type Station = typeof COMMON_STATIONS[number];
 
 // Helper to normalize location names
 export function normalizeLocationName(location: string): string {
@@ -29,15 +32,13 @@ export function normalizeLocationName(location: string): string {
   const lowercased = location.toLowerCase().trim();
 
   // Add "station" if it's a common tube station
-  if (COMMON_STATIONS.some(station => 
-    station.toLowerCase() === lowercased ||
-    lowercased === `${station.toLowerCase()} station`
-  )) {
-    const baseName = COMMON_STATIONS.find(s => 
-      s.toLowerCase() === lowercased ||
-      lowercased === `${s.toLowerCase()} station`
-    );
-    return `${baseName} Station`;
+  const station = COMMON_STATIONS.find(s => 
+    s.toLowerCase() === lowercased ||
+    lowercased === `${s.toLowerCase()} station`
+  );
+
+  if (station) {
+    return `${station} Station`;
   }
 
   // Return with proper capitalization
@@ -88,13 +89,13 @@ export function verifyPlaceMatch(
 // Helper to suggest similar locations when a match isn't found
 export function suggestSimilarLocations(location: string): string[] {
   const normalized = location.toLowerCase();
-  const suggestions: string[] = [];
+  const suggestions = new Set<string>();
 
   // First check stations
   for (const station of COMMON_STATIONS) {
     if (station.toLowerCase().includes(normalized) || 
         normalized.includes(station.toLowerCase())) {
-      suggestions.push(`${station} Station`);
+      suggestions.add(`${station} Station`);
     }
   }
 
@@ -102,30 +103,32 @@ export function suggestSimilarLocations(location: string): string[] {
   for (const area of londonAreas) {
     if (area.name.toLowerCase().includes(normalized) || 
         normalized.includes(area.name.toLowerCase())) {
-      suggestions.push(area.name);
+      suggestions.add(area.name);
     }
 
     // Check neighboring areas
     for (const neighbor of area.neighbors) {
       if (neighbor.toLowerCase().includes(normalized) || 
           normalized.includes(neighbor.toLowerCase())) {
-        suggestions.push(neighbor);
+        suggestions.add(neighbor);
       }
     }
   }
 
-  // Return unique suggestions, prioritizing exact matches
-  return [...new Set(suggestions)]
+  // Convert to array and sort by relevance
+  return Array.from(suggestions)
     .sort((a, b) => {
-      const aExact = a.toLowerCase() === normalized;
-      const bExact = b.toLowerCase() === normalized;
-      return bExact - aExact;
+      const aScore = a.toLowerCase() === normalized ? 2 :
+                    a.toLowerCase().includes(normalized) ? 1 : 0;
+      const bScore = b.toLowerCase() === normalized ? 2 :
+                    b.toLowerCase().includes(normalized) ? 1 : 0;
+      return bScore - aScore;
     })
-    .slice(0, 3); // Return up to 3 unique suggestions
+    .slice(0, 3); // Return up to 3 suggestions
 }
 
 // Convert activity types to Google Places API types
 export function mapActivityToPlaceType(activity: string): string | undefined {
-  const normalized = activity.toLowerCase().trim();
+  const normalized = activity.toLowerCase().trim() as ActivityType;
   return ACTIVITY_TYPE_MAPPINGS[normalized];
 }
