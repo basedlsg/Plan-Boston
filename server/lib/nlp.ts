@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { PlaceDetails } from "@shared/schema";
+import { londonAreas } from "../data/london-areas";
 
-// the newest Anthropic model is "claude-3-5-sonnet-20241022" which was released October 22, 2024
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -12,6 +12,7 @@ export type StructuredRequest = {
   fixedTimes: Array<{
     location: string;
     time: string;  // Format: "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour)
+    type?: string; // e.g., "restaurant" for lunch
   }>;
   preferences: {
     type?: string;
@@ -19,36 +20,62 @@ export type StructuredRequest = {
   };
 };
 
+// Helper to validate if a location exists in our London areas data
+function isKnownLondonArea(location: string): boolean {
+  return londonAreas.some(area => 
+    area.name.toLowerCase() === location.toLowerCase() ||
+    area.neighbors.some(n => n.toLowerCase() === location.toLowerCase())
+  );
+}
+
 export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
   try {
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       messages: [{
         role: "user",
-        content: `Extract locations and times from this London itinerary request. Format as JSON with:
-        - startLocation: the user's current or starting location
-        - destinations: array of specific places they want to visit
-        - fixedTimes: array of {location, time} pairs for any time-specific commitments
-          Time should be in 24-hour format (e.g., "21:00") or 12-hour format with AM/PM (e.g., "9:00 PM")
-        - preferences: object containing:
-          - type: type of place they're looking for (e.g. "coffee shop", "restaurant")
-          - requirements: array of specific requirements (e.g. ["quiet", "work-friendly"])
+        content: `Extract locations and times from this London itinerary request. Format as JSON.
+Consider:
+- Locations can be neighborhoods (Fitzrovia, Soho), landmarks (Green Park, Tower Bridge), or areas
+- Times can be in 12-hour ("2pm", "2:00 PM") or 24-hour format ("14:00")
+- Activity types like "lunch", "dinner", "coffee", "shopping"
+- Requirements like "quiet", "non-crowded", "interesting"
 
-        For example, if input is "I'm at Green Park and need a quiet coffee shop to work until my dinner at Duck & Waffle at 8pm",
-        you should identify:
-        - Green Park as startLocation
-        - Duck & Waffle in destinations
-        - fixedTimes with Duck & Waffle at "20:00" or "8:00 PM"
-        - preferences for a quiet, work-friendly coffee shop
+Example input: "lunch in Green Park at 2 then go to Fitzrovia for a nice non-crowded interesting activity"
+Should identify:
+- "Green Park" as location with "lunch" at "14:00"
+- "Fitzrovia" as destination with requirements ["non-crowded", "interesting"]
 
-        Request: ${query}
+Input: ${query}
 
-        Return only JSON, no other text.`
+Return JSON with:
+{
+  "startLocation": "first location mentioned if no explicit start",
+  "destinations": ["other locations mentioned"],
+  "fixedTimes": [{"location": "place", "time": "HH:MM", "type": "activity_type"}],
+  "preferences": {
+    "type": "activity type if specified",
+    "requirements": ["any mentioned requirements"]
+  }
+}`
       }],
       max_tokens: 1000,
+      response_format: { type: "json_object" }
     });
 
-    return JSON.parse(response.content[0].text) as StructuredRequest;
+    const parsed = JSON.parse(response.content[0].text) as StructuredRequest;
+
+    // Validate locations against our London areas data
+    const validatedRequest = {
+      ...parsed,
+      startLocation: parsed.startLocation && isKnownLondonArea(parsed.startLocation) ? parsed.startLocation : null,
+      destinations: parsed.destinations.filter(isKnownLondonArea),
+      fixedTimes: parsed.fixedTimes.filter(ft => isKnownLondonArea(ft.location))
+    };
+
+    console.log("Parsed request:", validatedRequest);
+    return validatedRequest;
+
   } catch (error) {
     console.error("Error parsing itinerary request:", error);
     throw new Error("Failed to understand the itinerary request. Please try rephrasing it.");
