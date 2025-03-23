@@ -21,7 +21,7 @@ export async function searchPlace(
 
     // Add type specific context
     if (options.type) {
-      searchQuery = `${options.type} ${searchQuery}`;
+      searchQuery = `${options.type} in ${searchQuery}`; //Improved phrasing
     }
 
     // Build search URL with parameters
@@ -29,6 +29,8 @@ export async function searchPlace(
       query: searchQuery,
       region: 'uk',
       key: GOOGLE_PLACES_API_KEY || '',
+      type: options.type || '', // Explicitly include type parameter
+      rankby: 'distance' //Added to prioritize nearby results
     });
 
     if (options.openNow) {
@@ -50,7 +52,7 @@ export async function searchPlace(
     }
 
     if (!searchData.results?.length) {
-      console.error(`No results found for "${query}". Full response:`, searchData);
+      console.warn(`No results found for "${query}". Full response:`, searchData); // Changed to warn
       return null;
     }
 
@@ -66,7 +68,7 @@ export async function searchPlace(
     }
 
     // Get more details including opening hours
-    const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${bestResult.place_id}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level&key=${GOOGLE_PLACES_API_KEY}`;
+    const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${bestResult.place_id}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types&key=${GOOGLE_PLACES_API_KEY}`;
 
     const detailsRes = await fetch(detailsUrl);
     const detailsData = await detailsRes.json();
@@ -82,7 +84,7 @@ export async function searchPlace(
     // Some venues might not have a business_status
     if (detailsData.result.business_status && 
         detailsData.result.business_status !== "OPERATIONAL") {
-      console.error(`Place not operational: "${query}"`, detailsData.result);
+      console.warn(`Place not operational: "${query}"`, detailsData.result); // Changed to warn
       return null;
     }
 
