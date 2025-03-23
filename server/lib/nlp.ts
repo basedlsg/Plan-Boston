@@ -92,29 +92,29 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     const patternStartLocation = extractStartingLocation(query);
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-3-opus-20240229",
+      max_tokens: 1000,
       messages: [{
         role: "user",
-        content: `Extract locations, times, and activities from this London itinerary request. Format the response as JSON with the following structure:
+        content: `You are a London itinerary planner. Parse this request into structured data.
+
+Request: ${query}
+
+Important Notes:
+- If locations like "Bank" or "Embankment" are mentioned without "station", treat them as tube stations
+- The starting location detected by pattern matching is: ${patternStartLocation || "none"}
+- Treat any location with an activity (e.g. "dinner in Soho") as both an activity location and potential starting point
+- Activity types include: lunch, dinner, coffee, shopping
+- Look for preferences like: quiet, non-crowded, interesting
+
+Return your response in this exact JSON format:
 {
   "startLocation": string | null,
   "destinations": string[],
   "fixedTimes": [{"location": string, "time": string, "type"?: string}],
   "preferences": {"type"?: string, "requirements"?: string[]}
-}
-
-Note:
-- For locations like "Bank" or "Embankment", treat as tube stations
-- The starting location is: ${patternStartLocation || "not detected by pattern matching"}
-- Treat any location with an activity (e.g. "dinner in Soho") as both an activity location and potential starting point
-- Extract activity types (lunch, dinner, coffee, shopping)
-- Look for requirements (quiet, non-crowded, interesting)
-
-Input: ${query}`
-      }],
-      max_tokens: 1000,
-      temperature: 0,
-      response_format: { type: "json_object" }
+}`
+      }]
     });
 
     const content = response.content[0]?.type === 'text' ? response.content[0].text : null;
