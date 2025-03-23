@@ -142,8 +142,13 @@ export async function registerRoutes(app: Express) {
       const parsed = await parseItineraryRequest(query);
       console.log("Parsed request:", parsed);
 
+      // If no explicit start location, use the first location mentioned
       if (!parsed.startLocation) {
-        throw new Error("Please specify a starting location in your request. For example: 'Starting from Green Park...'");
+        // Use the first fixed time location or first destination
+        parsed.startLocation = parsed.fixedTimes[0]?.location || parsed.destinations[0];
+        if (!parsed.startLocation) {
+          throw new Error("Could not determine a starting location from your request. Please mention where you'd like to start.");
+        }
       }
 
       // Initialize base date and time
@@ -159,7 +164,10 @@ export async function registerRoutes(app: Express) {
       for (const timeSlot of parsed.fixedTimes) {
         try {
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
-          const place = await searchPlace(timeSlot.location);
+          const place = await searchPlace(timeSlot.location, {
+            type: timeSlot.type || undefined,
+            openNow: true
+          });
 
           if (!place) {
             throw new Error(`Could not find location: ${timeSlot.location}`);
@@ -189,7 +197,7 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-      //Added Lunch handling
+      // Handle lunch request specifically
       if (parsed.preferences?.type?.includes('lunch')) {
         const lunchPlace = await searchPlace(parsed.startLocation, {
           type: 'restaurant',
@@ -217,7 +225,6 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-
       // Sort fixed appointments chronologically
       itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
@@ -239,7 +246,11 @@ export async function registerRoutes(app: Express) {
             );
 
             for (const activity of suggestedActivities) {
-              const suggestedPlace = await searchPlace(activity);
+              const suggestedPlace = await searchPlace(activity, {
+                openNow: true,
+                minRating: 4.0
+              });
+
               if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
                 const activityTime = new Date(current.time.getTime() + 90 * 60 * 1000);
 
