@@ -152,9 +152,14 @@ export async function registerRoutes(app: Express) {
 
   // Add endpoint to get current server time
   app.get("/api/time", (_req, res) => {
+    const now = new Date();
     res.json({ 
-      currentTime: new Date().toISOString(),
-      timestamp: Date.now()
+      currentTime: now.toISOString(),
+      timestamp: now.getTime(),
+      timezone: {
+        offset: -now.getTimezoneOffset(),
+        name: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }
     });
   });
 
