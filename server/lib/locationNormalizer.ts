@@ -14,13 +14,21 @@ const LANDMARK_MAPPINGS: Record<string, string> = {
   "piccadilly": "Piccadilly Circus",
   "oxford street": "Oxford Street",
   "south bank": "South Bank",
-  "southbank": "South Bank"
+  "southbank": "South Bank",
+  "bank": "Bank station",
+  "embankment": "Embankment station",
+  "liverpool st": "Liverpool Street station",
+  "liverpool street": "Liverpool Street station",
+  "canary wharf": "Canary Wharf",
+  "brick lane": "Brick Lane",
+  "carnaby": "Carnaby Street",
+  "carnaby st": "Carnaby Street"
 };
 
 // Helper to normalize location names
 export function normalizeLocationName(location: string): string {
   const lowercased = location.toLowerCase().trim();
-  
+
   // Check if it's a known landmark variation
   if (LANDMARK_MAPPINGS[lowercased]) {
     console.log(`Normalized landmark: ${location} -> ${LANDMARK_MAPPINGS[lowercased]}`);

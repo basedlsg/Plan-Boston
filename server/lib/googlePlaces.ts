@@ -1,5 +1,6 @@
 import type { PlaceDetails } from "@shared/schema";
 import { normalizeLocationName, verifyPlaceMatch, suggestSimilarLocations } from "./locationNormalizer";
+import { londonAreas, findAreasByCharacteristics } from "../data/london-areas";
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
@@ -15,18 +16,32 @@ export async function searchPlace(
   options: SearchOptions = {}
 ): Promise<PlaceDetails | null> {
   try {
-    // Normalize the location name first
+    // First check if this matches any of our known areas
+    const matchingArea = londonAreas.find(area => 
+      area.name.toLowerCase() === query.toLowerCase() ||
+      area.neighbors.some(n => n.toLowerCase() === query.toLowerCase())
+    );
+
+    // Normalize the location name
     const normalizedLocation = normalizeLocationName(query);
     console.log(`Normalized location: ${query} -> ${normalizedLocation}`);
 
     // Handle landmarks vs amenities differently
     const isAmenitySearch = !!options.type;
 
+    // Build search query with appropriate context
     let searchQuery = normalizedLocation;
     if (!normalizedLocation.toLowerCase().includes('london')) {
-      searchQuery = isAmenitySearch 
-        ? `${normalizedLocation}, London, UK`  // Full context for amenities
-        : `${normalizedLocation}, London`;     // Simpler context for landmarks
+      // Add more specific context for stations and streets
+      if (normalizedLocation.toLowerCase().includes('station')) {
+        searchQuery = `${normalizedLocation}, Underground Station, London`;
+      } else if (matchingArea) {
+        searchQuery = `${normalizedLocation}, ${matchingArea.borough || 'London'}, UK`;
+      } else {
+        searchQuery = isAmenitySearch 
+          ? `${normalizedLocation}, London, UK`  
+          : `${normalizedLocation}, London`;
+      }
     }
 
     // Build search URL with parameters
@@ -39,7 +54,9 @@ export async function searchPlace(
 
     // Use different parameters for landmarks vs amenities
     if (isAmenitySearch) {
-      params.append('type', options.type);
+      if (options.type) {
+        params.append('type', options.type);
+      }
       params.append('rankby', 'distance');
     } else {
       params.append('radius', '50000'); // 50km radius from London center
@@ -51,53 +68,42 @@ export async function searchPlace(
 
     const searchUrl = `${PLACES_API_BASE}/textsearch/json?${params.toString()}`;
 
-    const searchRes = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-
-    // Log complete request details
     console.log('Places API Request:', {
       url: searchUrl,
       query: searchQuery,
       params: Object.fromEntries(params)
     });
 
-    console.log('Places API Response:', {
-      status: searchData.status,
-      resultsCount: searchData.results?.length,
-      firstResult: searchData.results?.[0] ? {
-        name: searchData.results[0].name,
-        types: searchData.results[0].types,
-        rating: searchData.results[0].rating,
-        placeId: searchData.results[0].place_id,
-        formattedAddress: searchData.results[0].formatted_address,
-        geometry: searchData.results[0].geometry
-      } : null
-    });
+    const searchRes = await fetch(searchUrl);
+    const searchData = await searchRes.json();
 
-    if (searchData.status !== "OK") {
+    if (searchData.status !== "OK" || !searchData.results?.length) {
       const suggestions = suggestSimilarLocations(query);
       const suggestionText = suggestions.length > 0 
         ? `Did you mean: ${suggestions.join(', ')}?` 
         : '';
 
-      console.error(`Google Places API Error for query "${query}":`, {
+      // Log the error with detailed context
+      console.error(`Google Places API Error for "${query}":`, {
         status: searchData.status,
         error_message: searchData.error_message,
+        originalQuery: query,
+        normalizedQuery: normalizedLocation,
+        searchQuery,
+        matchingArea: matchingArea?.name,
         suggestions
       });
-      throw new Error(`Could not find "${query}". ${suggestionText}`);
-    }
 
-    if (!searchData.results?.length) {
-      const suggestions = suggestSimilarLocations(query);
       throw new Error(
-        `No results found for "${query}". ` +
-        (suggestions.length > 0 ? `Did you mean: ${suggestions.join(', ')}?` : '')
+        `Could not find "${query}"${suggestionText ? `. ${suggestionText}` : ''}. ` +
+        `Try being more specific${matchingArea ? ' or using the full name' : ''}.`
       );
     }
 
-    // Filter results by rating if specified
+    // Filter and enhance results
     let bestResult = searchData.results[0];
+
+    // Apply rating filter if specified
     if (options.minRating) {
       const qualifiedResults = searchData.results.filter(
         (r: any) => r.rating >= options.minRating
@@ -109,36 +115,47 @@ export async function searchPlace(
 
     // Verify the result matches what was requested
     if (!verifyPlaceMatch(query, bestResult.name, bestResult.types)) {
-      console.warn(`Place match verification failed for "${query}". Got "${bestResult.name}" instead.`);
+      console.warn(`Place match verification warning for "${query}". Got "${bestResult.name}" instead.`);
     }
 
-    // Get more details including opening hours
+    // Get additional place details
     const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${bestResult.place_id}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types&key=${GOOGLE_PLACES_API_KEY}`;
 
     const detailsRes = await fetch(detailsUrl);
     const detailsData = await detailsRes.json();
 
     if (detailsData.status !== "OK") {
-      console.error(`Error fetching place details for "${query}":`, {
+      console.error(`Error fetching details for "${query}":`, {
         status: detailsData.status,
         error_message: detailsData.error_message
       });
       return null;
     }
 
-    // Some venues might not have a business_status
+    // Check if place is operational
     if (detailsData.result.business_status && 
         detailsData.result.business_status !== "OPERATIONAL") {
       console.warn(`Place not operational: "${query}"`, detailsData.result);
       return null;
     }
 
-    return {
+    // Combine Google Places data with our custom area data if available
+    const placeDetails = {
       ...detailsData.result,
-      place_id: bestResult.place_id
+      place_id: bestResult.place_id,
+      area_info: matchingArea || undefined
     };
+
+    console.log(`Successfully found location "${query}":`, {
+      name: placeDetails.name,
+      address: placeDetails.formatted_address,
+      types: placeDetails.types,
+      area: matchingArea?.name
+    });
+
+    return placeDetails;
   } catch (error) {
     console.error(`Error searching place "${query}":`, error);
-    throw error; // Re-throw to handle suggestions in the calling code
+    throw error;
   }
 }
