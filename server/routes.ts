@@ -7,6 +7,7 @@ import { parseItineraryRequest } from "./lib/nlp";
 import { insertPlaceSchema, insertItinerarySchema } from "@shared/schema";
 import { z } from "zod";
 import { format } from 'date-fns';
+import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, LondonArea } from "./data/london-areas";
 
 // Improved time parsing and validation
 function parseTimeString(timeStr: string, baseDate?: Date): Date {
@@ -44,14 +45,42 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
   throw new Error(`Invalid time format: ${timeStr}. Please use either "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour) format.`);
 }
 
-function findInterestingActivities(location: string, duration: number, timeOfDay: string): string[] {
-  // Activities categorized by time of day and duration
+// Update the findInterestingActivities function
+function findInterestingActivities(
+  location: string,
+  duration: number,
+  timeOfDay: string,
+  preferences: { type?: string; requirements?: string[] } = {}
+): string[] {
+  const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+
+  // If user wants non-crowded places, use the quiet areas helper
+  if (preferences.requirements?.includes('non-crowded')) {
+    const quietAreas = findQuietAreas(timeOfDay, isWeekend, location);
+    if (quietAreas.length > 0) {
+      return quietAreas.slice(0, 2).map(area => 
+        `${preferences.type || 'activity'} in ${area.name}`
+      );
+    }
+  }
+
+  // Find areas matching other characteristics
+  const matchingAreas = findAreasByCharacteristics(
+    preferences.requirements || [],
+    [location] // Exclude current location to prevent duplicates
+  );
+
+  if (matchingAreas.length > 0) {
+    return matchingAreas.slice(0, 2).map(area => 
+      `${preferences.type || 'interesting activity'} in ${area.name}`
+    );
+  }
+
+  // Fallback to default activities if no specific matches
   const activities = {
     morning: [
       'artisan bakery',
       'farmers market',
-      'yoga studio',
-      'morning walking tour',
       'specialty coffee roaster',
       'local breakfast spot'
     ],
@@ -60,93 +89,51 @@ function findInterestingActivities(location: string, duration: number, timeOfDay
       'museum',
       'historic site',
       'garden',
-      'park',
       'cultural center',
-      'exhibition space',
-      'lunch spot',
-      'food market',
-      'bistro'
+      'lunch spot'
     ],
     afternoon: [
       'boutique shopping',
-      'craft workshop',
       'tea room',
-      'bookstore',
       'local market',
-      'riverside walk',
-      'antique shop',
-      'chocolate shop',
       'design gallery'
     ],
     evening: [
       'wine bar',
       'jazz club',
-      'theater',
-      'comedy club',
-      'rooftop bar',
-      'live music venue',
       'cocktail bar',
       'art cinema'
     ]
   };
 
   // Select appropriate activities based on time of day
-  let timeSlot: 'morning' | 'midday' | 'afternoon' | 'evening' = 'midday';
   const hour = parseInt(timeOfDay.split(':')[0]);
+  const timeSlot = hour < 12 ? 'morning' 
+                : hour < 14 ? 'midday'
+                : hour < 17 ? 'afternoon'
+                : 'evening';
 
-  if (hour < 12) {
-    timeSlot = 'morning';
-  } else if (hour < 14) {
-    timeSlot = 'midday';
-  } else if (hour < 17) {
-    timeSlot = 'afternoon';
-  } else {
-    timeSlot = 'evening';
-  }
-
-  // For longer durations (>3 hours), suggest multiple varied activities
-  const activityCount = Math.min(Math.ceil(duration / 2), 3); // Max 3 activities, minimum 1 per 2 hours
   const selectedActivities = [];
 
-  // If it's around lunchtime (12-2pm), prioritize food options
-  if (hour >= 12 && hour <= 14 && !selectedActivities.includes('lunch spot')) {
-    selectedActivities.push('lunch spot');
-  }
+  // For longer durations, suggest multiple varied activities
+  const activityCount = Math.min(Math.ceil(duration / 2), 3);
 
-  // Get main activities for the time slot
-  const currentTimeSlotActivities = activities[timeSlot].filter(a => !selectedActivities.includes(a));
-  const mainActivity = currentTimeSlotActivities[Math.floor(Math.random() * currentTimeSlotActivities.length)];
-  selectedActivities.push(mainActivity);
+  // Get activities from current time slot
+  const currentActivities = activities[timeSlot].filter(a => 
+    !selectedActivities.includes(a)
+  );
 
-  // If we need more activities, get them from appropriate time slots
-  if (activityCount > 1) {
-    const nextTimeSlot = timeSlot === 'morning' ? 'midday' : 
-                        timeSlot === 'midday' ? 'afternoon' : 
-                        timeSlot === 'afternoon' ? 'evening' : 'evening';
+  selectedActivities.push(
+    ...currentActivities
+      .sort(() => Math.random() - 0.5)
+      .slice(0, activityCount)
+  );
 
-    const nextSlotActivities = activities[nextTimeSlot].filter(a => !selectedActivities.includes(a));
-    const nextActivity = nextSlotActivities[Math.floor(Math.random() * nextSlotActivities.length)];
-    selectedActivities.push(nextActivity);
-
-    // For very long gaps, add a third activity
-    if (activityCount > 2) {
-      const remainingActivities = [...activities[timeSlot], ...activities[nextTimeSlot]]
-        .filter(a => !selectedActivities.includes(a));
-      const extraActivity = remainingActivities[Math.floor(Math.random() * remainingActivities.length)];
-      selectedActivities.push(extraActivity);
-    }
-  }
-
-  // Add specific location context to each activity
-  return selectedActivities.map(activity => {
-    // If the activity is lunch-related, specify "restaurant" or "casual dining"
-    if (activity === 'lunch spot') {
-      return `casual dining restaurant near ${location}`;
-    }
-    return `${activity} near ${location}`;
-  });
+  // Add location context to each activity
+  return selectedActivities.map(activity => `${activity} near ${location}`);
 }
 
+// Update the /api/plan endpoint to handle fixed appointments better
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -162,13 +149,13 @@ export async function registerRoutes(app: Express) {
     try {
       const requestSchema = z.object({ 
         query: z.string(),
-        date: z.string().optional(), // Allow custom date
-        startTime: z.string().optional() // Allow custom start time
+        date: z.string().optional(),
+        startTime: z.string().optional()
       });
 
       const { query, date, startTime } = requestSchema.parse(req.body);
 
-      // Parse the request using Claude
+      // Parse the request using NLP
       const parsed = await parseItineraryRequest(query);
       console.log("Parsed request:", parsed);
 
@@ -176,32 +163,31 @@ export async function registerRoutes(app: Express) {
         throw new Error("Please specify a starting location in your request. For example: 'Starting from Green Park...'");
       }
 
-      // Initialize base date from request or use current date
+      // Initialize base date and time
       const baseDate = date ? new Date(date) : new Date();
+      let currentTime = startTime 
+        ? parseTimeString(startTime, baseDate)
+        : new Date(baseDate.setHours(9, 0, 0, 0));
 
-      // Initialize start time
-      let currentTime: Date;
-      if (startTime) {
-        currentTime = parseTimeString(startTime, baseDate);
-      } else {
-        currentTime = new Date(baseDate);
-        currentTime.setHours(9, 0, 0, 0); // Default to 9 AM
-      }
+      const scheduledPlaces = new Set(); // Track unique places
+      const itineraryPlaces = [];
 
-      const scheduledPlaces = [];
-
-      // First handle fixed-time appointments
+      // Handle fixed-time appointments first
       for (const timeSlot of parsed.fixedTimes) {
-        const place = await searchPlace(timeSlot.location);
-        if (!place) {
-          throw new Error(`Could not find location: ${timeSlot.location}`);
-        }
-
         try {
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
+          const place = await searchPlace(timeSlot.location);
+
+          if (!place) {
+            throw new Error(`Could not find location: ${timeSlot.location}`);
+          }
+
+          if (scheduledPlaces.has(place.place_id)) {
+            continue; // Skip duplicate locations
+          }
 
           const newPlace = await storage.createPlace({
-            placeId: timeSlot.location,
+            placeId: place.place_id,
             name: place.name,
             address: place.formatted_address,
             location: place.geometry.location,
@@ -209,7 +195,8 @@ export async function registerRoutes(app: Express) {
             scheduledTime: appointmentTime.toISOString(),
           });
 
-          scheduledPlaces.push({
+          scheduledPlaces.add(place.place_id);
+          itineraryPlaces.push({
             place: newPlace,
             time: appointmentTime,
             isFixed: true
@@ -219,93 +206,60 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-      // Sort fixed appointments to find gaps
-      scheduledPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
+      // Sort fixed appointments chronologically
+      itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
-      // If we have preferences (like coffee shop), schedule it first
-      if (parsed.preferences?.type) {
-        const preferenceQuery = `${parsed.preferences.type} ${parsed.preferences.requirements?.join(' ')} near ${parsed.startLocation}`;
-        const suggestedPlace = await searchPlace(preferenceQuery);
+      // Fill gaps with interesting activities based on preferences
+      if (parsed.preferences?.type || parsed.preferences?.requirements) {
+        for (let i = 0; i < itineraryPlaces.length - 1; i++) {
+          const current = itineraryPlaces[i];
+          const next = itineraryPlaces[i + 1];
 
-        if (suggestedPlace) {
-          const newPlace = await storage.createPlace({
-            placeId: `preference-${Date.now()}`,
-            name: suggestedPlace.name,
-            address: suggestedPlace.formatted_address,
-            location: suggestedPlace.geometry.location,
-            details: suggestedPlace,
-            scheduledTime: currentTime.toISOString(),
-          });
+          // Calculate gap between activities
+          const gap = next.time.getTime() - (current.time.getTime() + 90 * 60 * 1000);
 
-          scheduledPlaces.push({
-            place: newPlace,
-            time: new Date(currentTime),
-            isFixed: false
-          });
+          if (gap > 1.5 * 60 * 60 * 1000) { // If gap > 1.5 hours
+            const suggestedActivities = findInterestingActivities(
+              current.place.name,
+              gap / (60 * 60 * 1000),
+              format(new Date(current.time.getTime() + 90 * 60 * 1000), 'HH:mm'),
+              parsed.preferences
+            );
 
-          // Move current time forward
-          currentTime.setMinutes(currentTime.getMinutes() + 90);
-        }
-      }
+            for (const activity of suggestedActivities) {
+              const suggestedPlace = await searchPlace(activity);
+              if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
+                const activityTime = new Date(current.time.getTime() + 90 * 60 * 1000);
 
-      // Find and fill time gaps with interesting activities
-      const filledSchedule = [...scheduledPlaces].sort((a, b) => a.time.getTime() - b.time.getTime());
+                const newPlace = await storage.createPlace({
+                  placeId: suggestedPlace.place_id,
+                  name: suggestedPlace.name,
+                  address: suggestedPlace.formatted_address,
+                  location: suggestedPlace.geometry.location,
+                  details: suggestedPlace,
+                  scheduledTime: activityTime.toISOString(),
+                });
 
-      for (let i = 0; i < filledSchedule.length - 1; i++) {
-        const current = filledSchedule[i];
-        const next = filledSchedule[i + 1];
-
-        // Calculate gap between activities
-        const gap = next.time.getTime() - (current.time.getTime() + 90 * 60 * 1000); // 90 min for current activity
-
-        // If we have more than 1.5 hours between activities, add something interesting
-        if (gap > 1.5 * 60 * 60 * 1000) {
-          const activityTime = new Date(current.time.getTime() + 90 * 60 * 1000);
-          const timeStr = format(activityTime, 'HH:mm');
-
-          const activityQueries = findInterestingActivities(
-            current.place.name,
-            gap / (60 * 60 * 1000),
-            timeStr
-          );
-
-          for (const query of activityQueries) {
-            const suggestedActivity = await searchPlace(query);
-            if (suggestedActivity) {
-              const newPlace = await storage.createPlace({
-                placeId: `activity-${Date.now()}-${i}`,
-                name: suggestedActivity.name,
-                address: suggestedActivity.formatted_address,
-                location: suggestedActivity.geometry.location,
-                details: suggestedActivity,
-                scheduledTime: activityTime.toISOString(),
-              });
-
-              filledSchedule.push({
-                place: newPlace,
-                time: new Date(activityTime),
-                isFixed: false
-              });
-
-              // Move time forward for next activity if multiple activities
-              activityTime.setMinutes(activityTime.getMinutes() + 90);
+                scheduledPlaces.add(suggestedPlace.place_id);
+                itineraryPlaces.push({
+                  place: newPlace,
+                  time: new Date(activityTime),
+                  isFixed: false
+                });
+              }
             }
           }
         }
       }
 
-      // Final sort of all activities
-      filledSchedule.sort((a, b) => a.time.getTime() - b.time.getTime());
+      // Final chronological sort
+      itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
       // Calculate travel times between places
       const travelTimes = [];
-      const startPlace = await searchPlace(parsed.startLocation);
-      if (!startPlace) {
-        throw new Error(`Could not find start location: ${parsed.startLocation}`);
-      }
+      let lastPlace = null;
 
-      let lastPlace = startPlace;
-      for (const scheduledPlace of filledSchedule) {
+      for (const scheduledPlace of itineraryPlaces) {
         if (lastPlace && scheduledPlace.place.details) {
           const travelTime = calculateTravelTime(lastPlace, scheduledPlace.place.details);
           travelTimes.push({
@@ -318,9 +272,10 @@ export async function registerRoutes(app: Express) {
         lastPlace = scheduledPlace.place.details;
       }
 
+      // Create the final itinerary
       const itinerary = await storage.createItinerary({
         query,
-        places: filledSchedule.map(sp => sp.place),
+        places: itineraryPlaces.map(sp => sp.place),
         travelTimes,
       });
 
