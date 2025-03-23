@@ -14,14 +14,14 @@ export async function searchPlace(
   options: SearchOptions = {}
 ): Promise<PlaceDetails | null> {
   try {
-    // Add London context and venue type if not present
-    let searchQuery = query.toLowerCase().includes('london') 
-      ? query 
-      : `${query}, London, UK`;
-
-    // Add type specific context
-    if (options.type) {
-      searchQuery = `${options.type} in ${searchQuery}`; //Improved phrasing
+    // Handle landmarks vs amenities differently
+    const isAmenitySearch = !!options.type;
+    
+    let searchQuery = query;
+    if (!query.toLowerCase().includes('london')) {
+      searchQuery = isAmenitySearch 
+        ? `${query}, London, UK`  // Full context for amenities
+        : `${query}, London`;     // Simpler context for landmarks
     }
 
     // Build search URL with parameters
@@ -29,9 +29,16 @@ export async function searchPlace(
       query: searchQuery,
       region: 'uk',
       key: GOOGLE_PLACES_API_KEY || '',
-      type: options.type || '', // Explicitly include type parameter
-      rankby: 'distance' //Added to prioritize nearby results
+      language: 'en'
     });
+
+    // Use different parameters for landmarks vs amenities
+    if (isAmenitySearch) {
+      params.append('type', options.type);
+      params.append('rankby', 'distance');
+    } else {
+      params.append('radius', '50000'); // 50km radius from London center
+    }
 
     if (options.openNow) {
       params.append('opennow', 'true');
@@ -41,6 +48,23 @@ export async function searchPlace(
 
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
+
+    // Log complete request details
+    console.log('Places API Request:', {
+      url: searchUrl,
+      query: searchQuery,
+      params: Object.fromEntries(params)
+    });
+
+    console.log('Places API Response:', {
+      status: searchData.status,
+      resultsCount: searchData.results?.length,
+      firstResult: searchData.results?.[0] ? {
+        name: searchData.results[0].name,
+        types: searchData.results[0].types,
+        rating: searchData.results[0].rating
+      } : null
+    });
 
     if (searchData.status !== "OK") {
       console.error(`Google Places API Error for query "${query}":`, {
