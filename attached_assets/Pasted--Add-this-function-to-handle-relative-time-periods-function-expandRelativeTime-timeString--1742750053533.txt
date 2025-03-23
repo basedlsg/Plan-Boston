@@ -1,0 +1,142 @@
+// Add this function to handle relative time periods
+function expandRelativeTime(timeString) {
+  // Map of relative times to reasonable hour ranges
+  const timeMap = {
+    'morning': '10:00',
+    'afternoon': '14:00',
+    'evening': '18:00',
+    'night': '20:00',
+    'lunch': '12:30',
+    'dinner': '19:00',
+    'breakfast': '08:30'
+  };
+  
+  // Try to match the timeString to our map
+  const normalized = timeString.toLowerCase().trim();
+  if (timeMap[normalized]) {
+    return timeMap[normalized];
+  }
+  
+  // If not found in our map, return the original string for further processing
+  return timeString;
+}
+
+// Update your normalizeTimeString function to use the relative time expansion
+function normalizeTimeString(timeString) {
+  try {
+    // First, try to handle relative times
+    const expandedTime = expandRelativeTime(timeString);
+    
+    // If it was expanded, it's already normalized
+    if (expandedTime !== timeString) {
+      return expandedTime;
+    }
+    
+    // Handle various time formats
+    // [existing time parsing logic]
+    
+    return timeString;
+  } catch (error) {
+    // Instead of throwing an error, return a default time based on context
+    console.warn(`Could not parse time: ${timeString}, using default`);
+    
+    // Use the current time as context to choose a reasonable default
+    const currentHour = new Date().getHours();
+    if (currentHour < 11) return '12:00'; // Default to lunch if morning
+    if (currentHour < 16) return '18:00'; // Default to dinner if afternoon
+    return '20:00'; // Default to evening if later
+  }
+}
+
+// Update location extraction to be more flexible
+function extractLocations(query) {
+  const locations = [];
+  
+  // Look for explicit locations
+  const explicitPatterns = [
+    /in\s+([A-Za-z\s']+?)(?:\s+(?:at|and|,|-|for|to|around))/i,
+    /at\s+([A-Za-z\s']+?)(?:\s+(?:at|and|,|-|for|to|around))/i,
+    /near\s+([A-Za-z\s']+?)(?:\s+(?:at|and|,|-|for|to|around))/i,
+    /(?:from|starting at)\s+([A-Za-z\s']+?)(?:\s+(?:at|and|,|-|for|to|around))/i
+  ];
+  
+  // Add more permissive patterns that can appear at the end of a sentence
+  const permissivePatterns = [
+    /in\s+([A-Za-z\s']+)$/i,
+    /at\s+([A-Za-z\s']+)$/i,
+    /near\s+([A-Za-z\s']+)$/i
+  ];
+  
+  // Check all patterns
+  [...explicitPatterns, ...permissivePatterns].forEach(pattern => {
+    const matches = query.match(new RegExp(pattern, 'g'));
+    if (matches) {
+      matches.forEach(match => {
+        const locationMatch = match.match(pattern);
+        if (locationMatch && locationMatch[1]) {
+          const location = locationMatch[1].trim();
+          if (location && !locations.includes(location)) {
+            locations.push(location);
+          }
+        }
+      });
+    }
+  });
+  
+  // If no locations found but there are location-like terms, extract them
+  if (locations.length === 0) {
+    const londonLocations = [
+      'Soho', 'Mayfair', 'Covent Garden', 'Camden', 'Notting Hill', 
+      'Shoreditch', 'Knightsbridge', 'Kensington', 'Chelsea', 'Westminster',
+      'Green Park', 'Hyde Park', 'Regent Park', 'Tower Bridge'
+      // Add more common London locations
+    ];
+    
+    // Check if any of these locations are mentioned in the query
+    londonLocations.forEach(location => {
+      if (query.toLowerCase().includes(location.toLowerCase())) {
+        locations.push(location);
+      }
+    });
+  }
+  
+  return locations;
+}
+
+// Update the main parsing function to be more resilient
+function parseItineraryRequest(query) {
+  try {
+    // First, try using Claude (your existing code)
+    // ...
+    
+    // If Claude fails, use fallback parsing with the improved functions
+    const locations = extractLocations(query);
+    
+    // If still no locations, try to extract activities and infer locations
+    if (locations.length === 0) {
+      const activities = extractActivities(query);
+      
+      // If we found activities but no locations, suggest popular areas
+      if (activities.length > 0) {
+        // Suggest based on activity type
+        if (activities.includes('shopping')) return { startLocation: 'Oxford Street', ... };
+        if (activities.includes('museum')) return { startLocation: 'South Kensington', ... };
+        // More activity-based suggestions
+      }
+      
+      // If all else fails, tell the user we need a location
+      throw new Error("I need to know which part of London you're interested in. Could you mention a neighborhood or landmark?");
+    }
+    
+    // Continue with the rest of your parsing logic
+    // ...
+  } catch (error) {
+    // Improve error messages to be more helpful
+    if (error.message.includes('parse time')) {
+      throw new Error("I'm not sure what time you meant. Could you specify a time like '2pm' or '14:00'?");
+    }
+    
+    // Pass through other custom error messages
+    throw error;
+  }
+}

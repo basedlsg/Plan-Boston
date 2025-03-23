@@ -54,7 +54,7 @@ const STARTING_PATTERNS = [
 function isKnownLondonArea(location: string | null | undefined): boolean {
   if (!location || typeof location !== 'string') return false;
 
-  return londonAreas.some(area => 
+  return londonAreas.some(area =>
     area.name.toLowerCase() === location.toLowerCase() ||
     area.neighbors.some(n => n.toLowerCase() === location.toLowerCase())
   );
@@ -96,37 +96,81 @@ function extractFirstLocation(text: string): string | null {
   return null;
 }
 
+// Helper to handle relative time periods
+function expandRelativeTime(timeString: string): string {
+  // Map of relative times to reasonable hour ranges
+  const timeMap = {
+    'morning': '10:00',
+    'afternoon': '14:00',
+    'evening': '18:00',
+    'night': '20:00',
+    'lunch': '12:30',
+    'dinner': '19:00',
+    'breakfast': '08:30'
+  };
+
+  // Try to match the timeString to our map
+  const normalized = timeString.toLowerCase().trim();
+  if (timeMap[normalized]) {
+    return timeMap[normalized];
+  }
+
+  // If not found in our map, return the original string for further processing
+  return timeString;
+}
+
 // Helper to normalize time strings to 24-hour format
-function normalizeTimeString(time: string): string {
-  // Already in 24-hour format
-  if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
-    return time;
+function normalizeTimeString(timeString: string): string {
+  try {
+    // First, try to handle relative times
+    const expandedTime = expandRelativeTime(timeString);
+
+    // If it was expanded, it's already normalized
+    if (expandedTime !== timeString) {
+      return expandedTime;
+    }
+
+    // Already in 24-hour format
+    if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(expandedTime)) {
+      return expandedTime;
+    }
+
+    // Convert 12-hour format with am/pm
+    const twelveHour = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i;
+    const match = expandedTime.toLowerCase().match(twelveHour);
+
+    if (match) {
+      let [_, hours, minutes = "00", meridian] = match;
+      let hour = parseInt(hours);
+
+      if (meridian === "pm" && hour < 12) hour += 12;
+      if (meridian === "am" && hour === 12) hour = 0;
+
+      return `${hour.toString().padStart(2, '0')}:${minutes}`;
+    }
+
+    // Handle informal times
+    const informal = /^(\d{1,2})(?:\s*(?:ish|around|about|approximately))?$/;
+    const informalMatch = expandedTime.match(informal);
+
+    if (informalMatch) {
+      const hour = parseInt(informalMatch[1]);
+      return `${hour.toString().padStart(2, '0')}:00`;
+    }
+
+    // Instead of throwing an error, return a default time based on context
+    console.warn(`Could not parse time: ${timeString}, using default`);
+
+    // Use the current time as context to choose a reasonable default
+    const currentHour = new Date().getHours();
+    if (currentHour < 11) return '12:00'; // Default to lunch if morning
+    if (currentHour < 16) return '18:00'; // Default to dinner if afternoon
+    return '20:00'; // Default to evening if later
+
+  } catch (error) {
+    console.error(`Error parsing time "${timeString}":`, error);
+    return '12:00'; // Default to noon if all else fails
   }
-
-  // Convert 12-hour format with am/pm
-  const twelveHour = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i;
-  const match = time.toLowerCase().match(twelveHour);
-
-  if (match) {
-    let [_, hours, minutes = "00", meridian] = match;
-    let hour = parseInt(hours);
-
-    if (meridian === "pm" && hour < 12) hour += 12;
-    if (meridian === "am" && hour === 12) hour = 0;
-
-    return `${hour.toString().padStart(2, '0')}:${minutes}`;
-  }
-
-  // Handle informal times
-  const informal = /^(\d{1,2})(?:\s*(?:ish|around|about|approximately))?$/;
-  const informalMatch = time.match(informal);
-
-  if (informalMatch) {
-    const hour = parseInt(informalMatch[1]);
-    return `${hour.toString().padStart(2, '0')}:00`;
-  }
-
-  throw new Error(`Could not parse time: ${time}`);
 }
 
 export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
@@ -169,8 +213,8 @@ Return JSON only, no explanations, in this exact format:
       fixedTimes: Array.isArray(rawResponse.fixedTimes) ? rawResponse.fixedTimes : [],
       preferences: {
         type: rawResponse.preferences?.type || undefined,
-        requirements: Array.isArray(rawResponse.preferences?.requirements) 
-          ? rawResponse.preferences.requirements 
+        requirements: Array.isArray(rawResponse.preferences?.requirements)
+          ? rawResponse.preferences.requirements
           : []
       }
     };
@@ -213,8 +257,8 @@ Return JSON only, no explanations, in this exact format:
     // Normalize all locations
     const validatedRequest = {
       ...parsed,
-      startLocation: parsed.startLocation && isKnownLondonArea(normalizeLocation(parsed.startLocation)) 
-        ? normalizeLocation(parsed.startLocation) 
+      startLocation: parsed.startLocation && isKnownLondonArea(normalizeLocation(parsed.startLocation))
+        ? normalizeLocation(parsed.startLocation)
         : null,
       destinations: (parsed.destinations || [])
         .map(normalizeLocation)
@@ -229,9 +273,9 @@ Return JSON only, no explanations, in this exact format:
     };
 
     // If no valid locations were found, throw a helpful error
-    if (!validatedRequest.startLocation && 
-        validatedRequest.destinations.length === 0 && 
-        validatedRequest.fixedTimes.length === 0) {
+    if (!validatedRequest.startLocation &&
+      validatedRequest.destinations.length === 0 &&
+      validatedRequest.fixedTimes.length === 0) {
       throw new Error(
         "We need to know where in London you'll be. Try adding a neighborhood or landmark to your request.\n\n" +
         "Examples:\n" +
