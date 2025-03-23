@@ -56,14 +56,30 @@ export async function searchPlace(
       params: Object.fromEntries(params)
     });
 
+    console.log('Places API Request Details:', {
+      fullQuery: searchQuery,
+      originalQuery: query,
+      parameters: Object.fromEntries(params),
+      options,
+      timestamp: new Date().toISOString()
+    });
+
     console.log('Places API Response:', {
       status: searchData.status,
       resultsCount: searchData.results?.length,
       firstResult: searchData.results?.[0] ? {
         name: searchData.results[0].name,
         types: searchData.results[0].types,
-        rating: searchData.results[0].rating
-      } : null
+        rating: searchData.results[0].rating,
+        placeId: searchData.results[0].place_id,
+        formattedAddress: searchData.results[0].formatted_address,
+        geometry: searchData.results[0].geometry
+      } : null,
+      allResults: searchData.results?.map(r => ({
+        name: r.name,
+        types: r.types,
+        rating: r.rating
+      }))
     });
 
     if (searchData.status !== "OK") {
