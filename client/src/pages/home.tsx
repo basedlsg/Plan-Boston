@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { generateICS } from "@/lib/ics";
@@ -30,7 +31,6 @@ export default function Home() {
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState<string>("");
 
-  // Update the currentTime state initialization
   useState(() => {
     fetch("/api/time")
       .then(res => res.json())
@@ -41,13 +41,12 @@ export default function Home() {
       .catch(console.error);
   });
 
-  // Update the form initialization to use current time
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       query: "",
       date: format(new Date(), "yyyy-MM-dd"),
-      startTime: format(new Date(), "HH:mm"), // Use current time instead of hardcoded 9 AM
+      startTime: format(new Date(), "HH:mm"),
     },
   });
 
@@ -60,7 +59,7 @@ export default function Home() {
       setItinerary(data);
       toast({
         title: "Itinerary created!",
-        description: "Your London day plan is ready.",
+        description: "Your day plan is ready.",
       });
     },
     onError: (error: Error) => {
@@ -75,7 +74,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto space-y-8">
+        <div className="grid gap-8 max-w-3xl mx-auto">
+          {/* Header Section */}
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold tracking-tight">
               Plan
@@ -85,73 +85,84 @@ export default function Home() {
             </p>
           </div>
 
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
-              className="space-y-6"
-            >
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Date</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+          {/* Form Card */}
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Create Your Plan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
+                  className="space-y-6"
+                >
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
 
-              <FormField
-                control={form.control}
-                name="startTime"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Time</FormLabel>
-                    <FormControl>
-                      <TimeInput
-                        value={field.value}
-                        onChange={field.onChange}
-                        className="w-full"
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                    <FormField
+                      control={form.control}
+                      name="startTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                            <TimeInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              className="w-full"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-              <FormField
-                control={form.control}
-                name="query"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Your Plans</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="e.g. I'm at Green Park and need a quiet coffee shop to work until my dinner at Duck & Waffle at 8pm"
-                        className="min-h-[120px] resize-y"
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="query"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Your Plans</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="e.g. I'm at Green Park and need a quiet café to work until my dinner at Duck & Waffle at 8pm"
+                            className="min-h-[120px] resize-y"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={planMutation.isPending}
-              >
-                {planMutation.isPending ? "Creating plan..." : "Create Plan"}
-              </Button>
-            </form>
-          </Form>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={planMutation.isPending}
+                  >
+                    {planMutation.isPending ? "Creating plan..." : "Create Plan"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
 
+          {/* Itinerary Display */}
           {itinerary && (
-            <Card>
+            <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   Your Itinerary
@@ -168,10 +179,13 @@ export default function Home() {
                 <div className="space-y-6">
                   {(itinerary.places as Place[]).map((place, index) => (
                     <div key={`${place.placeId}-${index}`} className="relative">
+                      {/* Timeline connector */}
                       {index > 0 && (
                         <div className="absolute top-0 left-7 h-full w-px bg-border -translate-x-1/2" />
                       )}
-                      <div className="flex items-start gap-4">
+
+                      {/* Activity card */}
+                      <div className="flex items-start gap-4 bg-card rounded-lg p-4 shadow-sm">
                         <div className="flex-shrink-0 p-2 bg-primary/5 rounded-full relative z-10">
                           <Clock className="w-5 h-5 text-primary" />
                         </div>
@@ -179,7 +193,7 @@ export default function Home() {
                           <div className="flex items-baseline justify-between">
                             <h3 className="font-semibold">{place.name}</h3>
                             {place.scheduledTime && (
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-sm text-muted-foreground font-mono">
                                 {formatTime(place.scheduledTime)}
                               </span>
                             )}
@@ -189,13 +203,15 @@ export default function Home() {
                           </p>
                         </div>
                       </div>
+
+                      {/* Travel time indicator */}
                       {index < (itinerary.travelTimes as Array<{
                         from: string;
                         to: string;
                         duration: number;
                         arrivalTime: string;
                       }>).length && (
-                        <div className="ml-7 my-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="ml-7 my-4 p-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md">
                           <MapPin className="w-4 h-4" />
                           {itinerary.travelTimes[index].duration} minutes to{" "}
                           {itinerary.travelTimes[index].to}
