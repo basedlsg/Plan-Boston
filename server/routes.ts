@@ -55,28 +55,36 @@ function findInterestingActivities(
   const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
   const hour = parseInt(timeOfDay.split(':')[0]);
 
-  const activityTypes = {
-    morning: ['cafe', 'coffee_shop', 'bakery'],
-    midday: ['museum', 'art_gallery', 'restaurant'],
-    afternoon: ['shopping_mall', 'tea_room', 'park'],
-    evening: ['bar', 'restaurant', 'night_club']
-  };
-
-  const timeSlot = hour < 12 ? 'morning'
-                : hour < 14 ? 'midday'
-                : hour < 17 ? 'afternoon'
-                : 'evening';
+  const getTimeSlot = (hour: number) => 
+    hour < 12 ? 'morning'
+    : hour < 14 ? 'midday'
+    : hour < 17 ? 'afternoon'
+    : 'evening';
 
   // Handle lunch-specific requests
   if (hour >= 12 && hour <= 15 && preferences.type?.includes('lunch')) {
-    return ['restaurant'];
+    return ['restaurant near ${location}'];
   }
 
   // If user wants non-crowded places
   if (preferences.requirements?.includes('non-crowded')) {
     const quietAreas = findQuietAreas(timeOfDay, isWeekend, location);
     if (quietAreas.length > 0) {
-      return activityTypes[timeSlot];
+      const currentTimeSlot = getTimeSlot(hour);
+
+      // Get activity type based on time of day
+      const activities = {
+        morning: ['artisan cafe', 'specialty coffee'],
+        midday: ['gallery', 'museum'],
+        afternoon: ['boutique shopping', 'tea room'],
+        evening: ['wine bar', 'cocktail bar']
+      };
+
+      const areaActivities = activities[currentTimeSlot];
+      return quietAreas.slice(0, 1).map(area => {
+        const activity = areaActivities[Math.floor(Math.random() * areaActivities.length)];
+        return `${activity} in ${area.name}`;
+      });
     }
   }
 
@@ -101,12 +109,8 @@ function findInterestingActivities(
     evening: ['wine bar', 'cocktail bar']
   };
 
-  const timeSlot = hour < 12 ? 'morning'
-                : hour < 14 ? 'midday'
-                : hour < 17 ? 'afternoon'
-                : 'evening';
-
-  const activities = defaultActivities[timeSlot];
+  const currentTimeSlot = getTimeSlot(hour);
+  const activities = defaultActivities[currentTimeSlot];
   return [`${activities[0]} near ${location}`];
 }
 
