@@ -158,21 +158,71 @@ export async function registerRoutes(app: Express) {
       const scheduledPlaces = new Set(); // Track unique places
       const itineraryPlaces = [];
 
+      // Handle lunch request specifically
+      if (parsed.preferences?.type?.includes('lunch')) {
+        console.log("Searching for lunch venue near:", parsed.startLocation);
+        const lunchPlace = await searchPlace(parsed.startLocation, {
+          type: 'restaurant',
+          openNow: true,
+          minRating: 4.0
+        });
+
+        if (lunchPlace) {
+          console.log("Found lunch venue:", {
+            name: lunchPlace.name,
+            address: lunchPlace.formatted_address,
+            rating: lunchPlace.rating
+          });
+
+          const lunchTime = parseTimeString('14:00', baseDate);
+          const newPlace = await storage.createPlace({
+            placeId: lunchPlace.place_id,
+            name: lunchPlace.name,
+            address: lunchPlace.formatted_address,
+            location: lunchPlace.geometry.location,
+            details: lunchPlace,
+            scheduledTime: lunchTime.toISOString(),
+          });
+
+          scheduledPlaces.add(lunchPlace.place_id);
+          itineraryPlaces.push({
+            place: newPlace,
+            time: lunchTime,
+            isFixed: true
+          });
+        } else {
+          console.error("Failed to find lunch venue near:", parsed.startLocation);
+        }
+      }
+
       // Handle fixed-time appointments first
       for (const timeSlot of parsed.fixedTimes) {
         try {
+          console.log("Processing fixed time appointment:", {
+            location: timeSlot.location,
+            time: timeSlot.time,
+            type: timeSlot.type
+          });
+
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
           const place = await searchPlace(timeSlot.location, {
-            type: timeSlot.type || undefined,
+            type: timeSlot.type,
             openNow: true
           });
 
           if (!place) {
-            throw new Error(`Could not find location: ${timeSlot.location}`);
+            throw new Error(`Could not find location: ${timeSlot.location}. Try specifying the full name (e.g. "The Green Park" instead of "Green Park")`);
           }
 
+          console.log("Found location:", {
+            name: place.name,
+            address: place.formatted_address,
+            type: place.types
+          });
+
           if (scheduledPlaces.has(place.place_id)) {
-            continue; // Skip duplicate locations
+            console.log("Skipping duplicate location:", place.name);
+            continue;
           }
 
           const newPlace = await storage.createPlace({
@@ -191,35 +241,8 @@ export async function registerRoutes(app: Express) {
             isFixed: true
           });
         } catch (error: any) {
+          console.error(`Error scheduling ${timeSlot.location}:`, error);
           throw new Error(`Error scheduling ${timeSlot.location}: ${error.message}`);
-        }
-      }
-
-      // Handle lunch request specifically
-      if (parsed.preferences?.type?.includes('lunch')) {
-        const lunchPlace = await searchPlace(parsed.startLocation, {
-          type: 'restaurant',
-          openNow: true,
-          minRating: 4.0
-        });
-
-        if (lunchPlace) {
-          const lunchTime = parseTimeString('14:00', baseDate); // Handle "at 2" specification
-          const newPlace = await storage.createPlace({
-            placeId: lunchPlace.place_id,
-            name: lunchPlace.name,
-            address: lunchPlace.formatted_address,
-            location: lunchPlace.geometry.location,
-            details: lunchPlace,
-            scheduledTime: lunchTime.toISOString(),
-          });
-
-          scheduledPlaces.add(lunchPlace.place_id);
-          itineraryPlaces.push({
-            place: newPlace,
-            time: lunchTime,
-            isFixed: true
-          });
         }
       }
 
