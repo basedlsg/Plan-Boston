@@ -34,36 +34,53 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       model: "claude-3-5-sonnet-20241022",
       messages: [{
         role: "user",
-        content: `Extract locations and times from this London itinerary request. Format as JSON.
-Consider:
-- Locations can be neighborhoods (Fitzrovia, Soho), landmarks (Green Park, Tower Bridge), or areas
-- Times can be in 12-hour ("2pm", "2:00 PM") or 24-hour format ("14:00")
-- Activity types like "lunch", "dinner", "coffee", "shopping"
-- Requirements like "quiet", "non-crowded", "interesting"
+        content: `Extract locations, times, and activities from this London itinerary request. Format as JSON.
 
 Example input: "lunch in Green Park at 2 then go to Fitzrovia for a nice non-crowded interesting activity"
 Should identify:
-- "Green Park" as location with "lunch" at "14:00"
-- "Fitzrovia" as destination with requirements ["non-crowded", "interesting"]
+- Green Park with lunch at 14:00
+- Fitzrovia as destination
+- Type: "lunch" for first activity
+- Requirements: ["non-crowded", "interesting"]
 
 Input: ${query}
 
-Return JSON with:
+Format response as:
 {
-  "startLocation": "first location mentioned if no explicit start",
-  "destinations": ["other locations mentioned"],
-  "fixedTimes": [{"location": "place", "time": "HH:MM", "type": "activity_type"}],
+  "startLocation": "",
+  "destinations": [],
+  "fixedTimes": [
+    {
+      "location": "location name",
+      "time": "HH:MM",
+      "type": "activity type (e.g. restaurant, cafe)"
+    }
+  ],
   "preferences": {
     "type": "activity type if specified",
-    "requirements": ["any mentioned requirements"]
+    "requirements": ["requirements like quiet, non-crowded"]
   }
 }`
       }],
       max_tokens: 1000,
-      response_format: { type: "json_object" }
+      temperature: 0
     });
 
     const parsed = JSON.parse(response.content[0].text) as StructuredRequest;
+
+    // Use the first mentioned location as startLocation if none specified
+    if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
+      parsed.startLocation = parsed.fixedTimes[0].location;
+    } else if (!parsed.startLocation && parsed.destinations.length > 0) {
+      parsed.startLocation = parsed.destinations[0];
+    }
+
+    // For activities like "lunch", ensure we have a type
+    if (parsed.fixedTimes.length > 0 && !parsed.fixedTimes[0].type) {
+      if (parsed.preferences.type?.includes('lunch')) {
+        parsed.fixedTimes[0].type = 'restaurant';
+      }
+    }
 
     // Validate locations against our London areas data
     const validatedRequest = {

@@ -1,0 +1,203 @@
+[
+  {
+    "testRun": "2025-03-23T15:01:51.330Z",
+    "results": [
+      {
+        "timestamp": "2025-03-23T15:01:47.339Z",
+        "query": "Green Park",
+        "success": true,
+        "executionTimeMs": 532,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "The Green Park",
+          "formatted_address": "Green Park, London SW1A 1AA, UK",
+          "location": {
+            "lat": 51.5039416,
+            "lng": -0.1434016
+          },
+          "types": [
+            "park",
+            "tourist_attraction",
+            "point_of_interest",
+            "establishment"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:47.832Z",
+        "query": "Tower Bridge",
+        "success": true,
+        "executionTimeMs": 493,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Tower Bridge",
+          "formatted_address": "Tower Bridge Rd, London SE1 2UP, UK",
+          "location": {
+            "lat": 51.5054564,
+            "lng": -0.07535649999999999
+          },
+          "types": [
+            "tourist_attraction",
+            "point_of_interest",
+            "establishment"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:48.206Z",
+        "query": "Buckingham Palace",
+        "success": true,
+        "executionTimeMs": 374,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Buckingham Palace",
+          "formatted_address": "London SW1A 1AA, UK",
+          "location": {
+            "lat": 51.501364,
+            "lng": -0.14189
+          },
+          "types": [
+            "tourist_attraction",
+            "point_of_interest",
+            "establishment"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:48.680Z",
+        "query": "Fitzrovia",
+        "success": true,
+        "executionTimeMs": 474,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Fitzrovia",
+          "formatted_address": "Fitzrovia, London, UK",
+          "location": {
+            "lat": 51.5214993,
+            "lng": -0.1365872
+          },
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:49.151Z",
+        "query": "Shoreditch",
+        "success": true,
+        "executionTimeMs": 471,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Shoreditch",
+          "formatted_address": "Shoreditch, London, UK",
+          "location": {
+            "lat": 51.5229106,
+            "lng": -0.0777472
+          },
+          "types": [
+            "administrative_area_level_4",
+            "political"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:49.673Z",
+        "query": "Notting Hill",
+        "success": true,
+        "executionTimeMs": 522,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Notting Hill",
+          "formatted_address": "Notting Hill, London, UK",
+          "location": {
+            "lat": 51.5160125,
+            "lng": -0.2090148
+          },
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:50.195Z",
+        "query": "Borough Market",
+        "success": true,
+        "executionTimeMs": 522,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Borough Market",
+          "formatted_address": "London SE1 9AL, UK",
+          "location": {
+            "lat": 51.5055826,
+            "lng": -0.09048080000000001
+          },
+          "types": [
+            "tourist_attraction",
+            "point_of_interest",
+            "establishment"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:50.706Z",
+        "query": "Covent Garden",
+        "success": true,
+        "executionTimeMs": 511,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Covent Garden",
+          "formatted_address": "Covent Garden, London, UK",
+          "location": {
+            "lat": 51.5116571,
+            "lng": -0.1240436
+          },
+          "types": [
+            "sublocality_level_1",
+            "sublocality",
+            "political"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:51.041Z",
+        "query": "Oxford Street",
+        "success": true,
+        "executionTimeMs": 335,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Oxford Street",
+          "formatted_address": "Oxford St, London, UK",
+          "location": {
+            "lat": 51.5152548,
+            "lng": -0.1420194
+          },
+          "types": [
+            "route"
+          ]
+        }
+      },
+      {
+        "timestamp": "2025-03-23T15:01:51.330Z",
+        "query": "Piccadilly Circus",
+        "success": true,
+        "executionTimeMs": 289,
+        "errorMessage": null,
+        "placeDetails": {
+          "name": "Piccadilly Circus",
+          "formatted_address": "Piccadilly Circus, London, UK",
+          "location": {
+            "lat": 51.5098597,
+            "lng": -0.1342809
+          },
+          "types": [
+            "route"
+          ]
+        }
+      }
+    ]
+  }
+]

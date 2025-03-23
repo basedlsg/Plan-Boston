@@ -1,0 +1,123 @@
+I noticed the automated changes made to your codebase weren't what you requested. Let's focus specifically on testing the Google Places API location recognition without modifying your NLP implementation or installing unrelated packages.
+
+Let me create a simple test script to verify your landmark recognition improvements:
+
+1. Create a new file at `server/tests/landmark-recognition.ts`
+2. Implement direct tests for various London locations using your existing API
+3. Log results with detailed information for debugging
+
+Here's what we'll do:
+
+```
+I'll help test the location recognition in your London Day Planner without making unrelated changes to your codebase.
+
+Let's create a simple, focused test script:
+
+1. First, let's create a test file:
+   touch server/tests/landmark-recognition.ts
+
+2. Next, I'll add a basic test script that directly uses your searchPlace function:
+
+// Add this content to server/tests/landmark-recognition.ts:
+import { searchPlace } from '../lib/googlePlaces';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Test a variety of London landmarks and locations
+const testLocations = [
+  'Green Park',
+  'Tower Bridge',
+  'Buckingham Palace',
+  'Fitzrovia',
+  'Shoreditch',
+  'Notting Hill',
+  'Borough Market',
+  'Covent Garden',
+  'Oxford Street',
+  'Piccadilly Circus'
+];
+
+// Create logs directory if it doesn't exist
+const logsDir = path.join(__dirname, '..', 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+const logFile = path.join(logsDir, 'location-tests.json');
+
+async function runTests() {
+  const results = [];
+  
+  for (const location of testLocations) {
+    console.log(`Testing location: ${location}`);
+    const startTime = Date.now();
+    
+    try {
+      const result = await searchPlace(location, {});
+      const endTime = Date.now();
+      
+      const testResult = {
+        timestamp: new Date().toISOString(),
+        query: location,
+        success: !!result,
+        executionTimeMs: endTime - startTime,
+        errorMessage: null,
+        placeDetails: result ? {
+          name: result.name,
+          formatted_address: result.formatted_address,
+          place_id: result.place_id,
+          types: result.types
+        } : null
+      };
+      
+      results.push(testResult);
+      console.log(`Result: ${testResult.success ? 'SUCCESS' : 'FAILED'}`);
+      
+    } catch (error) {
+      const endTime = Date.now();
+      const testResult = {
+        timestamp: new Date().toISOString(),
+        query: location,
+        success: false,
+        executionTimeMs: endTime - startTime,
+        errorMessage: error.message,
+        placeDetails: null
+      };
+      
+      results.push(testResult);
+      console.log(`Error testing ${location}: ${error.message}`);
+    }
+  }
+  
+  // Save results to log file
+  let existingLogs = [];
+  try {
+    if (fs.existsSync(logFile)) {
+      existingLogs = JSON.parse(fs.readFileSync(logFile, 'utf8'));
+    }
+  } catch (error) {
+    console.error('Error reading existing logs:', error);
+  }
+  
+  existingLogs.push({
+    testRun: new Date().toISOString(),
+    results
+  });
+  
+  fs.writeFileSync(logFile, JSON.stringify(existingLogs, null, 2));
+  console.log(`Test results saved to ${logFile}`);
+  
+  // Summary
+  const successCount = results.filter(r => r.success).length;
+  console.log(`\nSummary: ${successCount}/${results.length} locations successfully recognized`);
+}
+
+runTests().catch(console.error);
+
+3. Now let's run the test:
+   npx tsx server/tests/landmark-recognition.ts
+
+This will test each location directly with your searchPlace function and create a detailed log of the results without modifying any of your existing code or NLP implementation.
+```
+
+This approach isolates the Google Places API testing from other components and gives you clean results to analyze.
