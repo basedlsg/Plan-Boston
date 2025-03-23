@@ -172,6 +172,10 @@ export async function registerRoutes(app: Express) {
       const parsed = await parseItineraryRequest(query);
       console.log("Parsed request:", parsed);
 
+      if (!parsed.startLocation) {
+        throw new Error("Please specify a starting location in your request. For example: 'Starting from Green Park...'");
+      }
+
       // Initialize base date from request or use current date
       const baseDate = date ? new Date(date) : new Date();
 

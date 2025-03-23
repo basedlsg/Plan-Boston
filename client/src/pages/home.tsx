@@ -65,7 +65,7 @@ export default function Home() {
     onError: (error: Error) => {
       toast({
         title: "Error creating itinerary",
-        description: error.message,
+        description: error.message || "Please ensure you've specified a starting location and any fixed appointments.",
         variant: "destructive",
       });
     },
@@ -139,7 +139,7 @@ export default function Home() {
                         <FormLabel>Your Plans</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="e.g. I'm at Green Park and need a quiet café to work until my dinner at Duck & Waffle at 8pm"
+                            placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
                             className="min-h-[120px] resize-y"
                             {...field}
                           />
