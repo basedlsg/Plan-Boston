@@ -20,6 +20,23 @@ export type StructuredRequest = {
   };
 };
 
+// Common London stations that don't always include "station" in references
+const COMMON_STATIONS = [
+  "Bank",
+  "Embankment",
+  "Liverpool Street",
+  "Charing Cross",
+  "Victoria",
+  "Waterloo",
+  "London Bridge"
+];
+
+// Starting location patterns
+const STARTING_PATTERNS = [
+  /(?:I'm|I am|starting|start|begin|beginning|currently)(?:\s+(?:from|at|in|near))?\s+(.+?)(?:\s+(?:at|and|,|--))/i,
+  /(?:from|at|in)\s+(.+?)(?:\s+(?:at|and|,|--))/i
+];
+
 // Helper to validate if a location exists in our London areas data
 function isKnownLondonArea(location: string): boolean {
   return londonAreas.some(area => 
@@ -28,13 +45,40 @@ function isKnownLondonArea(location: string): boolean {
   );
 }
 
+// Helper to extract starting location from text using patterns
+function extractStartingLocation(text: string): string | null {
+  for (const pattern of STARTING_PATTERNS) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      let location = match[1].trim();
+
+      // Add "station" if it's a common tube station
+      if (COMMON_STATIONS.includes(location) && !location.toLowerCase().includes("station")) {
+        location = `${location} Station`;
+      }
+
+      return location;
+    }
+  }
+  return null;
+}
+
 export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
   try {
+    // First try to extract starting location using patterns
+    const patternStartLocation = extractStartingLocation(query);
+
     const response = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       messages: [{
         role: "user",
         content: `Extract locations, times, and activities from this London itinerary request. Format as JSON.
+
+Note these special cases:
+- If a location like "Bank" or "Embankment" is mentioned without "station", assume it's a tube station
+- The starting location is: ${patternStartLocation || "not detected by pattern matching"}
+- Look for specific activity types (lunch, dinner, coffee, shopping) and their locations
+- Identify any requirements (quiet, non-crowded, interesting)
 
 Example input: "lunch in Green Park at 2 then go to Fitzrovia for a nice non-crowded interesting activity"
 Should identify:
@@ -68,8 +112,12 @@ Format response as:
 
     const parsed = JSON.parse(response.content[0].text) as StructuredRequest;
 
-    // Use the first mentioned location as startLocation if none specified
-    if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
+    // Use pattern-matched starting location if available
+    if (patternStartLocation && !parsed.startLocation) {
+      parsed.startLocation = patternStartLocation;
+    }
+    // Otherwise use the first mentioned location
+    else if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
       parsed.startLocation = parsed.fixedTimes[0].location;
     } else if (!parsed.startLocation && parsed.destinations.length > 0) {
       parsed.startLocation = parsed.destinations[0];
@@ -82,12 +130,25 @@ Format response as:
       }
     }
 
-    // Validate locations against our London areas data
+    // Add "station" to common station names if missing
+    const normalizeLocation = (loc: string) => {
+      if (COMMON_STATIONS.includes(loc) && !loc.toLowerCase().includes("station")) {
+        return `${loc} Station`;
+      }
+      return loc;
+    };
+
+    // Normalize all locations
     const validatedRequest = {
       ...parsed,
-      startLocation: parsed.startLocation && isKnownLondonArea(parsed.startLocation) ? parsed.startLocation : null,
-      destinations: parsed.destinations.filter(isKnownLondonArea),
-      fixedTimes: parsed.fixedTimes.filter(ft => isKnownLondonArea(ft.location))
+      startLocation: parsed.startLocation && isKnownLondonArea(normalizeLocation(parsed.startLocation)) 
+        ? normalizeLocation(parsed.startLocation) 
+        : null,
+      destinations: parsed.destinations.map(normalizeLocation).filter(isKnownLondonArea),
+      fixedTimes: parsed.fixedTimes.map(ft => ({
+        ...ft,
+        location: normalizeLocation(ft.location)
+      })).filter(ft => isKnownLondonArea(ft.location))
     };
 
     console.log("Parsed request:", validatedRequest);
