@@ -7,7 +7,7 @@ const anthropic = new Anthropic({
 });
 
 export type StructuredRequest = {
-  startLocation: string;
+  startLocation: string | null;
   destinations: string[];
   fixedTimes: Array<{
     location: string;
@@ -74,20 +74,26 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       model: "claude-3-5-sonnet-20241022",
       messages: [{
         role: "user",
-        content: `Extract locations, times, and activities from this London itinerary request. Format as JSON.
+        content: `Extract locations, times, and activities from this London itinerary request. Format as JSON with the following EXACT structure:
+{
+  "startLocation": string | null,
+  "destinations": string[],
+  "fixedTimes": Array<{
+    "location": string,
+    "time": string,
+    "type"?: string
+  }>,
+  "preferences": {
+    "type"?: string,
+    "requirements"?: string[]
+  }
+}
 
 Note these special cases:
 - If a location like "Bank" or "Embankment" is mentioned without "station", assume it's a tube station
 - The starting location is: ${patternStartLocation || "not detected by pattern matching"}
-- Look for specific activity types (lunch, dinner, coffee, shopping) and their locations
+- Look for specific activity types (lunch, dinner, coffee, shopping)
 - Identify any requirements (quiet, non-crowded, interesting)
-
-Example input: "lunch in Green Park at 2 then go to Fitzrovia for a nice non-crowded interesting activity"
-Should identify:
-- Green Park with lunch at 14:00
-- Fitzrovia as destination
-- Type: "lunch" for first activity
-- Requirements: ["non-crowded", "interesting"]
 
 Input: ${query}`
       }],
@@ -95,7 +101,23 @@ Input: ${query}`
       temperature: 0
     });
 
-    const parsed = JSON.parse(response.content[0].text) as StructuredRequest;
+    if (!response.content[0] || typeof response.content[0].text !== 'string') {
+      throw new Error("Invalid response format from language model");
+    }
+
+    // Parse response and ensure proper structure with defaults
+    const rawResponse = JSON.parse(response.content[0].text);
+    const parsed: StructuredRequest = {
+      startLocation: rawResponse.startLocation || null,
+      destinations: Array.isArray(rawResponse.destinations) ? rawResponse.destinations : [],
+      fixedTimes: Array.isArray(rawResponse.fixedTimes) ? rawResponse.fixedTimes : [],
+      preferences: {
+        type: rawResponse.preferences?.type || undefined,
+        requirements: Array.isArray(rawResponse.preferences?.requirements) 
+          ? rawResponse.preferences.requirements 
+          : []
+      }
+    };
 
     // Use pattern-matched starting location if available
     if (patternStartLocation && !parsed.startLocation) {

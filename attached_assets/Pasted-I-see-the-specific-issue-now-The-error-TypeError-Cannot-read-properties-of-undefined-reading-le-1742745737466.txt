@@ -1,0 +1,57 @@
+I see the specific issue now. The error `TypeError: Cannot read properties of undefined (reading 'length')` in `/server/lib/nlp.ts:105:57` indicates a null or undefined value is being accessed.
+
+This looks like an error in your NLP parsing logic where it's trying to access a property of an undefined object. The issue is likely in how your application is consuming Claude's response or parsing it.
+
+Here's how to fix this issue:
+
+1. Open the file `/server/lib/nlp.ts` and look at line 105.
+
+2. The error suggests you're trying to read a `.length` property from something that is undefined. This typically happens when:
+   - An API response is null or undefined
+   - The expected structure of data isn't what the code expects
+
+3. Add a null check before accessing the property:
+
+```typescript
+// Example fix for line 105:
+// Change from:
+const someValue = response.data.items.length;
+
+// To:
+const someValue = response?.data?.items?.length || 0;
+```
+
+4. If you're using Claude API, check that you're handling the response correctly:
+
+```typescript
+// Make sure your Claude response handling has proper checks:
+function parseItineraryRequest(text) {
+  try {
+    // Get response from Claude
+    const claudeResponse = await getResponseFromClaude(text);
+    
+    // Add defensive checks
+    if (!claudeResponse || !claudeResponse.content) {
+      throw new Error("Received invalid response from language model");
+    }
+    
+    // Safely access properties with optional chaining
+    const extractedPlaces = claudeResponse?.content?.[0]?.places || [];
+    
+    // Continue processing...
+    
+  } catch (error) {
+    console.error("Error parsing itinerary request:", error);
+    throw new Error("Failed to understand the itinerary request. Please try rephrasing it.");
+  }
+}
+```
+
+5. Add more detailed logging to see what's happening:
+
+```typescript
+// Add this near line 105:
+console.log("Claude response:", JSON.stringify(response, null, 2));
+```
+
+The core issue is that your code is trying to access a property on an undefined value. Fix the null handling in your NLP parsing logic, especially around line 105, and the error should be resolved.
