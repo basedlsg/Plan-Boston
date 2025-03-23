@@ -34,7 +34,10 @@ const COMMON_STATIONS = [
 // Starting location patterns
 const STARTING_PATTERNS = [
   /(?:I'm|I am|starting|start|begin|beginning|currently)(?:\s+(?:from|at|in|near))?\s+(.+?)(?:\s+(?:at|and|,|--))/i,
-  /(?:from|at|in)\s+(.+?)(?:\s+(?:at|and|,|--))/i
+  /(?:from|at|in)\s+(.+?)(?:\s+(?:at|and|,|--))/i,
+  // Add more general location extraction patterns
+  /(?:at|in|near)\s+(.+?)(?:\s+(?:at|and|,|--))/i,
+  /(?:to|towards?)\s+(.+?)(?:\s+(?:at|and|,|--))/i
 ];
 
 // Helper to validate if a location exists in our London areas data
@@ -62,6 +65,24 @@ function extractStartingLocation(text: string): string | null {
       return location;
     }
   }
+  return null;
+}
+
+// Helper to extract first location mentioned in text
+function extractFirstLocation(text: string): string | null {
+  // Look for locations after prepositions
+  const locationPatterns = [
+    /(?:at|in|near|by)\s+([A-Z][a-zA-Z\s]+?)(?:\s+(?:at|and|,|--))/,
+    /(?:to|towards?)\s+([A-Z][a-zA-Z\s]+?)(?:\s+(?:at|and|,|--))/
+  ];
+
+  for (const pattern of locationPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+  }
+
   return null;
 }
 
@@ -94,6 +115,7 @@ Note these special cases:
 - The starting location is: ${patternStartLocation || "not detected by pattern matching"}
 - Look for specific activity types (lunch, dinner, coffee, shopping)
 - Identify any requirements (quiet, non-crowded, interesting)
+- Treat any location mentioned with an activity (e.g. "dinner in Soho") as both an activity location and potential starting point
 
 Input: ${query}`
       }],
@@ -123,11 +145,19 @@ Input: ${query}`
     if (patternStartLocation && !parsed.startLocation) {
       parsed.startLocation = patternStartLocation;
     }
-    // Otherwise use the first mentioned location
+    // Otherwise use the first activity location as the starting point
     else if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
       parsed.startLocation = parsed.fixedTimes[0].location;
     } else if (!parsed.startLocation && parsed.destinations.length > 0) {
       parsed.startLocation = parsed.destinations[0];
+    }
+
+    // If still no starting location, extract first mentioned location
+    if (!parsed.startLocation) {
+      const firstLocation = extractFirstLocation(query);
+      if (firstLocation) {
+        parsed.startLocation = firstLocation;
+      }
     }
 
     // For activities like "lunch", ensure we have a type
@@ -163,11 +193,27 @@ Input: ${query}`
         .filter(ft => isKnownLondonArea(ft.location))
     };
 
+    // If no valid locations were found, throw a helpful error
+    if (!validatedRequest.startLocation && 
+        validatedRequest.destinations.length === 0 && 
+        validatedRequest.fixedTimes.length === 0) {
+      throw new Error(
+        "We need to know where in London you'll be. Try adding a neighborhood or landmark to your request.\n\n" +
+        "Examples:\n" +
+        "- \"I'm at Liverpool Street and want lunch\"\n" +
+        "- \"Find me dinner in Soho at 7pm\"\n" +
+        "- \"Plan a day starting from Green Park\""
+      );
+    }
+
     console.log("Parsed request:", validatedRequest);
     return validatedRequest;
 
   } catch (error) {
     console.error("Error parsing itinerary request:", error);
-    throw new Error("Failed to understand the itinerary request. Please try rephrasing it.");
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Failed to understand the itinerary request. Please try rephrasing it with a specific London location.");
   }
 }
