@@ -1,0 +1,138 @@
+// server/routes.ts or equivalent
+
+async function createItinerary(query, date, startTime) {
+  try {
+    // Parse the request with the more robust approach
+    const parsedRequest = await parseItineraryRequest(query);
+    
+    // Plan the itinerary using the parsed information
+    const itinerary = await planItinerary(parsedRequest, date, startTime);
+    
+    return itinerary;
+  } catch (error) {
+    console.error("Error creating itinerary:", error);
+    
+    // Provide a more helpful error message
+    if (error.message.includes("time format")) {
+      throw new Error("I didn't understand one of the times you mentioned. Try using formats like '2pm' or '14:00'.");
+    }
+    
+    if (!error.message.includes("starting location")) {
+      throw new Error("I couldn't understand your request. Could you try rephrasing it? For example: 'I'm at Green Park and want lunch, then visit the British Museum.'");
+    }
+    
+    throw error;
+  }
+}
+
+async function planItinerary(parsedRequest, date, startTime) {
+  // Start with empty itinerary
+  const itinerary = {
+    date,
+    startTime,
+    places: [],
+    travelTimes: []
+  };
+  
+  try {
+    // Process starting location
+    const startPlace = await processLocation(parsedRequest.startingLocation);
+    itinerary.places.push(startPlace);
+    
+    // Process activities with times
+    if (parsedRequest.activities && parsedRequest.activities.length > 0) {
+      for (const activity of parsedRequest.activities) {
+        try {
+          // Get the location data
+          const place = await processLocation(activity.location, activity.type);
+          
+          // Calculate travel time from previous location
+          const previousPlace = itinerary.places[itinerary.places.length - 1];
+          const travelTime = await calculateTravelTime(previousPlace, place);
+          
+          // Add to itinerary
+          place.scheduledTime = activity.time;
+          place.activityType = activity.type;
+          
+          itinerary.places.push(place);
+          itinerary.travelTimes.push(travelTime);
+        } catch (activityError) {
+          console.warn(`Could not add activity ${activity.type} at ${activity.location}: ${activityError.message}`);
+          // Continue with other activities rather than failing the entire itinerary
+        }
+      }
+    }
+    
+    // Fill in gaps with suggestions if needed
+    if (itinerary.places.length < 2) {
+      // Add some suggested activities based on starting location
+      const suggestions = await suggestActivitiesNear(parsedRequest.startingLocation, parsedRequest.preferences);
+      
+      for (const suggestion of suggestions.slice(0, 2)) {
+        const place = await processLocation(suggestion.location, suggestion.type);
+        const previousPlace = itinerary.places[itinerary.places.length - 1];
+        const travelTime = await calculateTravelTime(previousPlace, place);
+        
+        itinerary.places.push(place);
+        itinerary.travelTimes.push(travelTime);
+      }
+    }
+    
+    return itinerary;
+  } catch (error) {
+    console.error("Error planning itinerary:", error);
+    throw error;
+  }
+}
+
+// Process a location with better error handling and fallbacks
+async function processLocation(locationName, activityType = null) {
+  if (!locationName) {
+    throw new Error("No location provided");
+  }
+  
+  try {
+    // Try to find the location
+    const place = await searchPlace(locationName, { type: activityType });
+    return place;
+  } catch (error) {
+    // Try alternative approaches
+    
+    // 1. Try adding London context
+    try {
+      const placeWithLondon = await searchPlace(`${locationName}, London`, { type: activityType });
+      return placeWithLondon;
+    } catch (londonError) {
+      // 2. Try known aliases
+      const aliases = {
+        "green park": "The Green Park",
+        "hyde park": "Hyde Park",
+        "regents park": "Regent's Park",
+        // Add more as needed
+      };
+      
+      const normalizedName = locationName.toLowerCase();
+      if (aliases[normalizedName]) {
+        try {
+          const placeWithAlias = await searchPlace(aliases[normalizedName], { type: activityType });
+          return placeWithAlias;
+        } catch (aliasError) {
+          // Fall through to original error
+        }
+      }
+      
+      // 3. If it's an activity type, try general search
+      if (activityType) {
+        try {
+          const generalPlace = await searchPlace(`${activityType} in London`, { type: activityType });
+          return generalPlace;
+        } catch (generalError) {
+          // Fall through
+        }
+      }
+      
+      // Re-throw the original error with more context
+      throw new Error(`Could not find "${locationName}". Try being more specific or using the full name.`);
+    }
+  }
+}

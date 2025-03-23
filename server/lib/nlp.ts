@@ -96,18 +96,16 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       max_tokens: 1000,
       messages: [{
         role: "user",
-        content: `You are a London itinerary planner. Parse this request into structured data.
+        content: `You are helping parse London day planning requests.
+Extract:
+1. Starting location (default to first mentioned location if no explicit start)
+2. All mentioned locations (neighborhoods, landmarks, streets)
+3. Activities with times, formatted as ISO time strings (convert informal times like "2pm" to "14:00")
+4. Activity types and preferences
 
-Request: ${query}
+Parse this request: "${query}"
 
-Important Notes:
-- If locations like "Bank" or "Embankment" are mentioned without "station", treat them as tube stations
-- The starting location detected by pattern matching is: ${patternStartLocation || "none"}
-- Treat any location with an activity (e.g. "dinner in Soho") as both an activity location and potential starting point
-- Activity types include: lunch, dinner, coffee, shopping
-- Look for preferences like: quiet, non-crowded, interesting
-
-Return your response in this exact JSON format:
+Return JSON only, no explanations, in this exact format:
 {
   "startLocation": string | null,
   "destinations": string[],
@@ -140,7 +138,7 @@ Return your response in this exact JSON format:
     if (patternStartLocation && !parsed.startLocation) {
       parsed.startLocation = patternStartLocation;
     }
-    // Otherwise use the first activity location as the starting point
+    // Otherwise use the first activity location as starting point
     else if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
       parsed.startLocation = parsed.fixedTimes[0].location;
     } else if (!parsed.startLocation && parsed.destinations.length > 0) {
