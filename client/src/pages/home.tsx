@@ -27,18 +27,17 @@ export default function Home() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState<string>("");
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Fetch current server time when component mounts
-  useEffect(() => {
+  useState(() => {
     fetch("/api/time")
       .then(res => res.json())
       .then(data => {
-        const localDate = new Date(data.currentTime);
-        setCurrentTime(formatInTimeZone(localDate, timeZone, "yyyy-MM-dd'T'HH:mm"));
+        const date = new Date(data.currentTime);
+        setCurrentTime(format(date, "yyyy-MM-dd'T'HH:mm"));
       })
       .catch(console.error);
-  }, []);
+  });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
