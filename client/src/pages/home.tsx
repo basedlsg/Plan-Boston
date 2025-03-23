@@ -30,23 +30,24 @@ export default function Home() {
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState<string>("");
 
-  // Fetch current server time when component mounts
+  // Update the currentTime state initialization
   useState(() => {
     fetch("/api/time")
       .then(res => res.json())
       .then(data => {
-        const date = new Date(data.currentTime);
-        setCurrentTime(format(date, "yyyy-MM-dd'T'HH:mm"));
+        const localDate = new Date(data.currentTime);
+        setCurrentTime(format(localDate, "yyyy-MM-dd'T'HH:mm"));
       })
       .catch(console.error);
   });
 
+  // Update the form initialization to use current time
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       query: "",
       date: format(new Date(), "yyyy-MM-dd"),
-      startTime: "09:00",
+      startTime: format(new Date(), "HH:mm"), // Use current time instead of hardcoded 9 AM
     },
   });
 
