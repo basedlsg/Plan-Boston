@@ -1,0 +1,74 @@
+1. Fix Incorrect Location Normalization
+
+Remove all hardcoded location mappings that incorrectly convert distinct neighborhoods
+Use the Google Places API to validate locations directly without intermediate mappings
+Preserve neighborhood names in their original form (e.g., keep "Mayfair" as "Mayfair", not "Green Park")
+Add a London location validation system that differentiates between neighborhoods, landmarks, and streets
+
+2. Overhaul Activity Type Handling
+
+Create a proper mapping system that converts natural language activities to appropriate Google Places API types:
+
+"breakfast/lunch/dinner" → "restaurant"
+"coffee" → "cafe"
+"meeting" → should NOT be used as a venue type parameter
+"arrive" → should NOT be used as a venue type parameter
+
+
+For non-venue activities like "meeting", use the activity for scheduling but don't send it to the Places API
+Add context-specific venue searches (e.g., for "meeting" look for appropriate venues like "coffee_shop" or "restaurant")
+
+3. Improve Venue Diversity & Relevance
+
+Expand search parameters to return multiple options, not just the first result
+Add ranking mechanisms that prioritize venues based on:
+
+Relevance to the activity type
+Distance from the location
+Ratings and reviews
+
+
+Implement a diversity filter to avoid returning the same venue for different queries
+Store previously recommended venues to avoid duplication in the same itinerary
+
+4. Implement Smart Starting Location Handling
+
+When no starting location is specified, implement a graceful fallback:
+
+If a destination is mentioned, use that as the starting point for a circular journey
+For early morning requests, default to major transport hubs (Liverpool St., King's Cross, etc.)
+Use time of day to suggest logical starting points
+
+
+Provide clear, conversational feedback when making assumptions about starting locations
+
+5. Fix Time Interpretation
+
+Add support for relative time references:
+
+"morning" → 9:00-11:00
+"afternoon" → 12:00-17:00
+"evening" → 17:00-21:00
+
+
+Handle approximate times with reasonable defaults
+Convert all recognized time patterns to standard format before processing
+
+6. Implement Structural Changes
+
+Separate the location validation logic from activity search logic
+Create a two-stage process:
+
+First identify and validate all locations mentioned
+Then search for appropriate venues for each activity at each location
+
+
+Add comprehensive error handling that provides useful feedback when locations or activities are ambiguous
+
+Implementation Approach
+
+Update the NLP module to properly distinguish between neighborhoods, activities, and times
+Rewrite the location normalization logic to preserve original location names
+Create a separate module for activity-to-venue-type mapping
+Implement a more sophisticated search strategy that returns diverse, relevant results
+Add input validation with helpful error messages for partial or ambiguous inputs
