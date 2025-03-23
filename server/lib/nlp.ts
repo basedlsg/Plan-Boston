@@ -95,40 +95,35 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       model: "claude-3-5-sonnet-20241022",
       messages: [{
         role: "user",
-        content: `Extract locations, times, and activities from this London itinerary request. Format as JSON with the following EXACT structure:
+        content: `Extract locations, times, and activities from this London itinerary request. Format the response as JSON with the following structure:
 {
   "startLocation": string | null,
   "destinations": string[],
-  "fixedTimes": Array<{
-    "location": string,
-    "time": string,
-    "type"?: string
-  }>,
-  "preferences": {
-    "type"?: string,
-    "requirements"?: string[]
-  }
+  "fixedTimes": [{"location": string, "time": string, "type"?: string}],
+  "preferences": {"type"?: string, "requirements"?: string[]}
 }
 
-Note these special cases:
-- If a location like "Bank" or "Embankment" is mentioned without "station", assume it's a tube station
+Note:
+- For locations like "Bank" or "Embankment", treat as tube stations
 - The starting location is: ${patternStartLocation || "not detected by pattern matching"}
-- Look for specific activity types (lunch, dinner, coffee, shopping)
-- Identify any requirements (quiet, non-crowded, interesting)
-- Treat any location mentioned with an activity (e.g. "dinner in Soho") as both an activity location and potential starting point
+- Treat any location with an activity (e.g. "dinner in Soho") as both an activity location and potential starting point
+- Extract activity types (lunch, dinner, coffee, shopping)
+- Look for requirements (quiet, non-crowded, interesting)
 
 Input: ${query}`
       }],
       max_tokens: 1000,
-      temperature: 0
+      temperature: 0,
+      response_format: { type: "json_object" }
     });
 
-    if (!response.content[0] || typeof response.content[0].text !== 'string') {
+    const content = response.content[0]?.type === 'text' ? response.content[0].text : null;
+    if (!content) {
       throw new Error("Invalid response format from language model");
     }
 
     // Parse response and ensure proper structure with defaults
-    const rawResponse = JSON.parse(response.content[0].text);
+    const rawResponse = JSON.parse(content);
     const parsed: StructuredRequest = {
       startLocation: rawResponse.startLocation || null,
       destinations: Array.isArray(rawResponse.destinations) ? rawResponse.destinations : [],
