@@ -14,6 +14,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { generateICS } from "@/lib/ics";
 import type { Itinerary, Place } from "@shared/schema";
 import { format } from "date-fns";
+import { TimeInput } from "@/components/TimeInput";
+import { formatDateTime, formatTime, getLocalTimeNow } from "@/lib/dateUtils";
 
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
@@ -110,9 +112,10 @@ export default function Home() {
                   <FormItem>
                     <FormLabel>Start Time</FormLabel>
                     <FormControl>
-                      <Input
-                        type="time"
-                        {...field}
+                      <TimeInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        className="w-full"
                       />
                     </FormControl>
                   </FormItem>
@@ -176,7 +179,7 @@ export default function Home() {
                             <h3 className="font-semibold">{place.name}</h3>
                             {place.scheduledTime && (
                               <span className="text-sm text-muted-foreground">
-                                {format(new Date(place.scheduledTime), 'h:mm a')}
+                                {formatTime(place.scheduledTime)}
                               </span>
                             )}
                           </div>
