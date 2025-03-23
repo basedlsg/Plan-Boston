@@ -75,7 +75,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto space-y-8">
           <div className="text-center space-y-4">
             <h1 className="text-4xl font-bold tracking-tight">
-              London Day Planner
+              Plan
             </h1>
             <p className="text-muted-foreground">
               Tell us your plans and we'll create a verified itinerary
