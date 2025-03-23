@@ -1,4 +1,5 @@
 import type { PlaceDetails } from "@shared/schema";
+import { normalizeLocationName, verifyPlaceMatch, suggestSimilarLocations } from "./locationNormalizer";
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
@@ -14,14 +15,18 @@ export async function searchPlace(
   options: SearchOptions = {}
 ): Promise<PlaceDetails | null> {
   try {
+    // Normalize the location name first
+    const normalizedLocation = normalizeLocationName(query);
+    console.log(`Normalized location: ${query} -> ${normalizedLocation}`);
+
     // Handle landmarks vs amenities differently
     const isAmenitySearch = !!options.type;
-    
-    let searchQuery = query;
-    if (!query.toLowerCase().includes('london')) {
+
+    let searchQuery = normalizedLocation;
+    if (!normalizedLocation.toLowerCase().includes('london')) {
       searchQuery = isAmenitySearch 
-        ? `${query}, London, UK`  // Full context for amenities
-        : `${query}, London`;     // Simpler context for landmarks
+        ? `${normalizedLocation}, London, UK`  // Full context for amenities
+        : `${normalizedLocation}, London`;     // Simpler context for landmarks
     }
 
     // Build search URL with parameters
@@ -56,14 +61,6 @@ export async function searchPlace(
       params: Object.fromEntries(params)
     });
 
-    console.log('Places API Request Details:', {
-      fullQuery: searchQuery,
-      originalQuery: query,
-      parameters: Object.fromEntries(params),
-      options,
-      timestamp: new Date().toISOString()
-    });
-
     console.log('Places API Response:', {
       status: searchData.status,
       resultsCount: searchData.results?.length,
@@ -74,26 +71,29 @@ export async function searchPlace(
         placeId: searchData.results[0].place_id,
         formattedAddress: searchData.results[0].formatted_address,
         geometry: searchData.results[0].geometry
-      } : null,
-      allResults: searchData.results?.map(r => ({
-        name: r.name,
-        types: r.types,
-        rating: r.rating
-      }))
+      } : null
     });
 
     if (searchData.status !== "OK") {
+      const suggestions = suggestSimilarLocations(query);
+      const suggestionText = suggestions.length > 0 
+        ? `Did you mean: ${suggestions.join(', ')}?` 
+        : '';
+
       console.error(`Google Places API Error for query "${query}":`, {
         status: searchData.status,
         error_message: searchData.error_message,
-        results: searchData.results
+        suggestions
       });
-      return null;
+      throw new Error(`Could not find "${query}". ${suggestionText}`);
     }
 
     if (!searchData.results?.length) {
-      console.warn(`No results found for "${query}". Full response:`, searchData); // Changed to warn
-      return null;
+      const suggestions = suggestSimilarLocations(query);
+      throw new Error(
+        `No results found for "${query}". ` +
+        (suggestions.length > 0 ? `Did you mean: ${suggestions.join(', ')}?` : '')
+      );
     }
 
     // Filter results by rating if specified
@@ -105,6 +105,11 @@ export async function searchPlace(
       if (qualifiedResults.length > 0) {
         bestResult = qualifiedResults[0];
       }
+    }
+
+    // Verify the result matches what was requested
+    if (!verifyPlaceMatch(query, bestResult.name, bestResult.types)) {
+      console.warn(`Place match verification failed for "${query}". Got "${bestResult.name}" instead.`);
     }
 
     // Get more details including opening hours
@@ -124,7 +129,7 @@ export async function searchPlace(
     // Some venues might not have a business_status
     if (detailsData.result.business_status && 
         detailsData.result.business_status !== "OPERATIONAL") {
-      console.warn(`Place not operational: "${query}"`, detailsData.result); // Changed to warn
+      console.warn(`Place not operational: "${query}"`, detailsData.result);
       return null;
     }
 
@@ -134,6 +139,6 @@ export async function searchPlace(
     };
   } catch (error) {
     console.error(`Error searching place "${query}":`, error);
-    return null;
+    throw error; // Re-throw to handle suggestions in the calling code
   }
 }
