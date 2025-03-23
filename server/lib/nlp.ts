@@ -1,3 +1,4 @@
+import { z } from "zod";
 import Anthropic from '@anthropic-ai/sdk';
 import type { PlaceDetails } from "@shared/schema";
 import { londonAreas } from "../data/london-areas";
@@ -11,8 +12,8 @@ export type StructuredRequest = {
   destinations: string[];
   fixedTimes: Array<{
     location: string;
-    time: string;  // Format: "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour)
-    type?: string; // e.g., "restaurant" for lunch
+    time: string;  // Format: "HH:MM" (24-hour)
+    type?: string; // e.g., "restaurant", "cafe"
   }>;
   preferences: {
     type?: string;
@@ -31,11 +32,20 @@ const COMMON_STATIONS = [
   "London Bridge"
 ];
 
-// Starting location patterns
+// Common activity types and their variations
+const ACTIVITY_TYPES = {
+  restaurant: ["lunch", "dinner", "eat", "food", "restaurant", "dining"],
+  cafe: ["coffee", "cafe", "breakfast", "brunch"],
+  bar: ["drink", "pub", "bar", "cocktail"],
+  shopping: ["shop", "shopping", "store", "retail"],
+  culture: ["museum", "gallery", "exhibition", "art"],
+  park: ["park", "garden", "outdoor", "walk"]
+};
+
+// Starting location patterns - more flexible for various phrasings
 const STARTING_PATTERNS = [
   /(?:I'm|I am|starting|start|begin|beginning|currently)(?:\s+(?:from|at|in|near))?\s+(.+?)(?:\s+(?:at|and|,|--))/i,
   /(?:from|at|in)\s+(.+?)(?:\s+(?:at|and|,|--))/i,
-  // Add more general location extraction patterns
   /(?:at|in|near)\s+(.+?)(?:\s+(?:at|and|,|--))/i,
   /(?:to|towards?)\s+(.+?)(?:\s+(?:at|and|,|--))/i
 ];
@@ -86,6 +96,39 @@ function extractFirstLocation(text: string): string | null {
   return null;
 }
 
+// Helper to normalize time strings to 24-hour format
+function normalizeTimeString(time: string): string {
+  // Already in 24-hour format
+  if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
+    return time;
+  }
+
+  // Convert 12-hour format with am/pm
+  const twelveHour = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i;
+  const match = time.toLowerCase().match(twelveHour);
+
+  if (match) {
+    let [_, hours, minutes = "00", meridian] = match;
+    let hour = parseInt(hours);
+
+    if (meridian === "pm" && hour < 12) hour += 12;
+    if (meridian === "am" && hour === 12) hour = 0;
+
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
+  }
+
+  // Handle informal times
+  const informal = /^(\d{1,2})(?:\s*(?:ish|around|about|approximately))?$/;
+  const informalMatch = time.match(informal);
+
+  if (informalMatch) {
+    const hour = parseInt(informalMatch[1]);
+    return `${hour.toString().padStart(2, '0')}:00`;
+  }
+
+  throw new Error(`Could not parse time: ${time}`);
+}
+
 export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
   try {
     // First try to extract starting location using patterns
@@ -96,14 +139,13 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       max_tokens: 1000,
       messages: [{
         role: "user",
-        content: `You are helping parse London day planning requests.
-Extract:
-1. Starting location (default to first mentioned location if no explicit start)
-2. All mentioned locations (neighborhoods, landmarks, streets)
-3. Activities with times, formatted as ISO time strings (convert informal times like "2pm" to "14:00")
-4. Activity types and preferences
+        content: `Parse this London itinerary request: "${query}"
 
-Parse this request: "${query}"
+Extract the core elements regardless of phrasing:
+1. LOCATIONS: Any mentioned place in London (neighborhoods, landmarks, streets, stations)
+2. ACTIVITIES: What they want to do (dining, sightseeing, etc.)
+3. TIMES: When activities should occur (convert to 24-hour format)
+4. PREFERENCES: Desired qualities (quiet, fancy, cheap, etc.)
 
 Return JSON only, no explanations, in this exact format:
 {
@@ -115,13 +157,12 @@ Return JSON only, no explanations, in this exact format:
       }]
     });
 
-    const content = response.content[0]?.type === 'text' ? response.content[0].text : null;
-    if (!content) {
+    if (!response.content[0] || typeof response.content[0].text !== 'string') {
       throw new Error("Invalid response format from language model");
     }
 
     // Parse response and ensure proper structure with defaults
-    const rawResponse = JSON.parse(content);
+    const rawResponse = JSON.parse(response.content[0].text);
     const parsed: StructuredRequest = {
       startLocation: rawResponse.startLocation || null,
       destinations: Array.isArray(rawResponse.destinations) ? rawResponse.destinations : [],
@@ -181,7 +222,8 @@ Return JSON only, no explanations, in this exact format:
       fixedTimes: (parsed.fixedTimes || [])
         .map(ft => ({
           ...ft,
-          location: normalizeLocation(ft.location)
+          location: normalizeLocation(ft.location),
+          time: normalizeTimeString(ft.time) // Normalize time here
         }))
         .filter(ft => isKnownLondonArea(ft.location))
     };
