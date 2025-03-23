@@ -38,7 +38,9 @@ const STARTING_PATTERNS = [
 ];
 
 // Helper to validate if a location exists in our London areas data
-function isKnownLondonArea(location: string): boolean {
+function isKnownLondonArea(location: string | null | undefined): boolean {
+  if (!location || typeof location !== 'string') return false;
+
   return londonAreas.some(area => 
     area.name.toLowerCase() === location.toLowerCase() ||
     area.neighbors.some(n => n.toLowerCase() === location.toLowerCase())
@@ -87,24 +89,7 @@ Should identify:
 - Type: "lunch" for first activity
 - Requirements: ["non-crowded", "interesting"]
 
-Input: ${query}
-
-Format response as:
-{
-  "startLocation": "",
-  "destinations": [],
-  "fixedTimes": [
-    {
-      "location": "location name",
-      "time": "HH:MM",
-      "type": "activity type (e.g. restaurant, cafe)"
-    }
-  ],
-  "preferences": {
-    "type": "activity type if specified",
-    "requirements": ["requirements like quiet, non-crowded"]
-  }
-}`
+Input: ${query}`
       }],
       max_tokens: 1000,
       temperature: 0
@@ -131,7 +116,8 @@ Format response as:
     }
 
     // Add "station" to common station names if missing
-    const normalizeLocation = (loc: string) => {
+    const normalizeLocation = (loc: string): string => {
+      if (!loc) return '';
       if (COMMON_STATIONS.includes(loc) && !loc.toLowerCase().includes("station")) {
         return `${loc} Station`;
       }
@@ -144,11 +130,15 @@ Format response as:
       startLocation: parsed.startLocation && isKnownLondonArea(normalizeLocation(parsed.startLocation)) 
         ? normalizeLocation(parsed.startLocation) 
         : null,
-      destinations: parsed.destinations.map(normalizeLocation).filter(isKnownLondonArea),
-      fixedTimes: parsed.fixedTimes.map(ft => ({
-        ...ft,
-        location: normalizeLocation(ft.location)
-      })).filter(ft => isKnownLondonArea(ft.location))
+      destinations: (parsed.destinations || [])
+        .map(normalizeLocation)
+        .filter(isKnownLondonArea),
+      fixedTimes: (parsed.fixedTimes || [])
+        .map(ft => ({
+          ...ft,
+          location: normalizeLocation(ft.location)
+        }))
+        .filter(ft => isKnownLondonArea(ft.location))
     };
 
     console.log("Parsed request:", validatedRequest);
