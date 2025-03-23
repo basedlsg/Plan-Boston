@@ -53,84 +53,67 @@ function findInterestingActivities(
   preferences: { type?: string; requirements?: string[] } = {}
 ): string[] {
   const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+  const hour = parseInt(timeOfDay.split(':')[0]);
+
+  // Handle lunch-specific requests
+  if (hour >= 12 && hour <= 15 && preferences.type?.includes('lunch')) {
+    return [`restaurant near ${location}`];
+  }
 
   // If user wants non-crowded places, use the quiet areas helper
   if (preferences.requirements?.includes('non-crowded')) {
     const quietAreas = findQuietAreas(timeOfDay, isWeekend, location);
     if (quietAreas.length > 0) {
-      return quietAreas.slice(0, 2).map(area => 
-        `${preferences.type || 'activity'} in ${area.name}`
-      );
+      const suggestions = quietAreas.slice(0, 2).map(area => {
+        const timeSlot = hour < 12 ? 'morning'
+                      : hour < 14 ? 'midday'
+                      : hour < 17 ? 'afternoon'
+                      : 'evening';
+
+        // Get activity type based on time of day
+        const activities = {
+          morning: ['artisan cafe', 'specialty coffee'],
+          midday: ['gallery', 'museum'],
+          afternoon: ['boutique shopping', 'tea room'],
+          evening: ['wine bar', 'cocktail bar']
+        };
+
+        const areaActivities = activities[timeSlot];
+        const activity = areaActivities[Math.floor(Math.random() * areaActivities.length)];
+        return `${activity} in ${area.name}`;
+      });
+      return suggestions;
     }
   }
 
   // Find areas matching other characteristics
   const matchingAreas = findAreasByCharacteristics(
     preferences.requirements || [],
-    [location] // Exclude current location to prevent duplicates
+    [location]
   );
 
   if (matchingAreas.length > 0) {
-    return matchingAreas.slice(0, 2).map(area => 
-      `${preferences.type || 'interesting activity'} in ${area.name}`
-    );
+    return matchingAreas.slice(0, 1).map(area => {
+      const timeAppropriate = hour >= 17 ? 'evening activity' : 'afternoon activity';
+      return `interesting ${timeAppropriate} in ${area.name}`;
+    });
   }
 
-  // Fallback to default activities if no specific matches
-  const activities = {
-    morning: [
-      'artisan bakery',
-      'farmers market',
-      'specialty coffee roaster',
-      'local breakfast spot'
-    ],
-    midday: [
-      'art gallery',
-      'museum',
-      'historic site',
-      'garden',
-      'cultural center',
-      'lunch spot'
-    ],
-    afternoon: [
-      'boutique shopping',
-      'tea room',
-      'local market',
-      'design gallery'
-    ],
-    evening: [
-      'wine bar',
-      'jazz club',
-      'cocktail bar',
-      'art cinema'
-    ]
+  // Default suggestions based on time
+  const defaultActivities = {
+    morning: ['artisan cafe', 'breakfast spot'],
+    midday: ['lunch restaurant', 'bistro'],
+    afternoon: ['tea room', 'art gallery'],
+    evening: ['wine bar', 'cocktail bar']
   };
 
-  // Select appropriate activities based on time of day
-  const hour = parseInt(timeOfDay.split(':')[0]);
-  const timeSlot = hour < 12 ? 'morning' 
+  const timeSlot = hour < 12 ? 'morning'
                 : hour < 14 ? 'midday'
                 : hour < 17 ? 'afternoon'
                 : 'evening';
 
-  const selectedActivities = [];
-
-  // For longer durations, suggest multiple varied activities
-  const activityCount = Math.min(Math.ceil(duration / 2), 3);
-
-  // Get activities from current time slot
-  const currentActivities = activities[timeSlot].filter(a => 
-    !selectedActivities.includes(a)
-  );
-
-  selectedActivities.push(
-    ...currentActivities
-      .sort(() => Math.random() - 0.5)
-      .slice(0, activityCount)
-  );
-
-  // Add location context to each activity
-  return selectedActivities.map(activity => `${activity} near ${location}`);
+  const activities = defaultActivities[timeSlot];
+  return [`${activities[0]} near ${location}`];
 }
 
 // Update the /api/plan endpoint to handle fixed appointments better
@@ -139,7 +122,7 @@ export async function registerRoutes(app: Express) {
 
   // Add endpoint to get current server time
   app.get("/api/time", (_req, res) => {
-    res.json({ 
+    res.json({
       currentTime: new Date().toISOString(),
       timestamp: Date.now()
     });
@@ -147,7 +130,7 @@ export async function registerRoutes(app: Express) {
 
   app.post("/api/plan", async (req, res) => {
     try {
-      const requestSchema = z.object({ 
+      const requestSchema = z.object({
         query: z.string(),
         date: z.string().optional(),
         startTime: z.string().optional()
@@ -165,7 +148,7 @@ export async function registerRoutes(app: Express) {
 
       // Initialize base date and time
       const baseDate = date ? new Date(date) : new Date();
-      let currentTime = startTime 
+      let currentTime = startTime
         ? parseTimeString(startTime, baseDate)
         : new Date(baseDate.setHours(9, 0, 0, 0));
 
@@ -205,6 +188,35 @@ export async function registerRoutes(app: Express) {
           throw new Error(`Error scheduling ${timeSlot.location}: ${error.message}`);
         }
       }
+
+      //Added Lunch handling
+      if (parsed.preferences?.type?.includes('lunch')) {
+        const lunchPlace = await searchPlace(parsed.startLocation, {
+          type: 'restaurant',
+          openNow: true,
+          minRating: 4.0
+        });
+
+        if (lunchPlace) {
+          const lunchTime = parseTimeString('14:00', baseDate); // Handle "at 2" specification
+          const newPlace = await storage.createPlace({
+            placeId: lunchPlace.place_id,
+            name: lunchPlace.name,
+            address: lunchPlace.formatted_address,
+            location: lunchPlace.geometry.location,
+            details: lunchPlace,
+            scheduledTime: lunchTime.toISOString(),
+          });
+
+          scheduledPlaces.add(lunchPlace.place_id);
+          itineraryPlaces.push({
+            place: newPlace,
+            time: lunchTime,
+            isFixed: true
+          });
+        }
+      }
+
 
       // Sort fixed appointments chronologically
       itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());

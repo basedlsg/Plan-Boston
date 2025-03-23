@@ -3,21 +3,43 @@ import type { PlaceDetails } from "@shared/schema";
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
 
-export async function searchPlace(query: string): Promise<PlaceDetails | null> {
-  try {
-    // Add London context if not present
-    const searchQuery = query.toLowerCase().includes('london') 
-      ? query 
-      : `${query}, London, UK`; // Changed to include UK and use comma
+interface SearchOptions {
+  type?: string;
+  openNow?: boolean;
+  minRating?: number;
+}
 
-    const searchUrl = `${PLACES_API_BASE}/textsearch/json?query=${encodeURIComponent(
-      searchQuery
-    )}&region=uk&key=${GOOGLE_PLACES_API_KEY}`;
+export async function searchPlace(
+  query: string, 
+  options: SearchOptions = {}
+): Promise<PlaceDetails | null> {
+  try {
+    // Add London context and venue type if not present
+    let searchQuery = query.toLowerCase().includes('london') 
+      ? query 
+      : `${query}, London, UK`;
+
+    // Add type specific context
+    if (options.type) {
+      searchQuery = `${options.type} ${searchQuery}`;
+    }
+
+    // Build search URL with parameters
+    const params = new URLSearchParams({
+      query: searchQuery,
+      region: 'uk',
+      key: GOOGLE_PLACES_API_KEY || '',
+    });
+
+    if (options.openNow) {
+      params.append('opennow', 'true');
+    }
+
+    const searchUrl = `${PLACES_API_BASE}/textsearch/json?${params.toString()}`;
 
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
 
-    // Detailed error logging
     if (searchData.status !== "OK") {
       console.error(`Google Places API Error for query "${query}":`, {
         status: searchData.status,
@@ -27,15 +49,24 @@ export async function searchPlace(query: string): Promise<PlaceDetails | null> {
       return null;
     }
 
-    // Better error handling
     if (!searchData.results?.length) {
       console.error(`No results found for "${query}". Full response:`, searchData);
       return null;
     }
 
+    // Filter results by rating if specified
+    let bestResult = searchData.results[0];
+    if (options.minRating) {
+      const qualifiedResults = searchData.results.filter(
+        (r: any) => r.rating >= options.minRating
+      );
+      if (qualifiedResults.length > 0) {
+        bestResult = qualifiedResults[0];
+      }
+    }
+
     // Get more details including opening hours
-    const placeId = searchData.results[0].place_id;
-    const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${placeId}&fields=name,formatted_address,geometry,opening_hours,business_status&key=${GOOGLE_PLACES_API_KEY}`;
+    const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${bestResult.place_id}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level&key=${GOOGLE_PLACES_API_KEY}`;
 
     const detailsRes = await fetch(detailsUrl);
     const detailsData = await detailsRes.json();
@@ -48,13 +79,17 @@ export async function searchPlace(query: string): Promise<PlaceDetails | null> {
       return null;
     }
 
-    // Some areas might not have a business_status, so we'll skip that check for them
-    if (detailsData.result.business_status && detailsData.result.business_status !== "OPERATIONAL") {
+    // Some venues might not have a business_status
+    if (detailsData.result.business_status && 
+        detailsData.result.business_status !== "OPERATIONAL") {
       console.error(`Place not operational: "${query}"`, detailsData.result);
       return null;
     }
 
-    return detailsData.result;
+    return {
+      ...detailsData.result,
+      place_id: bestResult.place_id
+    };
   } catch (error) {
     console.error(`Error searching place "${query}":`, error);
     return null;
