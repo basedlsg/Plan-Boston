@@ -54,7 +54,7 @@ export async function getWeatherForecast(latitude: number, longitude: number): P
   url.searchParams.append('lat', latitude.toString());
   url.searchParams.append('lon', longitude.toString());
   url.searchParams.append('units', 'metric'); // Use Celsius
-  url.searchParams.append('exclude', 'minutely,alerts');
+  url.searchParams.append('cnt', '24'); // 24 forecasts (3-hour intervals for 3 days)
   url.searchParams.append('appid', WEATHER_API_KEY);
   
   try {
@@ -178,36 +178,63 @@ export async function getWeatherAwareVenue(
   longitude: number,
   visitTime: Date
 ): Promise<{venue: PlaceDetails, weatherSuitable: boolean}> {
+  // Default to the original place if anything fails
+  let bestVenue = place;
+  let isWeatherSuitable = true;
+  
   try {
-    // Default to the original place if anything fails
-    let bestVenue = place;
-    let isWeatherSuitable = true;
-    
-    // Skip weather check if there are no alternatives
-    if (!alternatives || alternatives.length === 0) {
+    // Skip weather check if there are no alternatives or no API key
+    if (!alternatives || alternatives.length === 0 || !process.env.WEATHER_API_KEY) {
+      console.log("Skipping weather check - no alternatives or API key missing");
       return { venue: place, weatherSuitable: true };
     }
     
     // Check if original place is outdoors
     if (place.types && isVenueOutdoor(place.types)) {
-      // Fetch weather data
-      const weatherData = await getWeatherForecast(latitude, longitude);
-      
-      // Check if weather is suitable for outdoor activities
-      isWeatherSuitable = isWeatherSuitableForOutdoor(weatherData, visitTime);
-      
-      // If weather is bad for outdoor activities, recommend an indoor alternative
-      if (!isWeatherSuitable) {
-        // Find indoor alternatives
+      // Try to fetch weather data
+      try {
+        const weatherData = await getWeatherForecast(latitude, longitude);
+        
+        // Check if weather is suitable for outdoor activities
+        isWeatherSuitable = isWeatherSuitableForOutdoor(weatherData, visitTime);
+        
+        // If weather is bad for outdoor activities, recommend an indoor alternative
+        if (!isWeatherSuitable) {
+          // Find indoor alternatives
+          const indoorAlternatives = alternatives.filter(alt => 
+            alt.types && !isVenueOutdoor(alt.types)
+          );
+          
+          // Use the first indoor alternative if available
+          if (indoorAlternatives.length > 0) {
+            bestVenue = indoorAlternatives[0];
+            console.log(`Weather not suitable for outdoor venue. Recommending indoor alternative: ${bestVenue.name}`);
+          } else {
+            console.log("Weather not suitable for outdoor venue, but no indoor alternatives available");
+          }
+        } else {
+          console.log(`Weather is suitable for outdoor venue: ${place.name}`);
+        }
+      } catch (weatherError) {
+        // If we can't get weather data, use a simple fallback based on venue type
+        console.warn("Could not fetch weather data:", weatherError);
+        console.log("Using fallback venue selection based on venue types only");
+        
+        // Even without weather data, we can provide an indoor alternative
+        // Just to give options if the primary venue is outdoor
         const indoorAlternatives = alternatives.filter(alt => 
           alt.types && !isVenueOutdoor(alt.types)
         );
         
-        // Use the first indoor alternative if available
         if (indoorAlternatives.length > 0) {
-          bestVenue = indoorAlternatives[0];
+          // We don't switch automatically without weather data
+          // But provide the information for the client to display
+          console.log(`Outdoor venue has indoor alternatives: ${indoorAlternatives[0].name}`);
         }
       }
+    } else {
+      // Primary venue is already indoor, no need for weather check
+      console.log(`Primary venue is indoor: ${place.name}`);
     }
     
     return { venue: bestVenue, weatherSuitable: isWeatherSuitable };
@@ -231,8 +258,8 @@ async function testWeatherService() {
     const forecast = await getWeatherForecast(londonLat, londonLng);
     
     console.log("✅ Successfully fetched weather data:");
-    console.log(`  Current temp: ${forecast.current.temp}°C`);
-    console.log(`  Conditions: ${forecast.current.weather[0].main}`);
+    console.log(`  First forecast temp: ${forecast.list[0].main.temp}°C`);
+    console.log(`  Conditions: ${forecast.list[0].weather[0].main}`);
     
     // Test cache by making a second request
     console.log("\nTesting cache (should be instant):");
@@ -261,15 +288,15 @@ async function testWeatherService() {
   // Test weather suitability with mock data
   console.log("\n--- Testing Weather Suitability ---");
   const mockWeatherData = {
-    hourly: [
+    list: [
       {
         dt: Math.floor(Date.now() / 1000),
-        temp: 20,
+        main: { temp: 20 },
         weather: [{ id: 800, main: "Clear", description: "clear sky" }]
       },
       {
         dt: Math.floor(Date.now() / 1000) + 3600,
-        temp: 18,
+        main: { temp: 18 },
         weather: [{ id: 500, main: "Rain", description: "light rain" }]
       }
     ]

@@ -14,8 +14,8 @@ async function testWeatherService() {
     const forecast = await getWeatherForecast(londonLat, londonLng);
     
     console.log("✅ Successfully fetched weather data:");
-    console.log(`  Current temp: ${forecast.current.temp}°C`);
-    console.log(`  Conditions: ${forecast.current.weather[0].main}`);
+    console.log(`  First forecast temp: ${forecast.list[0].main.temp}°C`);
+    console.log(`  Conditions: ${forecast.list[0].weather[0].main}`);
     
     // Test cache by making a second request
     console.log("\n🔄 Testing cache (should be instant):");
@@ -48,15 +48,15 @@ async function testWeatherService() {
   console.log("\n☔ Testing Weather Suitability");
   console.log("-----------------------------");
   const mockWeatherData = {
-    hourly: [
+    list: [
       {
         dt: Math.floor(Date.now() / 1000),
-        temp: 20,
+        main: { temp: 20 },
         weather: [{ id: 800, main: "Clear", description: "clear sky" }]
       },
       {
         dt: Math.floor(Date.now() / 1000) + 3600,
-        temp: 18,
+        main: { temp: 18 },
         weather: [{ id: 500, main: "Rain", description: "light rain" }]
       }
     ]
@@ -106,10 +106,10 @@ async function testWeatherService() {
   try {
     // Mock bad weather data
     const badWeatherData = {
-      hourly: [
+      list: [
         {
           dt: Math.floor(Date.now() / 1000),
-          temp: 12,
+          main: { temp: 12 },
           weather: [{ id: 500, main: "Rain", description: "light rain" }]
         }
       ]
