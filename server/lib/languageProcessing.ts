@@ -20,7 +20,7 @@ export type LocationContext = {
 export type ActivityContext = {
   type: string;
   naturalDescription: string;
-  venueType?: string;
+  venueType?: string | null;
   timeContext?: {
     preferredTime?: string;
     duration?: number;
@@ -147,7 +147,7 @@ export function parseActivity(description: string): ActivityContext {
   
   // Special handling for specific non-venue activities
   let activityType = 'activity';
-  let suggestedVenueType = undefined;
+  let suggestedVenueType: string | null = null;
   
   if (isNonVenueActivity) {
     // For meetings, suggest appropriate venue types rather than using 'meeting' as a venue type
@@ -241,7 +241,7 @@ export function parseActivity(description: string): ActivityContext {
   return {
     type: activityType,
     naturalDescription: description,
-    venueType: suggestedVenueType, // This will be string | undefined (no null)
+    venueType: suggestedVenueType, // Now allows string | null | undefined
     timeContext: {
       preferredTime: timeMatch?.[1].default,
       duration: durationMatch?.[1],

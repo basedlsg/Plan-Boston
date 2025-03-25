@@ -30,16 +30,16 @@ export const ACTIVITY_TYPE_MAPPINGS = {
   "nightlife": "night_club",
   "dessert": "bakery",
   // Non-venue activities that shouldn't be sent to Google Places API
-  // Using undefined instead of null to maintain type compatibility
-  "meeting": undefined,
-  "arrive": undefined,
-  "depart": undefined,
-  "explore": undefined,
-  "walk": undefined,
-  "travel": undefined,
-  "relax": undefined,
-  "break": undefined,
-  "rest": undefined
+  "meeting": null,
+  "arrive": null,
+  "depart": null,
+  "explore": null,
+  "walk": null,
+  "travel": null,
+  "relax": null,
+  "break": null,
+  "rest": null,
+  "visit": null
 } as const;
 
 type ActivityType = keyof typeof ACTIVITY_TYPE_MAPPINGS;
@@ -67,8 +67,11 @@ export function normalizeLocationName(location: string): string {
     return `${station} Station`;
   }
   
-  // Otherwise, preserve the original name as entered by the user
-  return trimmed;
+  // For other locations, apply proper capitalization for neighborhoods
+  // Convert to title case (first letter of each word capitalized)
+  return trimmed.split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 
 // Helper to verify if a returned place matches the requested location
@@ -254,7 +257,7 @@ export function suggestSimilarLocations(location: string): string[] {
 }
 
 // Convert activity types to Google Places API types
-export function mapActivityToPlaceType(activity: string): string | undefined {
+export function mapActivityToPlaceType(activity: string): string | null | undefined {
   if (!activity) return undefined;
   
   const normalized = activity.toLowerCase().trim();
@@ -263,14 +266,14 @@ export function mapActivityToPlaceType(activity: string): string | undefined {
   const isValidActivityType = Object.keys(ACTIVITY_TYPE_MAPPINGS).includes(normalized);
   
   if (isValidActivityType) {
-    // The value might be undefined for non-venue activities
+    // The value might be null for non-venue activities
     const mappedValue = ACTIVITY_TYPE_MAPPINGS[normalized as ActivityType];
-    return mappedValue; // This might be undefined, which is intended for non-venue activities
+    return mappedValue; // This might be null for non-venue activities
   }
   
   // Try to find partial matches
   for (const [key, value] of Object.entries(ACTIVITY_TYPE_MAPPINGS)) {
-    if ((normalized.includes(key) || key.includes(normalized)) && value !== undefined) {
+    if ((normalized.includes(key) || key.includes(normalized)) && value !== null) {
       return value;
     }
   }
