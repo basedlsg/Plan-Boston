@@ -13,11 +13,12 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { generateICS } from "@/lib/ics";
-import type { Itinerary, Place } from "@shared/schema";
+import type { Itinerary, Place, PlaceDetails } from "@shared/schema";
 import { format } from "date-fns";
 import { TimeInput } from "@/components/TimeInput";
 import { formatDateTime, formatTime, getLocalTimeNow } from "@/lib/dateUtils";
 import { Link } from "wouter";
+import VenueSwiper from "@/components/VenueSwiper";
 
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
@@ -31,6 +32,8 @@ export default function Home() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState<string>("");
+  // State to track if user has seen the swipe hint
+  const [shownSwipeHint, setShownSwipeHint] = useState<boolean>(false);
 
   useState(() => {
     fetch("/api/time")
@@ -58,10 +61,19 @@ export default function Home() {
     },
     onSuccess: (data: Itinerary) => {
       setItinerary(data);
-      toast({
-        title: "Itinerary created!",
-        description: "Your day plan is ready.",
-      });
+      // Show the swipe hint when first creating an itinerary
+      if (!shownSwipeHint) {
+        toast({
+          title: "Itinerary created!",
+          description: "For each venue, you can swipe to see alternatives.",
+        });
+        setShownSwipeHint(true);
+      } else {
+        toast({
+          title: "Itinerary created!",
+          description: "Your day plan is ready.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -71,6 +83,38 @@ export default function Home() {
       });
     },
   });
+  
+  // Handler for when a user selects a different venue from the VenueSwiper
+  const handleVenueSelection = (index: number, selectedVenue: PlaceDetails) => {
+    if (!itinerary) return;
+    
+    // Make a copy of the places array
+    const updatedPlaces = [...itinerary.places as Place[]];
+    
+    // Create a new place object with the selected venue data
+    const updatedPlace: Place = {
+      ...updatedPlaces[index],
+      placeId: selectedVenue.place_id,
+      name: selectedVenue.name,
+      address: selectedVenue.formatted_address,
+      location: selectedVenue.geometry.location,
+      details: selectedVenue
+    };
+    
+    // Replace the place at the specified index
+    updatedPlaces[index] = updatedPlace;
+    
+    // Update the itinerary state
+    setItinerary({
+      ...itinerary,
+      places: updatedPlaces
+    });
+    
+    toast({
+      title: "Venue updated",
+      description: `Changed to ${selectedVenue.name}`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -193,23 +237,37 @@ export default function Home() {
                       )}
 
                       {/* Activity card */}
-                      <div className="flex items-start gap-4 bg-card rounded-lg p-4 shadow-sm">
-                        <div className="flex-shrink-0 p-2 bg-primary/5 rounded-full relative z-10">
-                          <Clock className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-baseline justify-between">
-                            <h3 className="font-semibold">{place.name}</h3>
-                            {place.scheduledTime && (
-                              <span className="text-sm text-muted-foreground font-mono">
-                                {formatTime(place.scheduledTime)}
-                              </span>
-                            )}
+                      <div className="bg-card rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start gap-4 mb-3">
+                          <div className="flex-shrink-0 p-2 bg-primary/5 rounded-full relative z-10">
+                            <Clock className="w-5 h-5 text-primary" />
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {place.address}
-                          </p>
+                          <div className="flex-1">
+                            <div className="flex items-baseline justify-between">
+                              <h3 className="font-semibold">{place.name}</h3>
+                              {place.scheduledTime && (
+                                <span className="text-sm text-muted-foreground font-mono">
+                                  {formatTime(place.scheduledTime)}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {place.address}
+                            </p>
+                          </div>
                         </div>
+                        
+                        {/* VenueSwiper - only show for places with alternatives */}
+                        {place.alternatives && (place.alternatives as PlaceDetails[]).length > 0 && (
+                          <div className="mt-2">
+                            <VenueSwiper 
+                              primary={place.details as PlaceDetails}
+                              alternatives={place.alternatives as PlaceDetails[]}
+                              onSelect={(venue) => handleVenueSelection(index, venue)}
+                              className="w-full"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Travel time indicator */}

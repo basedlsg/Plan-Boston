@@ -1,0 +1,66 @@
+I understand - you want to integrate the VenueSwiper directly into the itinerary generation view instead of keeping it as a separate page. Here's a prompt for implementing this:
+
+```
+Integrate the VenueSwiper component directly into the itinerary generation view, allowing users to see and select venue alternatives without navigating to a separate page.
+
+Implementation:
+1. Locate the itinerary display component (likely in pages/itinerary.tsx or a similar file)
+2. For each venue in the itinerary, replace the static venue display with the VenueSwiper component
+3. Pass the primary venue and its alternatives to the VenueSwiper
+4. Add a callback function to handle when a user selects an alternative venue
+5. Update the UI to make it clear users can swipe to see alternatives
+
+Example implementation:
+```jsx
+// In the itinerary display component:
+
+import VenueSwiper from '../components/VenueSwiper';
+
+// Inside the component where venues are rendered:
+{itinerary.places.map((place, index) => (
+  <div key={place.id} className="mb-6">
+    <div className="text-sm text-gray-500 mb-1">
+      {formatTime(place.scheduledTime)}
+    </div>
+    
+    {/* Replace static venue card with VenueSwiper */}
+    <VenueSwiper
+      primary={place}
+      alternatives={place.alternatives || []}
+      onSelect={(selectedVenue) => handleVenueSelection(index, selectedVenue)}
+    />
+    
+    {/* Travel time to next location */}
+    {index < itinerary.places.length - 1 && (
+      <div className="flex items-center text-sm text-gray-500 mt-2">
+        <MapPinIcon className="w-4 h-4 mr-1" />
+        <span>{itinerary.travelTimes[index].duration} min to next location</span>
+      </div>
+    )}
+  </div>
+))}
+```
+
+Add the venue selection handler:
+```jsx
+const handleVenueSelection = (index, selectedVenue) => {
+  // Create a copy of the itinerary
+  const updatedPlaces = [...itinerary.places];
+  // Replace the venue at the specified index
+  updatedPlaces[index] = selectedVenue;
+  // Update the itinerary state
+  setItinerary({
+    ...itinerary,
+    places: updatedPlaces
+  });
+  
+  // You might also want to update the database or state management
+  // depending on your application architecture
+};
+```
+
+Make sure the UI indicates swiping is available:
+1. Add a subtle indicator showing "1/4" or similar to indicate more options
+2. Consider adding a small hint the first time ("Swipe to see alternatives")
+3. Make sure the swipe area has sufficient width on mobile devices
+```
