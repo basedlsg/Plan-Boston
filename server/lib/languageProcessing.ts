@@ -37,7 +37,10 @@ const locationSearcher = new Fuse(londonAreas, {
 });
 
 // Time period mappings with flexible ranges
-const TIME_PERIODS = {
+type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'night' | 'lunch' | 'dinner' | 'breakfast';
+type TimeRange = { start: string; end: string; default: string };
+
+const TIME_PERIODS: Record<TimePeriod, TimeRange> = {
   morning: { start: '08:00', end: '11:59', default: '10:00' },
   afternoon: { start: '12:00', end: '16:59', default: '14:00' },
   evening: { start: '17:00', end: '20:59', default: '18:00' },
@@ -48,7 +51,8 @@ const TIME_PERIODS = {
 };
 
 // Duration expressions mapping (in minutes)
-const DURATION_EXPRESSIONS: Record<string, number> = {
+type DurationExpression = 'quick' | 'brief' | 'short' | 'couple hours' | 'few hours' | 'half day' | 'all day';
+const DURATION_EXPRESSIONS: Record<DurationExpression, number> = {
   'quick': 30,
   'brief': 30,
   'short': 45,
@@ -146,8 +150,9 @@ export function parseActivity(description: string): ActivityContext {
 
 // Function to handle relative time periods
 export function expandRelativeTime(timeString: string): string {
-  // Map of relative times to reasonable hour ranges
-  const timeMap: Record<string, string> = {
+  // Map of relative times to reasonable hour ranges 
+  // Using the same TimePeriod type we defined earlier
+  const timeMap: Record<TimePeriod | string, string> = {
     'morning': '10:00',
     'afternoon': '14:00',
     'evening': '18:00',

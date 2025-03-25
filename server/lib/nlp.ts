@@ -75,8 +75,9 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     const extractedActivities = extractActivities(query);
 
     // Then use Claude for additional understanding
+    // The newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
     const response = await anthropic.messages.create({
-      model: "claude-3-opus-20240229",
+      model: "claude-3-7-sonnet-20250219",
       max_tokens: 1000,
       messages: [{
         role: "user",
@@ -134,10 +135,12 @@ Return JSON only, no explanations, in this exact format:
     try {
       claudeParsed = JSON.parse(textContent);
       console.log("Successfully parsed Claude response:", claudeParsed);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("JSON parse error:", error);
       console.error("Problematic text content:", textContent);
-      throw new Error(`Failed to parse JSON response: ${error.message}`);
+      // Handle unknown error type safely
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to parse JSON response: ${errorMessage}`);
     }
 
     // Combine Claude's understanding with our direct extraction
@@ -151,9 +154,9 @@ Return JSON only, no explanations, in this exact format:
       }
     };
 
-    // Use locations from both sources
+    // Use locations from both sources with null/undefined checks
     const allLocationsList = [
-      ...extractedLocations.map(l => l.name),
+      ...(extractedLocations && extractedLocations.length > 0 ? extractedLocations.map(l => l.name) : []),
       ...(claudeParsed.destinations || []),
       claudeParsed.startLocation
     ].filter(Boolean);
@@ -241,11 +244,13 @@ Return JSON only, no explanations, in this exact format:
     console.log("Parsed request:", parsed);
     return parsed;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error parsing itinerary request:", error);
+    // Re-throw if it's already an Error instance
     if (error instanceof Error) {
       throw error;
     }
+    // Otherwise, create a new Error with a generic message
     throw new Error("Failed to understand the itinerary request. Please try rephrasing it with a specific London location.");
   }
 }
