@@ -1,0 +1,124 @@
+// server/lib/nlp.ts
+// Update the parseItineraryRequest function
+
+async function parseItineraryRequest(query) {
+  try {
+    // Attempt to parse with Claude first
+    const claudeParsed = await parseWithClaude(query);
+    
+    // If Claude found a location, proceed with that
+    if (claudeParsed.startLocation || (claudeParsed.destinations && claudeParsed.destinations.length > 0)) {
+      return claudeParsed;
+    }
+    
+    // If no location was found, implement a smart fallback strategy
+    
+    // 1. Check if the query contains specific activity terms
+    const activityTerms = ['coffee', 'breakfast', 'lunch', 'dinner', 'museum', 'shopping'];
+    const activities = activityTerms.filter(term => query.toLowerCase().includes(term));
+    
+    // 2. If we found activities but no locations, suggest popular areas for those activities
+    if (activities.length > 0) {
+      // Map of activities to recommended areas
+      const activityLocations = {
+        'coffee': ['Soho', 'Shoreditch', 'Covent Garden'],
+        'breakfast': ['Notting Hill', 'Islington', 'Marylebone'],
+        'lunch': ['Soho', 'Covent Garden', 'South Bank'],
+        'dinner': ['Mayfair', 'Shoreditch', 'Soho'],
+        'museum': ['South Kensington', 'Bloomsbury', 'Southwark'],
+        'shopping': ['Oxford Street', 'Covent Garden', 'Knightsbridge']
+      };
+      
+      // Get the first activity and suggest a location
+      for (const activity of activities) {
+        if (activityLocations[activity]) {
+          // Take the first recommended location for this activity
+          const suggestedLocation = activityLocations[activity][0];
+          
+          // Create a response with the suggested location
+          return {
+            startLocation: suggestedLocation,
+            destinations: [suggestedLocation],
+            fixedTimes: [],
+            preferences: {
+              type: activity,
+              requirements: activities
+            },
+            isSuggestion: true,  // Mark this as a suggestion so we can indicate this to the user
+            suggestedActivity: activity
+          };
+        }
+      }
+    }
+    
+    // 3. If we still can't determine a location, use time of day to suggest popular areas
+    const currentHour = new Date().getHours();
+    let timeBasedLocation;
+    
+    if (currentHour < 10) {
+      timeBasedLocation = 'Liverpool Street'; // Popular morning spot near transport
+    } else if (currentHour < 14) {
+      timeBasedLocation = 'Soho'; // Popular for lunch
+    } else if (currentHour < 18) {
+      timeBasedLocation = 'South Bank'; // Good afternoon location
+    } else {
+      timeBasedLocation = 'Covent Garden'; // Popular evening area
+    }
+    
+    // Return a suggestion based on time of day
+    return {
+      startLocation: timeBasedLocation,
+      destinations: [timeBasedLocation],
+      fixedTimes: [],
+      preferences: {
+        type: currentHour < 10 ? 'breakfast' : 
+              currentHour < 14 ? 'lunch' : 
+              currentHour < 18 ? 'sightseeing' : 'dinner',
+        requirements: []
+      },
+      isSuggestion: true,
+      suggestedBasedOn: 'time of day'
+    };
+    
+  } catch (error) {
+    console.error("Error in parseItineraryRequest:", error);
+    
+    // Instead of just throwing the error, provide a more helpful response
+    throw new Error(
+      "I'd be happy to help plan your London day! " +
+      "Could you mention a specific area like Soho, Covent Garden, or any landmark you're interested in visiting?"
+    );
+  }
+}
+
+// Then in your routes.ts or controller, handle the suggestion flag:
+
+async function createItinerary(req, res) {
+  try {
+    const { query, date, startTime } = req.body;
+    const parsedRequest = await parseItineraryRequest(query);
+    
+    // Check if this is a suggestion-based response
+    if (parsedRequest.isSuggestion) {
+      // Create the itinerary using the suggested location
+      const itinerary = await planItinerary(parsedRequest, date, startTime);
+      
+      // Add a message to explain the suggestion
+      if (parsedRequest.suggestedActivity) {
+        itinerary.message = `I've suggested ${parsedRequest.startLocation} which is great for ${parsedRequest.suggestedActivity}. Let me know if you'd prefer a different area!`;
+      } else {
+        itinerary.message = `I've suggested ${parsedRequest.startLocation} based on the time of day. Let me know if you'd prefer a different area!`;
+      }
+      
+      return res.json(itinerary);
+    }
+    
+    // Regular processing for queries with explicit locations
+    const itinerary = await planItinerary(parsedRequest, date, startTime);
+    return res.json(itinerary);
+    
+  } catch (error) {
+    console.error("Error creating itinerary:", error);
+    return res.status(400).json({ message: error.message });
+  }
+}
