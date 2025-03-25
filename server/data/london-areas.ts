@@ -317,7 +317,7 @@ export const londonAreas: LondonArea[] = [
     type: "area",
     borough: "Westminster",
     characteristics: ["shopping", "busy", "commercial", "touristy"],
-    neighbors: ["Soho", "Marylebone", "Mayfair", "Fitzrovia"],
+    neighbors: ["Soho", "Marylebone", "Mayfair", "Fitzrovia", "Baker Street"],
     popularFor: ["department stores", "high street shopping", "flagship stores", "Christmas lights"],
     crowdLevels: {
       morning: 3,
@@ -331,7 +331,7 @@ export const londonAreas: LondonArea[] = [
     type: "area",
     borough: "Westminster",
     characteristics: ["bustling", "central", "touristy", "iconic"],
-    neighbors: ["Green Park", "St. James's", "Soho", "Mayfair"],
+    neighbors: ["Green Park", "St. James's", "Soho", "Mayfair", "Piccadilly Circus"],
     popularFor: ["Piccadilly Circus", "shopping", "theaters", "restaurants"],
     crowdLevels: {
       morning: 3,
@@ -485,7 +485,7 @@ export const londonAreas: LondonArea[] = [
     type: "area",
     borough: "Westminster",
     characteristics: ["historic", "tourist", "commercial", "cultural"],
-    neighbors: ["Marylebone", "Regent's Park", "Mayfair"],
+    neighbors: ["Marylebone", "Regent's Park", "Mayfair", "Oxford Street"],
     popularFor: ["Sherlock Holmes Museum", "Madame Tussauds", "offices", "shopping"],
     crowdLevels: {
       morning: 3,
@@ -639,7 +639,7 @@ export const londonAreas: LondonArea[] = [
     type: "neighborhood",
     borough: "Hammersmith and Fulham",
     characteristics: ["riverside", "commercial", "transport hub", "mixed"],
-    neighbors: ["Kensington", "Fulham", "Shepherd's Bush", "Chiswick"],
+    neighbors: ["Kensington", "Fulham", "Shepherd's Bush", "Chiswick", "West Kensington"],
     popularFor: ["Apollo venue", "riverside pubs", "offices", "transport links"],
     crowdLevels: {
       morning: 4,
