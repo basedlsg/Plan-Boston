@@ -277,14 +277,54 @@ Return JSON only, no explanations, in this exact format:
     
     parsed.fixedTimes = uniqueFixedTimes;
 
-    // If no locations were found, provide a helpful error
+    // Intelligently assign a starting location if none was provided
+    if (!parsed.startLocation) {
+      // Case 1: If there are destinations, use the first one as the starting point
+      if (parsed.destinations.length > 0) {
+        parsed.startLocation = parsed.destinations[0];
+        parsed.destinations.shift(); // Remove it from destinations since it's now the starting point
+      } 
+      // Case 2: If there are fixed times with locations, use the first one
+      else if (parsed.fixedTimes.length > 0 && parsed.fixedTimes[0].location) {
+        parsed.startLocation = parsed.fixedTimes[0].location;
+      }
+      // Case 3: Use transport hubs or time-appropriate locations as starting points
+      else {
+        const currentHour = new Date().getHours();
+        
+        // Morning (6-11): Transport hubs are logical starting points
+        if (currentHour >= 6 && currentHour < 12) {
+          const transportHubs = ["King's Cross", "Liverpool Street", "Waterloo", "Victoria", "Paddington"];
+          parsed.startLocation = transportHubs[0]; // Default to King's Cross
+        } 
+        // Lunchtime (12-14): Central shopping/business areas
+        else if (currentHour >= 12 && currentHour < 15) {
+          parsed.startLocation = "Oxford Street"; // Shopping and central
+        }
+        // Afternoon (15-17): Cultural areas
+        else if (currentHour >= 15 && currentHour < 18) {
+          parsed.startLocation = "South Kensington"; // Museum district
+        }
+        // Evening/Night (18-23): Entertainment districts
+        else if (currentHour >= 18 && currentHour < 24) {
+          parsed.startLocation = "Soho"; // Nightlife center
+        }
+        // Late night/early morning (0-5): Safe, well-lit areas
+        else {
+          parsed.startLocation = "Leicester Square"; // 24-hour area
+        }
+      }
+    }
+    
+    // If still no locations found after auto-assignment, provide a helpful error
     if (!parsed.startLocation && parsed.destinations.length === 0) {
       throw new Error(
-        "We need to know where in London you'll be. Try adding a neighborhood or landmark to your request.\n\n" +
+        "We need to know where in London you'd like to explore. Try adding a neighborhood or landmark to your request.\n\n" +
         "Examples:\n" +
         "- \"I'm at Liverpool Street and want lunch\"\n" +
         "- \"Find me dinner in Soho at 7pm\"\n" +
-        "- \"Plan a day starting from Green Park\""
+        "- \"Plan a day starting from Green Park\"\n\n" +
+        "Or tell us about your interests and we'll suggest a starting point."
       );
     }
 
@@ -293,11 +333,39 @@ Return JSON only, no explanations, in this exact format:
 
   } catch (error: unknown) {
     console.error("Error parsing itinerary request:", error);
-    // Re-throw if it's already an Error instance
+    
+    // Handle validation/parsing errors with more helpful messages
     if (error instanceof Error) {
+      // If it's about locations not found, give detailed recommendation
+      if (error.message.includes("location") || error.message.includes("where in London")) {
+        throw new Error(
+          `${error.message}\n\nPopular London areas you could mention:\n` +
+          "• Central: Soho, Covent Garden, Westminster, Leicester Square\n" +
+          "• West: Notting Hill, Kensington, Chelsea, Holland Park\n" +
+          "• East: Shoreditch, City of London, Canary Wharf\n" +
+          "• North: Camden Town, King's Cross, Hampstead\n" +
+          "• South: Greenwich, South Bank"
+        );
+      }
+      // If it's about API or parsing issues, provide gentler message
+      else if (error.message.includes("JSON") || error.message.includes("API") || error.message.includes("language model")) {
+        throw new Error(
+          "We're having trouble understanding your request right now. Please try:\n" +
+          "1. Being more specific about where and when\n" +
+          "2. Keeping your request simple and focused\n" +
+          "3. Using common London landmarks or neighborhoods"
+        );
+      }
+      // Otherwise just rethrow the original error
       throw error;
     }
-    // Otherwise, create a new Error with a generic message
-    throw new Error("Failed to understand the itinerary request. Please try rephrasing it with a specific London location.");
+    
+    // If it's not an Error instance, create a generic one
+    throw new Error(
+      "We couldn't understand your request. Please try rephrasing with:\n" +
+      "• A clear starting location in London\n" +
+      "• The type of activities you're interested in\n" +
+      "• Any specific time constraints"
+    );
   }
 }
