@@ -252,8 +252,9 @@ export async function registerRoutes(app: Express) {
       // Fill gaps with interesting activities based on preferences
       if (parsed.preferences?.type || parsed.preferences?.requirements) {
         for (let i = 0; i < itineraryPlaces.length - 1; i++) {
-          const current = itineraryPlaces[i];
-          const next = itineraryPlaces[i + 1];
+          // Explicitly type the current and next variables
+          const current: { place: Place, time: Date, isFixed: boolean } = itineraryPlaces[i];
+          const next: { place: Place, time: Date, isFixed: boolean } = itineraryPlaces[i + 1];
 
           // Calculate gap between activities
           const gap = next.time.getTime() - (current.time.getTime() + 90 * 60 * 1000);
@@ -273,7 +274,8 @@ export async function registerRoutes(app: Express) {
               });
 
               if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
-                const activityTime = new Date(current.time.getTime() + 90 * 60 * 1000);
+                // Explicitly define the activity time
+                const activityTime: Date = new Date(current.time.getTime() + 90 * 60 * 1000);
 
                 const newPlace = await storage.createPlace({
                   placeId: suggestedPlace.place_id,
@@ -301,7 +303,7 @@ export async function registerRoutes(app: Express) {
 
       // Calculate travel times between places
       const travelTimes = [];
-      let lastPlace = null;
+      let lastPlace: PlaceDetails | null = null;
 
       for (const scheduledPlace of itineraryPlaces) {
         if (lastPlace && scheduledPlace.place.details) {
@@ -313,7 +315,14 @@ export async function registerRoutes(app: Express) {
             arrivalTime: scheduledPlace.time.toISOString()
           });
         }
-        lastPlace = scheduledPlace.place.details;
+        // Ensure we're assigning a valid PlaceDetails object
+        if (scheduledPlace.place.details && 
+            typeof scheduledPlace.place.details === 'object' && 
+            'name' in scheduledPlace.place.details && 
+            'formatted_address' in scheduledPlace.place.details &&
+            'geometry' in scheduledPlace.place.details) {
+          lastPlace = scheduledPlace.place.details as PlaceDetails;
+        }
       }
 
       // Create the final itinerary

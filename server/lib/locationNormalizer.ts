@@ -26,7 +26,7 @@ export const ACTIVITY_TYPE_MAPPINGS = {
 type ActivityType = keyof typeof ACTIVITY_TYPE_MAPPINGS;
 type Station = typeof COMMON_STATIONS[number];
 
-// Helper to normalize location names
+// Helper to normalize location names - now preserves original names except for stations
 export function normalizeLocationName(location: string): string {
   // Handle null, undefined, or empty string
   if (!location || typeof location !== 'string') return '';
@@ -34,39 +34,26 @@ export function normalizeLocationName(location: string): string {
   const trimmed = location.trim();
   if (trimmed === '') return '';
   
+  // Only standardize station names, preserve all other location names
   const lowercased = trimmed.toLowerCase();
 
-  // Add "station" if it's a common tube station
+  // Check if it's a common tube station that needs "Station" appended
   const station = COMMON_STATIONS.find(s => 
     s.toLowerCase() === lowercased ||
     lowercased === `${s.toLowerCase()} station`
   );
 
+  // Only normalize station names
   if (station) {
     return `${station} Station`;
   }
   
-  // Check if it's a known London area for exact match
-  const exactAreaMatch = londonAreas.find(area => 
-    area.name.toLowerCase() === lowercased
-  );
-  
-  if (exactAreaMatch) {
-    return exactAreaMatch.name; // Return with proper casing from our data
-  }
-
-  // For multi-word locations, capitalize each word
-  if (trimmed.includes(' ')) {
-    return trimmed.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  }
-  
-  // Return with proper capitalization for single words
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  // Otherwise, preserve the original name as entered by the user
+  return trimmed;
 }
 
 // Helper to verify if a returned place matches the requested location
+// Updated to be more lenient with neighborhood matching
 export function verifyPlaceMatch(
   requestedLocation: string, 
   returnedName: string,
@@ -76,9 +63,9 @@ export function verifyPlaceMatch(
   if (!requestedLocation || !returnedName) return false;
   if (!Array.isArray(types)) types = [];
   
-  // Normalize inputs
+  // Normalize inputs for comparison
   const normalized = requestedLocation.toLowerCase().trim();
-  const returnedNormalized = returnedName.toLowerCase();
+  const returnedNormalized = returnedName.toLowerCase().trim();
   
   if (normalized === '' || returnedNormalized === '') return false;
 
@@ -87,32 +74,52 @@ export function verifyPlaceMatch(
     return true;
   }
 
-  // Check if the returned place contains the normalized name
-  if (returnedNormalized.includes(normalized)) {
+  // Check if the returned place contains the normalized name or vice versa
+  if (returnedNormalized.includes(normalized) || normalized.includes(returnedNormalized)) {
     return true;
   }
   
-  // Check if the normalized name contains the returned place
-  if (normalized.includes(returnedNormalized)) {
-    return true;
+  // Split words and check for partial matches
+  const requestWords = normalized.split(/\s+/).filter(word => word.length > 2);
+  const returnedWords = returnedNormalized.split(/\s+/).filter(word => word.length > 2);
+  
+  // If the requested location has multiple meaningful words, check if most match
+  if (requestWords.length > 1) {
+    const matchingWords = requestWords.filter(word => 
+      returnedWords.some(retWord => retWord.includes(word) || word.includes(retWord))
+    );
+    // If more than half the words match, consider it a match
+    if (matchingWords.length >= Math.ceil(requestWords.length / 2)) {
+      return true;
+    }
   }
 
-  // For areas and neighborhoods, be more lenient
+  // For areas and neighborhoods, be extra lenient
   const isArea = types.some(t => 
     t.includes('sublocality') || 
     t.includes('neighborhood') || 
-    t.includes('political')
+    t.includes('political') ||
+    t.includes('locality')
   );
 
   if (isArea) {
-    // Check if it's a known London area
+    // For neighborhoods, even a single word match can be considered valid
+    // since Google may return full official names like "Mayfair, London, UK"
+    for (const word of requestWords) {
+      if (word.length > 3 && returnedNormalized.includes(word)) {
+        return true;
+      }
+    }
+    
+    // Check if it's a known London area in our database
     const matchingArea = londonAreas.find(area => {
+      const areaLower = area.name.toLowerCase();
+      
       // Check the area name
-      if (area.name.toLowerCase() === normalized) return true;
+      if (areaLower === normalized) return true;
       
       // Check area name contains or is contained by the normalized string
-      if (area.name.toLowerCase().includes(normalized) || 
-          normalized.includes(area.name.toLowerCase())) {
+      if (areaLower.includes(normalized) || normalized.includes(areaLower)) {
         return true;
       }
       
@@ -166,20 +173,33 @@ export function suggestSimilarLocations(location: string): string[] {
     }
   }
 
-  // Then check areas
+  // Split the location into words for partial matching
+  const requestWords = normalized.split(/\s+/).filter(word => word.length > 2);
+
+  // Check areas, preserving original area names from our database
   for (const area of londonAreas) {
     const areaLower = area.name.toLowerCase();
+    
+    // Full or partial location matching
     if (areaLower.includes(normalized) || normalized.includes(areaLower)) {
-      suggestions.add(area.name);
+      suggestions.add(area.name); // Use proper case from our data
+    } else {
+      // Try word-level matching for multi-word locations
+      const matchingWords = requestWords.filter(word => 
+        areaLower.includes(word) || word.includes(areaLower)
+      );
+      if (matchingWords.length > 0) {
+        suggestions.add(area.name);
+      }
     }
 
-    // Check neighboring areas if available
+    // Check neighboring areas, maintaining their original names
     if (area.neighbors && Array.isArray(area.neighbors)) {
       for (const neighbor of area.neighbors) {
         if (typeof neighbor === 'string') {
           const neighborLower = neighbor.toLowerCase();
           if (neighborLower.includes(normalized) || normalized.includes(neighborLower)) {
-            suggestions.add(neighbor);
+            suggestions.add(neighbor); // Keep the original name
           }
         }
       }
@@ -197,13 +217,17 @@ export function suggestSimilarLocations(location: string): string[] {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       
-      const aScore = aLower === normalized ? 3 :
-                    aLower.startsWith(normalized) ? 2 :
-                    aLower.includes(normalized) ? 1 : 0;
+      const aScore = aLower === normalized ? 5 :
+                    aLower.startsWith(normalized) ? 4 :
+                    normalized.startsWith(aLower) ? 3 :
+                    aLower.includes(normalized) ? 2 :
+                    normalized.includes(aLower) ? 1 : 0;
                     
-      const bScore = bLower === normalized ? 3 :
-                    bLower.startsWith(normalized) ? 2 :
-                    bLower.includes(normalized) ? 1 : 0;
+      const bScore = bLower === normalized ? 5 :
+                    bLower.startsWith(normalized) ? 4 :
+                    normalized.startsWith(bLower) ? 3 :
+                    bLower.includes(normalized) ? 2 :
+                    normalized.includes(bLower) ? 1 : 0;
                     
       return bScore - aScore;
     })

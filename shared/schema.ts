@@ -31,12 +31,15 @@ export type InsertItinerary = z.infer<typeof insertItinerarySchema>;
 export type PlaceDetails = {
   name: string;
   formatted_address: string;
+  place_id: string;
   geometry: {
     location: {
       lat: number;
       lng: number;
     };
   };
+  types?: string[];
+  rating?: number;
   opening_hours?: {
     open_now?: boolean;
     periods?: Array<{
