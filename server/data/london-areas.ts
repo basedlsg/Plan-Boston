@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const areaSchema = z.object({
   name: z.string(),
-  type: z.enum(['borough', 'neighborhood', 'area']),
+  type: z.enum(["borough", "neighborhood", "area"]),
   borough: z.string().optional(),
   characteristics: z.array(z.string()),
   neighbors: z.array(z.string()),
@@ -67,22 +67,26 @@ export const londonAreas: LondonArea[] = [
 // Helper function to find areas by characteristics
 export function findAreasByCharacteristics(
   characteristics: string[],
-  excludeAreas: string[] = []
+  excludeAreas: string[] = [],
 ): LondonArea[] {
-  return londonAreas.filter(area => 
-    !excludeAreas.includes(area.name) &&
-    characteristics.some(c => 
-      area.characteristics.includes(c) || 
-      area.popularFor.includes(c)
-    )
+  return londonAreas.filter(
+    (area) =>
+      !excludeAreas.includes(area.name) &&
+      characteristics.some(
+        (c) => area.characteristics.includes(c) || area.popularFor.includes(c),
+      ),
   );
 }
 
 // Helper to get crowd level for a specific time
-export function getAreaCrowdLevel(area: LondonArea, timeOfDay: string, isWeekend: boolean): number {
+export function getAreaCrowdLevel(
+  area: LondonArea,
+  timeOfDay: string,
+  isWeekend: boolean,
+): number {
   if (isWeekend) return area.crowdLevels.weekend;
-  
-  const hour = parseInt(timeOfDay.split(':')[0]);
+
+  const hour = parseInt(timeOfDay.split(":")[0]);
   if (hour < 12) return area.crowdLevels.morning;
   if (hour < 17) return area.crowdLevels.afternoon;
   return area.crowdLevels.evening;
@@ -90,15 +94,15 @@ export function getAreaCrowdLevel(area: LondonArea, timeOfDay: string, isWeekend
 
 // Helper to find quiet areas
 export function findQuietAreas(
-  timeOfDay: string, 
+  timeOfDay: string,
   isWeekend: boolean,
-  nearArea?: string
+  nearArea?: string,
 ): LondonArea[] {
-  const areas = nearArea 
-    ? londonAreas.filter(a => a.neighbors.includes(nearArea))
+  const areas = nearArea
+    ? londonAreas.filter((a) => a.neighbors.includes(nearArea))
     : londonAreas;
-    
-  return areas.filter(area => {
+
+  return areas.filter((area) => {
     const crowdLevel = getAreaCrowdLevel(area, timeOfDay, isWeekend);
     return crowdLevel <= 2; // Areas with low crowd levels
   });
