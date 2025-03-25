@@ -173,7 +173,7 @@ export default function Home() {
                           <FormLabel>Start Time</FormLabel>
                           <FormControl>
                             <TimeInput
-                              value={field.value}
+                              value={field.value || ""}
                               onChange={field.onChange}
                               className="w-full"
                             />
@@ -258,20 +258,30 @@ export default function Home() {
                         </div>
                         
                         {/* VenueSwiper - only show for places with alternatives */}
-                        {place.alternatives && (place.alternatives as PlaceDetails[]).length > 0 && (
-                          <div className="mt-2">
-                            <VenueSwiper 
-                              primary={place.details as PlaceDetails}
-                              alternatives={place.alternatives as PlaceDetails[]}
-                              onSelect={(venue) => handleVenueSelection(index, venue)}
-                              className="w-full"
-                            />
-                          </div>
-                        )}
+                        {(() => {
+                          // Ensure proper type handling inside this isolated IIFE
+                          if (place.alternatives && 
+                              Array.isArray(place.alternatives) && 
+                              place.details && 
+                              (place.alternatives as PlaceDetails[]).length > 0) {
+                            return (
+                              <div className="mt-2">
+                                <VenueSwiper 
+                                  primary={place.details as PlaceDetails}
+                                  alternatives={place.alternatives as PlaceDetails[]}
+                                  onSelect={(venue) => handleVenueSelection(index, venue)}
+                                  className="w-full"
+                                />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
 
                       {/* Travel time indicator */}
-                      {index < (itinerary.travelTimes as Array<{
+                      {Array.isArray(itinerary.travelTimes) && 
+                       index < (itinerary.travelTimes as Array<{
                         from: string;
                         to: string;
                         duration: number;
@@ -279,8 +289,8 @@ export default function Home() {
                       }>).length && (
                         <div className="ml-7 my-4 p-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md">
                           <MapPin className="w-4 h-4" />
-                          {itinerary.travelTimes[index].duration} minutes to{" "}
-                          {itinerary.travelTimes[index].to}
+                          {(itinerary.travelTimes as Array<any>)[index].duration} minutes to{" "}
+                          {(itinerary.travelTimes as Array<any>)[index].to}
                         </div>
                       )}
                     </div>

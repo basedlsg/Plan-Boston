@@ -5,7 +5,7 @@ import { Clock } from "lucide-react";
 import { isValidTime, convertTo24Hour, TimeFormat } from '@/lib/dateUtils';
 
 interface TimeInputProps {
-  value: string;
+  value: string | undefined;
   onChange: (value: string) => void;
   timeFormat?: TimeFormat;
   className?: string;
@@ -13,7 +13,7 @@ interface TimeInputProps {
 
 export function TimeInput({ value, onChange, timeFormat = '12h', className }: TimeInputProps) {
   const [inputType, setInputType] = useState<'text' | 'time'>('text');
-  const [displayValue, setDisplayValue] = useState(value);
+  const [displayValue, setDisplayValue] = useState(value || "");
 
   // Check if the device supports time input
   useEffect(() => {
@@ -39,7 +39,7 @@ export function TimeInput({ value, onChange, timeFormat = '12h', className }: Ti
     <div className="relative">
       <Input
         type={inputType}
-        value={displayValue}
+        value={displayValue || ""}
         onChange={(e) => handleChange(e.target.value)}
         className={className}
         placeholder={timeFormat === '12h' ? "12:00 PM" : "14:00"}
