@@ -130,15 +130,104 @@ export function parseActivity(description: string): ActivityContext {
   if (lowered.includes('cheap') || lowered.includes('budget')) requirements.push('budget');
   if (lowered.includes('outdoor') || lowered.includes('outside')) requirements.push('outdoor');
 
-  // Map to venue type if possible
-  const venueType = Object.entries(ACTIVITY_TYPE_MAPPINGS).find(([activity]) =>
+  // Check for non-venue activities first
+  const nonVenueActivities = [
+    'meeting', 'arrive', 'depart', 'explore', 'walk', 
+    'travel', 'relax', 'break', 'rest'
+  ];
+  
+  const isNonVenueActivity = nonVenueActivities.some(activity => 
     lowered.includes(activity)
-  )?.[1];
+  );
+  
+  // Special handling for specific non-venue activities
+  let activityType = 'activity';
+  let suggestedVenueType = undefined;
+  
+  if (isNonVenueActivity) {
+    // For meetings, suggest appropriate venue types rather than using 'meeting' as a venue type
+    if (lowered.includes('meeting')) {
+      activityType = 'meeting';
+      // Suggest appropriate venue types based on meeting context
+      if (lowered.includes('coffee') || lowered.includes('casual')) {
+        suggestedVenueType = 'cafe';
+      } else if (lowered.includes('lunch') || lowered.includes('dinner')) {
+        suggestedVenueType = 'restaurant';
+      } else if (lowered.includes('drinks')) {
+        suggestedVenueType = 'bar';
+      } else {
+        // Default suggestion for meetings is cafe
+        suggestedVenueType = 'cafe';
+      }
+    } 
+    // For exploration activities
+    else if (lowered.includes('explore')) {
+      activityType = 'explore';
+      if (lowered.includes('park') || lowered.includes('garden')) {
+        suggestedVenueType = 'park';
+      } else if (lowered.includes('shop') || lowered.includes('shopping')) {
+        suggestedVenueType = 'shopping_mall';
+      } else if (lowered.includes('museum') || lowered.includes('culture')) {
+        suggestedVenueType = 'museum';
+      } else if (lowered.includes('history')) {
+        suggestedVenueType = 'tourist_attraction';
+      }
+      // For general exploration, don't suggest a venue type
+    }
+    // For walking activities
+    else if (lowered.includes('walk')) {
+      activityType = 'walk';
+      if (lowered.includes('park')) {
+        suggestedVenueType = 'park';
+      }
+    }
+    // For rest or relaxation activities
+    else if (lowered.includes('relax') || lowered.includes('rest') || lowered.includes('break')) {
+      activityType = 'relax';
+      if (lowered.includes('cafe') || lowered.includes('coffee')) {
+        suggestedVenueType = 'cafe';
+      } else if (lowered.includes('park')) {
+        suggestedVenueType = 'park';
+      } else if (lowered.includes('spa')) {
+        suggestedVenueType = 'spa';
+      }
+    }
+    // For arrival or departure
+    else if (lowered.includes('arrive') || lowered.includes('depart')) {
+      activityType = lowered.includes('arrive') ? 'arrive' : 'depart';
+      // No venue type suggestion for arrival/departure
+    }
+    // For traveling activities
+    else if (lowered.includes('travel')) {
+      activityType = 'travel';
+      // No venue type suggestion for traveling
+    }
+  } else {
+    // For regular venue-based activities, use the existing mapping
+    const venueTypeEntry = Object.entries(ACTIVITY_TYPE_MAPPINGS).find(([activity]) =>
+      lowered.includes(activity)
+    );
+    
+    if (venueTypeEntry) {
+      activityType = venueTypeEntry[0];
+      suggestedVenueType = venueTypeEntry[1];
+    } else {
+      // Default to generic activity type
+      activityType = 'activity';
+      
+      // Try to infer venue type from activity context
+      if (lowered.includes('food') || lowered.includes('eat')) {
+        suggestedVenueType = 'restaurant';
+      } else if (lowered.includes('visit')) {
+        suggestedVenueType = 'tourist_attraction';
+      }
+    }
+  }
 
   return {
-    type: venueType || 'activity',
+    type: activityType,
     naturalDescription: description,
-    venueType,
+    venueType: suggestedVenueType, // This will be string | undefined (no null)
     timeContext: {
       preferredTime: timeMatch?.[1].default,
       duration: durationMatch?.[1],

@@ -20,7 +20,26 @@ export const ACTIVITY_TYPE_MAPPINGS = {
   "drinks": "bar",
   "shopping": "shopping_mall",
   "culture": "museum",
-  "art": "art_gallery"
+  "art": "art_gallery",
+  "entertainment": "movie_theater",
+  "park": "park",
+  "hotel": "lodging",
+  "workout": "gym",
+  "spa": "spa",
+  "tourism": "tourist_attraction",
+  "nightlife": "night_club",
+  "dessert": "bakery",
+  // Non-venue activities that shouldn't be sent to Google Places API
+  // Using undefined instead of null to maintain type compatibility
+  "meeting": undefined,
+  "arrive": undefined,
+  "depart": undefined,
+  "explore": undefined,
+  "walk": undefined,
+  "travel": undefined,
+  "relax": undefined,
+  "break": undefined,
+  "rest": undefined
 } as const;
 
 type ActivityType = keyof typeof ACTIVITY_TYPE_MAPPINGS;
@@ -244,12 +263,14 @@ export function mapActivityToPlaceType(activity: string): string | undefined {
   const isValidActivityType = Object.keys(ACTIVITY_TYPE_MAPPINGS).includes(normalized);
   
   if (isValidActivityType) {
-    return ACTIVITY_TYPE_MAPPINGS[normalized as ActivityType];
+    // The value might be undefined for non-venue activities
+    const mappedValue = ACTIVITY_TYPE_MAPPINGS[normalized as ActivityType];
+    return mappedValue; // This might be undefined, which is intended for non-venue activities
   }
   
   // Try to find partial matches
   for (const [key, value] of Object.entries(ACTIVITY_TYPE_MAPPINGS)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
+    if ((normalized.includes(key) || key.includes(normalized)) && value !== undefined) {
       return value;
     }
   }
