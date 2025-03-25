@@ -1,0 +1,55 @@
+Modify googlePlaces.ts to return multiple venue options (1 primary + up to 3 alternatives) instead of just one result.
+
+Implementation:
+1. Update the searchPlace() function to return an object with 'primary' and 'alternatives' properties
+2. Get up to 4 results from Google Places API instead of just the top result
+3. Add properties to identify primary/alternative status and distance from primary
+
+Testing:
+Create a file called testVenueAlternatives.ts with this content:
+
+import { searchPlace } from './lib/googlePlaces';
+
+async function testVenueAlternatives() {
+  const testQueries = [
+    { query: "restaurant in Soho", options: { type: "restaurant" } },
+    { query: "coffee in Covent Garden", options: { type: "cafe" } }
+  ];
+  
+  console.log("--- Testing Venue Alternatives ---");
+  for (const test of testQueries) {
+    try {
+      console.log(`\nSearching for "${test.query}"...`);
+      const result = await searchPlace(test.query, test.options);
+      
+      // Check structure - should have primary and alternatives
+      if (!result.primary) {
+        console.error(`❌ Missing primary result for "${test.query}"`);
+        continue;
+      }
+      
+      console.log(`✅ Primary: "${result.primary.name}" (${result.primary.formatted_address})`);
+      
+      // Check alternatives
+      if (!Array.isArray(result.alternatives)) {
+        console.error(`❌ Alternatives is not an array for "${test.query}"`);
+      } else {
+        console.log(`✅ Found ${result.alternatives.length} alternatives:`);
+        result.alternatives.forEach((alt, i) => {
+          console.log(`  ${i+1}. "${alt.name}" (${alt.formatted_address})`);
+        });
+      }
+    } catch (error) {
+      console.error(`❌ Error searching for "${test.query}":`, error);
+    }
+  }
+}
+
+testVenueAlternatives();
+
+Run the test with: node -r ts-node/register testVenueAlternatives.ts
+
+Debug:
+- If no alternatives are returned, check the Google Places API response format
+- If only one venue is returned, check if nearbySearch is properly configured with radius
+- If structure is wrong, verify that the return type has been updated in both the function and any type definitions

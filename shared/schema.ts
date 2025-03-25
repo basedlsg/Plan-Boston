@@ -47,4 +47,12 @@ export type PlaceDetails = {
       close: { time: string; day: number };
     }>;
   };
+  is_primary?: boolean;
+  distance_from_primary?: number;
+  area_info?: any;
+};
+
+export type VenueSearchResult = {
+  primary: PlaceDetails;
+  alternatives: PlaceDetails[];
 };

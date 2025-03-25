@@ -1,9 +1,10 @@
-import type { PlaceDetails } from "@shared/schema";
+import type { PlaceDetails, VenueSearchResult } from "@shared/schema";
 import { normalizeLocationName, verifyPlaceMatch, suggestSimilarLocations } from "./locationNormalizer";
 import { londonAreas, findAreasByCharacteristics } from "../data/london-areas";
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
+const MAX_ALTERNATIVES = 3; // Maximum number of alternative venues to return
 
 interface SearchOptions {
   type?: string;
@@ -11,10 +12,37 @@ interface SearchOptions {
   minRating?: number;
 }
 
+// Helper function to calculate distance between two points using Haversine formula
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  const distance = R * c; // Distance in km
+  return Math.round(distance * 1000) / 1000; // Round to 3 decimal places
+}
+
+// Helper function to fetch place details
+async function fetchPlaceDetails(placeId: string): Promise<any> {
+  const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${placeId}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types&key=${GOOGLE_PLACES_API_KEY}`;
+  const detailsRes = await fetch(detailsUrl);
+  const detailsData = await detailsRes.json();
+  
+  if (detailsData.status !== "OK") {
+    throw new Error(`Error fetching details for place ${placeId}.`);
+  }
+  
+  return detailsData.result;
+}
+
 export async function searchPlace(
   query: string, 
   options: SearchOptions = {}
-): Promise<PlaceDetails | null> {
+): Promise<VenueSearchResult> {
   try {
     // First check if this matches any of our known areas
     const matchingArea = londonAreas.find(area => 
@@ -92,37 +120,73 @@ export async function searchPlace(
         throw new Error(`No ${options.type} found near ${normalizedLocation}. Try a different location or activity type.`);
       }
 
-      // Filter by rating if specified
-      let bestResult = nearbyData.results[0];
-      if (options.minRating) {
-        const qualifiedResults = nearbyData.results.filter(
-          (r: any) => r.rating >= options.minRating
+      // Filter results by rating if specified
+      let results = [...nearbyData.results];
+      if (options.minRating !== undefined) {
+        const minRating = options.minRating; // Store in a constant to avoid the "possibly undefined" error
+        const qualifiedResults = results.filter(
+          (r: any) => r.rating >= minRating
         );
         if (qualifiedResults.length > 0) {
-          bestResult = qualifiedResults[0];
+          results = qualifiedResults;
         }
       }
-
-      // Get additional details about the selected venue
-      const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${bestResult.place_id}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types&key=${GOOGLE_PLACES_API_KEY}`;
-      const detailsRes = await fetch(detailsUrl);
-      const detailsData = await detailsRes.json();
-
-      if (detailsData.status !== "OK") {
-        throw new Error(`Error fetching details for selected ${options.type}.`);
+      
+      // Limit to maximum results (1 primary + MAX_ALTERNATIVES)
+      results = results.slice(0, 1 + MAX_ALTERNATIVES);
+      
+      if (results.length === 0) {
+        throw new Error(`No ${options.type} found near ${normalizedLocation}. Try a different location or activity type.`);
       }
-
-      console.log(`Found ${options.type} near ${normalizedLocation}:`, {
-        name: bestResult.name,
-        address: bestResult.formatted_address,
-        rating: bestResult.rating,
-        distance: "Within 2km"
-      });
-
-      return {
-        ...detailsData.result,
-        place_id: bestResult.place_id,
+      
+      // Get primary result
+      const primaryResult = results[0];
+      const primaryLat = primaryResult.geometry.location.lat;
+      const primaryLng = primaryResult.geometry.location.lng;
+      
+      // Get details for all venues
+      const primaryDetails = await fetchPlaceDetails(primaryResult.place_id);
+      
+      // Mark as primary and add area info
+      const primary: PlaceDetails = {
+        ...primaryDetails,
+        place_id: primaryResult.place_id,
+        is_primary: true,
+        distance_from_primary: 0,
         area_info: matchingArea
+      };
+      
+      // Get alternative venues
+      const alternativePromises = results.slice(1).map(async (result) => {
+        const details = await fetchPlaceDetails(result.place_id);
+        
+        // Calculate distance from primary result
+        const distance = calculateDistance(
+          primaryLat, 
+          primaryLng,
+          result.geometry.location.lat, 
+          result.geometry.location.lng
+        );
+        
+        return {
+          ...details,
+          place_id: result.place_id,
+          is_primary: false,
+          distance_from_primary: distance,
+          area_info: matchingArea
+        };
+      });
+      
+      const alternatives = await Promise.all(alternativePromises);
+      
+      console.log(`Found ${results.length} ${options.type} venues near ${normalizedLocation}:`, {
+        primary: primary.name,
+        alternatives: alternatives.map(a => a.name)
+      });
+      
+      return {
+        primary,
+        alternatives
       };
 
     } else {
@@ -147,26 +211,57 @@ export async function searchPlace(
         );
       }
 
-      const bestResult = searchData.results[0];
-
-      // Verify the result matches what was requested
-      if (!verifyPlaceMatch(query, bestResult.name, bestResult.types)) {
-        console.warn(`Place match verification warning for "${query}". Got "${bestResult.name}" instead.`);
+      // Get up to MAX_ALTERNATIVES + 1 results
+      const results = searchData.results.slice(0, 1 + MAX_ALTERNATIVES);
+      const primaryResult = results[0];
+      
+      // Verify the primary result matches what was requested
+      if (!verifyPlaceMatch(query, primaryResult.name, primaryResult.types)) {
+        console.warn(`Place match verification warning for "${query}". Got "${primaryResult.name}" instead.`);
       }
-
-      // Get additional place details
-      const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${bestResult.place_id}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types&key=${GOOGLE_PLACES_API_KEY}`;
-      const detailsRes = await fetch(detailsUrl);
-      const detailsData = await detailsRes.json();
-
-      if (detailsData.status !== "OK") {
-        throw new Error(`Error fetching details for "${query}".`);
-      }
-
-      return {
-        ...detailsData.result,
-        place_id: bestResult.place_id,
+      
+      // Get primary landmark details
+      const primaryDetails = await fetchPlaceDetails(primaryResult.place_id);
+      const primaryLat = primaryResult.geometry.location.lat;
+      const primaryLng = primaryResult.geometry.location.lng;
+      
+      // Create primary result object
+      const primary: PlaceDetails = {
+        ...primaryDetails,
+        place_id: primaryResult.place_id,
+        is_primary: true,
+        distance_from_primary: 0,
         area_info: matchingArea
+      };
+      
+      // Get alternative landmarks
+      const alternativePromises = results.slice(1).map(async (result: any) => {
+        const details = await fetchPlaceDetails(result.place_id);
+        
+        // Calculate distance from primary result
+        const distance = calculateDistance(
+          primaryLat, 
+          primaryLng,
+          result.geometry.location.lat, 
+          result.geometry.location.lng
+        );
+        
+        return {
+          ...details,
+          place_id: result.place_id,
+          is_primary: false,
+          distance_from_primary: distance,
+          area_info: matchingArea
+        };
+      });
+      
+      const alternatives = await Promise.all(alternativePromises);
+      
+      console.log(`Found landmark "${primary.name}" with ${alternatives.length} alternatives`);
+      
+      return {
+        primary,
+        alternatives
       };
     }
   } catch (error) {
