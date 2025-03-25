@@ -204,22 +204,31 @@ export function parseActivity(description: string): ActivityContext {
     }
   } else {
     // For regular venue-based activities, use the existing mapping
-    const venueTypeEntry = Object.entries(ACTIVITY_TYPE_MAPPINGS).find(([activity]) =>
-      lowered.includes(activity)
-    );
-    
-    if (venueTypeEntry) {
-      activityType = venueTypeEntry[0];
-      suggestedVenueType = venueTypeEntry[1];
+    // Check for specific meal types first
+    if (lowered.includes('dinner')) {
+      activityType = 'dinner';
+      suggestedVenueType = 'restaurant';
+    } else if (lowered.includes('lunch')) {
+      activityType = 'lunch';
+      suggestedVenueType = 'restaurant';
     } else {
-      // Default to generic activity type
-      activityType = 'activity';
+      const venueTypeEntry = Object.entries(ACTIVITY_TYPE_MAPPINGS).find(([activity]) =>
+        lowered.includes(activity)
+      );
       
-      // Try to infer venue type from activity context
-      if (lowered.includes('food') || lowered.includes('eat')) {
-        suggestedVenueType = 'restaurant';
-      } else if (lowered.includes('visit')) {
-        suggestedVenueType = 'tourist_attraction';
+      if (venueTypeEntry) {
+        activityType = venueTypeEntry[0];
+        suggestedVenueType = venueTypeEntry[1];
+      } else {
+        // Default to generic activity type
+        activityType = 'activity';
+        
+        // Try to infer venue type from activity context
+        if (lowered.includes('food') || lowered.includes('eat')) {
+          suggestedVenueType = 'restaurant';
+        } else if (lowered.includes('visit')) {
+          suggestedVenueType = 'tourist_attraction';
+        }
       }
     }
   }

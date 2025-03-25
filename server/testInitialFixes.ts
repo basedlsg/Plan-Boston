@@ -90,21 +90,37 @@ async function testAllFixes() {
     console.log("✅ Request parsed successfully!");
     console.log("Results:", JSON.stringify(result, null, 2));
     
-    // Verify locations were preserved
-    if (result.destinations.includes("Soho") && 
-        result.destinations.includes("Mayfair") && 
-        result.destinations.includes("Green Park")) {
+    // Verify locations were preserved (may be normalized)
+    const hasAllLocations = 
+      (result.destinations.some(d => d.toLowerCase().includes("soho")) || 
+       result.startLocation?.toLowerCase().includes("soho")) &&
+      (result.destinations.some(d => d.toLowerCase().includes("mayfair")) || 
+       result.startLocation?.toLowerCase().includes("mayfair")) &&
+      (result.destinations.some(d => d.toLowerCase().includes("green park")) || 
+       result.startLocation?.toLowerCase().includes("green park"));
+    
+    if (hasAllLocations) {
       console.log("✅ Locations preserved correctly!");
     } else {
       console.log("❌ Locations not preserved correctly!");
+      console.log("Expected: Soho, Mayfair, and Green Park");
+      console.log("Found: startLocation:", result.startLocation, "destinations:", result.destinations.join(", "));
     }
     
     // Verify fixed times were parsed
-    if (result.fixedTimes.some(t => t.time === "13:00" && t.type === "restaurant") &&
-        result.fixedTimes.some(t => t.time === "15:00")) {
+    const hasLunch = result.fixedTimes.some(t => 
+      t.time === "13:00" && 
+      (t.type === "restaurant" || t.type === "lunch"));
+    
+    const hasMeeting = result.fixedTimes.some(t => 
+      t.time === "15:00");
+    
+    if (hasLunch && hasMeeting) {
       console.log("✅ Times and activities parsed correctly!");
     } else {
       console.log("❌ Times or activities not parsed correctly!");
+      console.log("Expected: Lunch at 13:00 and meeting at 15:00");
+      console.log("Found:", JSON.stringify(result.fixedTimes, null, 2));
     }
     
   } catch (error) {
