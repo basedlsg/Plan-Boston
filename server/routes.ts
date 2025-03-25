@@ -161,41 +161,46 @@ export async function registerRoutes(app: Express) {
       // Handle lunch request specifically
       if (parsed.preferences?.type?.includes('lunch')) {
         console.log("Searching for lunch venue near:", parsed.startLocation);
-        const venueResult = await searchPlace(parsed.startLocation, {
-          type: 'restaurant',
-          openNow: true,
-          minRating: 4.0
-        });
-        
-        // Use the primary venue from the result
-        const lunchPlace = venueResult.primary;
-
-        if (lunchPlace) {
-          console.log("Found lunch venue:", {
-            name: lunchPlace.name,
-            address: lunchPlace.formatted_address,
-            rating: lunchPlace.rating,
-            alternatives: venueResult.alternatives.length
+        try {
+          const venueResult = await searchPlace(parsed.startLocation, {
+            type: 'restaurant',
+            openNow: true,
+            minRating: 4.0
           });
+          
+          if (!venueResult || !venueResult.primary) {
+            console.error("Failed to find lunch venue near:", parsed.startLocation);
+          } else {
+            // Use the primary venue from the result
+            const lunchPlace = venueResult.primary;
 
-          const lunchTime = parseTimeString('14:00', baseDate);
-          const newPlace = await storage.createPlace({
-            placeId: lunchPlace.place_id,
-            name: lunchPlace.name,
-            address: lunchPlace.formatted_address,
-            location: lunchPlace.geometry.location,
-            details: lunchPlace,
-            scheduledTime: lunchTime.toISOString(),
-          });
+            console.log("Found lunch venue:", {
+              name: lunchPlace.name,
+              address: lunchPlace.formatted_address,
+              rating: lunchPlace.rating,
+              alternatives: venueResult.alternatives.length
+            });
 
-          scheduledPlaces.add(lunchPlace.place_id);
-          itineraryPlaces.push({
-            place: newPlace,
-            time: lunchTime,
-            isFixed: true
-          });
-        } else {
-          console.error("Failed to find lunch venue near:", parsed.startLocation);
+            const lunchTime = parseTimeString('14:00', baseDate);
+            const newPlace = await storage.createPlace({
+              placeId: lunchPlace.place_id,
+              name: lunchPlace.name,
+              address: lunchPlace.formatted_address,
+              location: lunchPlace.geometry.location,
+              details: lunchPlace,
+              alternatives: venueResult.alternatives,
+              scheduledTime: lunchTime.toISOString(),
+            });
+
+            scheduledPlaces.add(lunchPlace.place_id);
+            itineraryPlaces.push({
+              place: newPlace,
+              time: lunchTime,
+              isFixed: true
+            });
+          }
+        } catch (error) {
+          console.error("Error finding lunch venue:", error);
         }
       }
 
@@ -214,7 +219,7 @@ export async function registerRoutes(app: Express) {
             openNow: true
           });
 
-          if (!venueResult) {
+          if (!venueResult || !venueResult.primary) {
             throw new Error(`Could not find location: ${timeSlot.location}. Try specifying the full name (e.g. "The Green Park" instead of "Green Park")`);
           }
 
@@ -239,6 +244,7 @@ export async function registerRoutes(app: Express) {
             address: place.formatted_address,
             location: place.geometry.location,
             details: place,
+            alternatives: venueResult.alternatives,
             scheduledTime: appointmentTime.toISOString(),
           });
 
@@ -276,15 +282,21 @@ export async function registerRoutes(app: Express) {
             );
 
             for (const activity of suggestedActivities) {
-              const venueResult = await searchPlace(activity, {
-                openNow: true,
-                minRating: 4.0
-              });
-              
-              // Use the primary venue from the result
-              const suggestedPlace = venueResult.primary;
+              try {
+                const venueResult = await searchPlace(activity, {
+                  openNow: true,
+                  minRating: 4.0
+                });
+                
+                if (!venueResult || !venueResult.primary) {
+                  console.log(`No suitable venue found for activity: ${activity}`);
+                  continue;
+                }
+                
+                // Use the primary venue from the result
+                const suggestedPlace = venueResult.primary;
 
-              if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
+                if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
                 // Explicitly define the activity time
                 const activityTime: Date = new Date(current.time.getTime() + 90 * 60 * 1000);
 
@@ -294,6 +306,7 @@ export async function registerRoutes(app: Express) {
                   address: suggestedPlace.formatted_address,
                   location: suggestedPlace.geometry.location,
                   details: suggestedPlace,
+                  alternatives: venueResult.alternatives,
                   scheduledTime: activityTime.toISOString(),
                 });
 
@@ -306,6 +319,9 @@ export async function registerRoutes(app: Express) {
                 
                 // Log the alternatives found
                 console.log(`Added activity ${suggestedPlace.name} with ${venueResult.alternatives.length} alternatives`);
+              }
+              } catch (error) {
+                console.error(`Error finding venue for activity "${activity}":`, error);
               }
             }
           }

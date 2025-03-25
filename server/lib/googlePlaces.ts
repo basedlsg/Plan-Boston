@@ -211,8 +211,9 @@ export async function searchPlace(
         );
       }
 
-      // Get up to MAX_ALTERNATIVES + 1 results
+      // Get up to MAX_ALTERNATIVES + 1 results, but handle cases where there are few or no similar alternatives
       const results = searchData.results.slice(0, 1 + MAX_ALTERNATIVES);
+      // There should always be at least one result if we reach here
       const primaryResult = results[0];
       
       // Verify the primary result matches what was requested
