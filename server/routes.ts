@@ -161,17 +161,21 @@ export async function registerRoutes(app: Express) {
       // Handle lunch request specifically
       if (parsed.preferences?.type?.includes('lunch')) {
         console.log("Searching for lunch venue near:", parsed.startLocation);
-        const lunchPlace = await searchPlace(parsed.startLocation, {
+        const venueResult = await searchPlace(parsed.startLocation, {
           type: 'restaurant',
           openNow: true,
           minRating: 4.0
         });
+        
+        // Use the primary venue from the result
+        const lunchPlace = venueResult.primary;
 
         if (lunchPlace) {
           console.log("Found lunch venue:", {
             name: lunchPlace.name,
             address: lunchPlace.formatted_address,
-            rating: lunchPlace.rating
+            rating: lunchPlace.rating,
+            alternatives: venueResult.alternatives.length
           });
 
           const lunchTime = parseTimeString('14:00', baseDate);
@@ -205,19 +209,23 @@ export async function registerRoutes(app: Express) {
           });
 
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
-          const place = await searchPlace(timeSlot.location, {
+          const venueResult = await searchPlace(timeSlot.location, {
             type: timeSlot.type,
             openNow: true
           });
 
-          if (!place) {
+          if (!venueResult) {
             throw new Error(`Could not find location: ${timeSlot.location}. Try specifying the full name (e.g. "The Green Park" instead of "Green Park")`);
           }
+
+          // Use the primary venue from the result
+          const place = venueResult.primary;
 
           console.log("Found location:", {
             name: place.name,
             address: place.formatted_address,
-            type: place.types
+            type: place.types,
+            alternatives: venueResult.alternatives.length
           });
 
           if (scheduledPlaces.has(place.place_id)) {
@@ -268,10 +276,13 @@ export async function registerRoutes(app: Express) {
             );
 
             for (const activity of suggestedActivities) {
-              const suggestedPlace = await searchPlace(activity, {
+              const venueResult = await searchPlace(activity, {
                 openNow: true,
                 minRating: 4.0
               });
+              
+              // Use the primary venue from the result
+              const suggestedPlace = venueResult.primary;
 
               if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
                 // Explicitly define the activity time
@@ -292,6 +303,9 @@ export async function registerRoutes(app: Express) {
                   time: new Date(activityTime),
                   isFixed: false
                 });
+                
+                // Log the alternatives found
+                console.log(`Added activity ${suggestedPlace.name} with ${venueResult.alternatives.length} alternatives`);
               }
             }
           }
