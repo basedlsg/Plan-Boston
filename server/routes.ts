@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { searchPlace } from "./lib/googlePlaces";
 import { calculateTravelTime } from "./lib/itinerary";
 import { parseItineraryRequest } from "./lib/nlp";
-import { insertPlaceSchema, insertItinerarySchema } from "@shared/schema";
+import { insertPlaceSchema, insertItinerarySchema, Place, PlaceDetails } from "@shared/schema";
 import { z } from "zod";
 import { format } from 'date-fns';
 import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, LondonArea } from "./data/london-areas";
