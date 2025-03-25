@@ -45,7 +45,22 @@ export const ACTIVITY_TYPE_MAPPINGS = {
 type ActivityType = keyof typeof ACTIVITY_TYPE_MAPPINGS;
 type Station = typeof COMMON_STATIONS[number];
 
-// Helper to normalize location names - now preserves original names except for stations
+// Common misspellings and variants of London locations
+const SPELLING_CORRECTIONS: Record<string, string> = {
+  'picadilly': 'Piccadilly',
+  'piccadily': 'Piccadilly',
+  'liecester': 'Leicester',
+  'liecester square': 'Leicester Square',
+  'leiscester': 'Leicester',
+  'leicster': 'Leicester',
+  'kings cross': 'King\'s Cross',
+  'kings-cross': 'King\'s Cross',
+  'covent-garden': 'Covent Garden',
+  'covent garden': 'Covent Garden',
+  'coventgarden': 'Covent Garden'
+};
+
+// Helper to normalize location names with improved spelling corrections
 export function normalizeLocationName(location: string): string {
   // Handle null, undefined, or empty string
   if (!location || typeof location !== 'string') return '';
@@ -53,8 +68,31 @@ export function normalizeLocationName(location: string): string {
   const trimmed = location.trim();
   if (trimmed === '') return '';
   
-  // Only standardize station names, preserve all other location names
   const lowercased = trimmed.toLowerCase();
+  
+  // Check for common spelling corrections first
+  for (const [misspelled, correct] of Object.entries(SPELLING_CORRECTIONS)) {
+    if (lowercased === misspelled) {
+      return correct;
+    }
+  }
+  
+  // Handle hyphenated location names (e.g., "Covent-Garden" → "Covent Garden")
+  if (trimmed.includes('-')) {
+    const dehyphenated = trimmed.replace(/-/g, ' ');
+    // Check if the dehyphenated version has a correction
+    const dehyphenatedLower = dehyphenated.toLowerCase();
+    for (const [misspelled, correct] of Object.entries(SPELLING_CORRECTIONS)) {
+      if (dehyphenatedLower === misspelled) {
+        return correct;
+      }
+    }
+    
+    // If no correction found, properly capitalize the dehyphenated version
+    return dehyphenated.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
 
   // Check if it's a common tube station that needs "Station" appended
   const station = COMMON_STATIONS.find(s => 
@@ -62,15 +100,19 @@ export function normalizeLocationName(location: string): string {
     lowercased === `${s.toLowerCase()} station`
   );
 
-  // Only normalize station names
+  // Normalize station names
   if (station) {
     return `${station} Station`;
   }
   
-  // For other locations, apply proper capitalization for neighborhoods
+  // For other locations, apply proper capitalization
   // Convert to title case (first letter of each word capitalized)
   return trimmed.split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map(word => {
+      // Special case for King's Cross and similar possessives
+      if (word.toLowerCase() === 'kings') return 'King\'s';
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
     .join(' ');
 }
 
