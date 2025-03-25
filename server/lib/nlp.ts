@@ -95,15 +95,18 @@ Return JSON only, no explanations, in this exact format:
   "fixedTimes": [{"location": string, "time": string, "type"?: string}],
   "preferences": {"type"?: string, "requirements"?: string[]}
 }`
-      }]
+      }],
+      system: "Extract starting location, destinations, times, and preferences from London itinerary requests. Return as JSON."
     });
 
-    if (!response.content[0] || typeof response.content[0].text !== 'string') {
+    // Check for valid response format
+    const content = response.content[0];
+    if (!content || !('text' in content) || typeof content.text !== 'string') {
       throw new Error("Invalid response format from language model");
     }
 
     // Parse Claude's response
-    const claudeParsed = JSON.parse(response.content[0].text);
+    const claudeParsed = JSON.parse(content.text);
 
     // Combine Claude's understanding with our direct extraction
     const parsed: StructuredRequest = {

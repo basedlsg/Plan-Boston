@@ -1,0 +1,165 @@
+CURRENT APPLICATION: From analyzing the codebase, we have a London Day Planner that currently:
+
+Core Features:
+
+Takes natural language input for planning
+
+Handles basic time parsing (12/24 hour formats)
+
+Uses Google Places API for location verification
+
+Basic itinerary creation with:
+
+Fixed appointments
+
+Travel time calculations
+
+Simple gap filling
+
+Calendar export (.ics format)
+
+Basic UI with form inputs and itinerary display
+
+Technical Implementation:
+
+Express backend with TypeScript
+
+React frontend
+
+PostgreSQL database
+
+Basic NLP processing
+
+Simple location-based suggestions
+
+PROPOSED MVP ENHANCEMENTS:
+
+Location Intelligence:
+
+Comprehensive London knowledge base
+
+Dynamic area response (no fixed zones)
+
+Multi-location request handling
+
+Improved venue relationships
+
+Better area context understanding
+
+Enhanced Venue System:
+
+Maximum 4 venues (1 primary + 3 alternatives)
+
+Same-area alternative suggestions
+
+Improved venue scoring based on:
+
+Activity relevance
+
+Price matching
+
+Current availability
+
+Weather suitability
+
+Weather Integration:
+
+Real-time weather data
+
+Weather-aware suggestions
+
+Route optimization based on conditions
+
+Improved NLP:
+
+Switch to Gemini for better understanding
+
+Enhanced location identification
+
+Better activity matching
+
+Weather context processing
+
+Knowledge Base:
+
+Comprehensive area database
+
+Common nicknames/aliases
+
+Key intersections
+
+Detailed landmarks
+
+PURPOSE: The app aims to be an intelligent London day planner that takes natural language input and creates optimized itineraries considering:
+
+User preferences
+
+Weather conditions
+
+Travel times
+
+Venue availability
+
+Area characteristics
+
+Time-appropriate activities
+
+MAIN FIXES NEEDED:
+
+Backend:
+
+Implement Gemini NLP integration
+
+Build comprehensive London knowledge base
+
+Add weather API integration
+
+Enhance venue scoring system
+
+Improve multi-location handling
+
+Location System:
+
+Remove hardcoded area mappings
+
+Implement fluid area relationships
+
+Add landmark database
+
+Improve location context understanding
+
+Recommendation Engine:
+
+Implement smart alternative suggestions
+
+Add weather-aware routing
+
+Enhance activity matching
+
+Improve gap-filling logic
+
+Infrastructure:
+
+Add weather API integration
+
+Enhance database schema for new features
+
+Improve error handling
+
+Add better validation
+
+Card Swiping System:
+
+Horizontal swipeable cards for venue alternatives
+
+Maximum 4 cards per suggestion (1 primary + 3 alternatives)
+
+Smooth transitions between cards
+
+Visual indicators for alternative count
+
+Touch and mouse gesture support
+
+Clear visual hierarchy showing primary vs alternative venues
+
+The MVP should take a natural language input like "I want to explore Soho when it's not raining, then have dinner in Mayfair" and create a weather-aware itinerary with appropriate alternatives, considering the area characteristics and real-time conditions.

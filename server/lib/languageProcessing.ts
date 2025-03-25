@@ -144,12 +144,44 @@ export function parseActivity(description: string): ActivityContext {
   };
 }
 
+// Function to handle relative time periods
+export function expandRelativeTime(timeString: string): string {
+  // Map of relative times to reasonable hour ranges
+  const timeMap = {
+    'morning': '10:00',
+    'afternoon': '14:00',
+    'evening': '18:00',
+    'night': '20:00',
+    'lunch': '12:30',
+    'dinner': '19:00',
+    'breakfast': '08:30'
+  };
+  
+  // Try to match the timeString to our map
+  const normalized = timeString.toLowerCase().trim();
+  if (timeMap[normalized]) {
+    return timeMap[normalized];
+  }
+  
+  // If not found in our map, return the original string for further processing
+  return timeString;
+}
+
 // Helper to parse natural time expressions
 export function parseTimeExpression(expression: string): {
   time?: string;
   duration?: number;
   period?: string;
 } {
+  // First handle relative time expressions
+  const expandedTime = expandRelativeTime(expression);
+  if (expandedTime !== expression) {
+    return {
+      time: expandedTime,
+      period: expression.toLowerCase().trim()
+    };
+  }
+
   const lowered = expression.toLowerCase().trim();
 
   // Check for time periods first
