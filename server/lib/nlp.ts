@@ -243,7 +243,7 @@ Return JSON only, no explanations, in this exact format:
           fixedTimesList.push({
             location: parsed.startLocation || parsed.destinations[0] || 'Central London',
             time: activity.timeContext.preferredTime,
-            type: activity.venueType
+            type: activity.venueType === null ? undefined : activity.venueType
           });
         }
       }
