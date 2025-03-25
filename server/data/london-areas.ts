@@ -387,7 +387,7 @@ export const londonAreas: LondonArea[] = [
     type: "neighborhood",
     borough: "Camden",
     characteristics: ["legal", "business", "historic", "central"],
-    neighbors: ["Covent Garden", "Bloomsbury", "City of London", "Farringdon"],
+    neighbors: ["Covent Garden", "Bloomsbury", "City of London", "Farringdon", "Strand"],
     popularFor: ["law firms", "business centers", "Royal Courts of Justice", "historic pubs"],
     crowdLevels: {
       morning: 4,
@@ -401,7 +401,7 @@ export const londonAreas: LondonArea[] = [
     type: "neighborhood",
     borough: "Kensington and Chelsea",
     characteristics: ["upscale", "sophisticated", "fashionable", "artistic"],
-    neighbors: ["Knightsbridge", "South Kensington", "Fulham", "Belgravia"],
+    neighbors: ["Knightsbridge", "South Kensington", "Fulham", "Belgravia", "Earl's Court"],
     popularFor: ["King's Road shopping", "Chelsea Flower Show", "luxury homes", "football club"],
     crowdLevels: {
       morning: 2,
@@ -611,7 +611,7 @@ export const londonAreas: LondonArea[] = [
     type: "area",
     borough: "Westminster",
     characteristics: ["political", "historic", "tourist", "iconic"],
-    neighbors: ["St. James's", "Victoria", "Pimlico", "South Bank"],
+    neighbors: ["St. James's", "Victoria", "Pimlico", "South Bank", "Buckingham Palace"],
     popularFor: ["Houses of Parliament", "Westminster Abbey", "government buildings", "Big Ben"],
     crowdLevels: {
       morning: 4,
