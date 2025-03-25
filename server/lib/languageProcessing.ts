@@ -251,37 +251,114 @@ export function parseActivity(description: string): ActivityContext {
   };
 }
 
-// Function to handle relative time periods
+// Function to handle relative time periods with fuzzy matching
 export function expandRelativeTime(timeString: string): string {
-  // Map of relative times to reasonable hour ranges 
-  // Using the same TimePeriod type we defined earlier
-  const timeMap: Record<TimePeriod | string, string> = {
+  if (!timeString) return timeString;
+  
+  // Enhanced map of relative times to reasonable hour ranges
+  // Including more variations and time-of-day terminology
+  const timeMap: Record<string, string> = {
+    // Time periods
     'morning': '10:00',
+    'early morning': '08:00',
+    'late morning': '11:30',
+    'noon': '12:00',
+    'midday': '12:00',
     'afternoon': '14:00',
+    'early afternoon': '13:00',
+    'late afternoon': '16:00',
     'evening': '18:00',
+    'early evening': '17:30',
+    'late evening': '20:00',
     'night': '20:00',
+    'late night': '22:00',
+    'midnight': '00:00',
+    
+    // Meal times
+    'breakfast': '08:30',
+    'early breakfast': '07:30',
+    'late breakfast': '10:00',
+    'brunch': '11:00',
     'lunch': '12:30',
+    'early lunch': '12:00',
+    'late lunch': '14:00',
+    'tea time': '16:00',
     'dinner': '19:00',
-    'breakfast': '08:30'
+    'early dinner': '18:00',
+    'late dinner': '20:30',
+    'supper': '19:30',
+    
+    // Other expressions
+    'first thing': '08:00',
+    'start of day': '09:00',
+    'end of day': '17:00',
+    'business hours': '10:00',
+    'opening time': '09:00',
+    'closing time': '18:00',
+    'rush hour': '17:30',
+    'happy hour': '17:00',
+    'after work': '18:00'
   };
   
-  // Try to match the timeString to our map
+  // Normalize the input
   const normalized = timeString.toLowerCase().trim();
   
-  // Use safer property access with explicit check
+  // Check for exact matches first
   if (Object.prototype.hasOwnProperty.call(timeMap, normalized)) {
     return timeMap[normalized];
   }
   
-  // If not found in our map, return the original string for further processing
+  // For phrases like "in the morning" or "during the evening"
+  for (const [timePeriod, timeValue] of Object.entries(timeMap)) {
+    const pattern = new RegExp(`\\b${timePeriod}\\b`, 'i');
+    if (pattern.test(normalized)) {
+      return timeValue;
+    }
+    
+    // Check for possessive forms (e.g., "morning's")
+    if (normalized.includes(`${timePeriod}'s`)) {
+      return timeValue;
+    }
+    
+    // Fuzzy match for prepositions (in the morning, during afternoon, etc.)
+    const prepositions = ['in', 'during', 'at', 'around', 'about', 'by', 'before', 'after'];
+    for (const preposition of prepositions) {
+      if (normalized.includes(`${preposition} ${timePeriod}`)) {
+        return timeValue;
+      }
+    }
+  }
+  
+  // Special handling for hour-based expressions
+  if (normalized.includes('o\'clock')) {
+    // Extract the hour number
+    const match = normalized.match(/(\d+)\s*o'clock/i);
+    if (match && match[1]) {
+      const hour = parseInt(match[1]);
+      
+      // Handle ambiguous times (assume pm for 1-11, am for 12)
+      if (hour >= 1 && hour <= 11) {
+        // Default to PM for o'clock expressions (more common in conversation)
+        return `${(hour + 12).toString().padStart(2, '0')}:00`;
+      } else if (hour === 12) {
+        return '12:00';
+      } else if (hour >= 0 && hour <= 23) {
+        return `${hour.toString().padStart(2, '0')}:00`;
+      }
+    }
+  }
+  
+  // If no match found, return the original string for further processing
   return timeString;
 }
 
 // Helper to parse natural time expressions
 export function parseTimeExpression(expression: string): {
   time?: string;
+  endTime?: string;
   duration?: number;
   period?: string;
+  isRange?: boolean;
 } {
   // First handle relative time expressions
   const expandedTime = expandRelativeTime(expression);
@@ -294,7 +371,22 @@ export function parseTimeExpression(expression: string): {
 
   const lowered = expression.toLowerCase().trim();
 
-  // Check for time periods first
+  // Check for special time words
+  if (lowered === 'noon') {
+    return {
+      time: '12:00',
+      period: 'noon'
+    };
+  }
+  
+  if (lowered === 'midnight') {
+    return {
+      time: '00:00',
+      period: 'night'
+    };
+  }
+
+  // Check for time periods
   const periodMatch = Object.entries(TIME_PERIODS).find(([period]) => 
     lowered.includes(period)
   );
@@ -315,7 +407,140 @@ export function parseTimeExpression(expression: string): {
     };
   }
 
-  // Try to extract specific time
+  // Handle time ranges
+  // Pattern 1: "between X and Y"
+  const betweenPattern = /between\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s+and\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+  const betweenMatch = lowered.match(betweenPattern);
+  
+  if (betweenMatch) {
+    const [_, startHours, startMinutes = "00", startMeridian, endHours, endMinutes = "00", endMeridian] = betweenMatch;
+    
+    let startHour = parseInt(startHours);
+    let endHour = parseInt(endHours);
+    
+    // Handle meridian (am/pm)
+    // If end has meridian but start doesn't, apply the same meridian to start
+    const effectiveStartMeridian = startMeridian || endMeridian || '';
+    const effectiveEndMeridian = endMeridian || '';
+    
+    if (effectiveStartMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+    if (effectiveStartMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+    
+    if (effectiveEndMeridian?.toLowerCase() === "pm" && endHour < 12) endHour += 12;
+    if (effectiveEndMeridian?.toLowerCase() === "am" && endHour === 12) endHour = 0;
+    
+    return {
+      time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+      endTime: `${endHour.toString().padStart(2, '0')}:${endMinutes}`,
+      isRange: true
+    };
+  }
+  
+  // Pattern 2: "from X to Y" with special handling for noon/midnight
+  // First check if contains "noon" or "midnight"
+  if (lowered.includes("from") && lowered.includes("to")) {
+    // Special case for "from X to noon"
+    if (lowered.includes("to noon")) {
+      const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+      const match = lowered.match(timePattern);
+      
+      if (match) {
+        const [_, startHours, startMinutes = "00", startMeridian] = match;
+        let startHour = parseInt(startHours);
+        
+        // Handle meridian (am/pm)
+        if (startMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+        if (startMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+        
+        return {
+          time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+          endTime: "12:00",
+          isRange: true
+        };
+      }
+    }
+    
+    // Special case for "from X to midnight"
+    else if (lowered.includes("to midnight")) {
+      const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+      const match = lowered.match(timePattern);
+      
+      if (match) {
+        const [_, startHours, startMinutes = "00", startMeridian] = match;
+        let startHour = parseInt(startHours);
+        
+        // Handle meridian (am/pm)
+        if (startMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+        if (startMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+        
+        return {
+          time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+          endTime: "00:00",
+          isRange: true
+        };
+      }
+    }
+  }
+  
+  // Standard "from X to Y" pattern with numeric times
+  const fromToPattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s+to\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?|to\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+  const fromToMatch = lowered.match(fromToPattern);
+  
+  if (fromToMatch) {
+    // Check if we matched the "from X to Y" pattern or just "to Y"
+    const fullMatch = fromToMatch[1] !== undefined;
+    
+    if (fullMatch) {
+      const [_, startHours, startMinutes = "00", startMeridian, endHours, endMinutes = "00", endMeridian] = fromToMatch;
+      
+      let startHour = parseInt(startHours);
+      let endHour = parseInt(endHours);
+      
+      // Handle meridian (am/pm) similar to above
+      const effectiveStartMeridian = startMeridian || endMeridian || '';
+      const effectiveEndMeridian = endMeridian || '';
+      
+      if (effectiveStartMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+      if (effectiveStartMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+      
+      if (effectiveEndMeridian?.toLowerCase() === "pm" && endHour < 12) endHour += 12;
+      if (effectiveEndMeridian?.toLowerCase() === "am" && endHour === 12) endHour = 0;
+      
+      return {
+        time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+        endTime: `${endHour.toString().padStart(2, '0')}:${endMinutes}`,
+        isRange: true
+      };
+    }
+  }
+  
+  // Pattern 3: "X-Y" (e.g., "3-5pm")
+  const rangePattern = /(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+  const rangeMatch = lowered.match(rangePattern);
+  
+  if (rangeMatch) {
+    const [_, startHours, startMinutes = "00", endHours, endMinutes = "00", meridian] = rangeMatch;
+    
+    let startHour = parseInt(startHours);
+    let endHour = parseInt(endHours);
+    
+    // In the X-Y format, if there's a single meridian, it applies to both times
+    if (meridian?.toLowerCase() === "pm") {
+      if (startHour < 12) startHour += 12;
+      if (endHour < 12) endHour += 12;
+    } else if (meridian?.toLowerCase() === "am") {
+      if (startHour === 12) startHour = 0;
+      if (endHour === 12) endHour = 0;
+    }
+    
+    return {
+      time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+      endTime: `${endHour.toString().padStart(2, '0')}:${endMinutes}`,
+      isRange: true
+    };
+  }
+
+  // Standard time pattern (if no range patterns match)
   const timeMatch = lowered.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
   if (timeMatch) {
     let [_, hours, minutes = "00", meridian] = timeMatch;
@@ -329,29 +554,73 @@ export function parseTimeExpression(expression: string): {
     };
   }
 
+  // Return empty object if no pattern matches
   return {};
 }
 
-// Contextual time defaulting
+// Contextual time defaulting with activity-specific logic
 export function getDefaultTime(activity: string, currentTime?: Date): string {
   const now = currentTime || new Date();
   const hour = now.getHours();
   
-  // Map activities to logical default times
-  if (activity.toLowerCase().includes('breakfast')) {
+  const lowered = activity.toLowerCase().trim();
+  
+  // Mealtime activities
+  if (lowered.includes('breakfast')) {
     return hour < 10 ? '09:00' : '10:00';
   }
-  if (activity.toLowerCase().includes('lunch')) {
+  
+  if (lowered.includes('lunch')) {
     return hour < 13 ? '12:30' : '13:30';
   }
-  if (activity.toLowerCase().includes('dinner')) {
+  
+  if (lowered.includes('dinner')) {
     return hour < 19 ? '19:00' : '20:00';
   }
   
-  // Default based on current time
-  if (hour < 11) return '10:00';
-  if (hour < 14) return '13:00';
-  if (hour < 17) return '15:00';
-  if (hour < 20) return '19:00';
-  return '20:00';
+  // Coffee is typically a morning/afternoon activity
+  if (lowered.includes('coffee') || lowered.includes('cafe')) {
+    if (hour < 11) return '10:30'; // Mid-morning coffee
+    if (hour < 15) return '14:00'; // Afternoon coffee
+    if (hour < 18) return '16:00'; // Late afternoon coffee
+    return '10:30';  // Default to morning coffee for next day if asked at night
+  }
+  
+  // Drinks/Bar activities are typically evening activities
+  if (lowered.includes('drinks') || lowered.includes('bar') || lowered.includes('pub')) {
+    if (hour < 17) return '18:00'; // Early evening drinks
+    if (hour < 20) return '19:30'; // Prime time drinks
+    return '21:00';  // Late evening drinks
+  }
+  
+  // Shopping activities
+  if (lowered.includes('shop') || lowered.includes('store') || lowered.includes('mall')) {
+    if (hour < 12) return '11:00'; // Late morning shopping
+    if (hour < 17) return '14:00'; // Afternoon shopping
+    return '11:00';  // Default to morning shopping for next day if asked late
+  }
+  
+  // Museum/Cultural activities
+  if (lowered.includes('museum') || lowered.includes('gallery') || 
+      lowered.includes('exhibition') || lowered.includes('cultural')) {
+    if (hour < 12) return '11:00'; // Late morning visit
+    if (hour < 16) return '14:00'; // Afternoon visit
+    return '11:00';  // Default to morning for next day if asked late
+  }
+  
+  // Park/Outdoor activities
+  if (lowered.includes('park') || lowered.includes('garden') || 
+      lowered.includes('walk') || lowered.includes('outdoor')) {
+    if (hour < 12) return '11:00'; // Late morning
+    if (hour < 15) return '14:00'; // Afternoon
+    if (hour < 18) return '16:00'; // Late afternoon (avoid evening in winter)
+    return '11:00';  // Default to morning for next day if asked late
+  }
+  
+  // Default based on current time of day (for generic activities)
+  if (hour < 11) return '10:00';  // Morning activities
+  if (hour < 14) return '13:00';  // Lunch/early afternoon activities
+  if (hour < 17) return '15:00';  // Afternoon activities
+  if (hour < 20) return '19:00';  // Early evening activities
+  return '20:00';                 // Late evening activities
 }
