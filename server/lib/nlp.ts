@@ -99,14 +99,20 @@ Return JSON only, no explanations, in this exact format:
       system: "Extract starting location, destinations, times, and preferences from London itinerary requests. Return as JSON."
     });
 
-    // Check for valid response format
+    // Check for valid response format from Anthropic API
     const content = response.content[0];
-    if (!content || !('text' in content) || typeof content.text !== 'string') {
+    if (!content || typeof content !== 'object') {
       throw new Error("Invalid response format from language model");
+    }
+    
+    // Handle Anthropic API response format
+    const textContent = 'text' in content ? content.text : '';
+    if (typeof textContent !== 'string') {
+      throw new Error("Invalid text content from language model");
     }
 
     // Parse Claude's response
-    const claudeParsed = JSON.parse(content.text);
+    const claudeParsed = JSON.parse(textContent);
 
     // Combine Claude's understanding with our direct extraction
     const parsed: StructuredRequest = {
@@ -120,14 +126,22 @@ Return JSON only, no explanations, in this exact format:
     };
 
     // Use locations from both sources
-    const allLocations = new Set([
+    const allLocationsList = [
       ...extractedLocations.map(l => l.name),
-      ...claudeParsed.destinations || [],
+      ...(claudeParsed.destinations || []),
       claudeParsed.startLocation
-    ].filter(Boolean));
+    ].filter(Boolean);
+    
+    // Remove duplicates without using Set spread which causes TypeScript issues
+    const uniqueLocations: string[] = [];
+    allLocationsList.forEach(loc => {
+      if (!uniqueLocations.includes(loc)) {
+        uniqueLocations.push(loc);
+      }
+    });
 
     // Validate each location
-    for (const loc of allLocations) {
+    for (const loc of uniqueLocations) {
       const validatedLoc = findLocation(loc);
       if (validatedLoc) {
         if (!parsed.startLocation) {
@@ -139,10 +153,19 @@ Return JSON only, no explanations, in this exact format:
     }
 
     // Combine activities and times
-    const fixedTimes = new Set();
+    // Define the expected type for our fixed times entries
+    type FixedTimeEntry = {
+      location: string;
+      time: string;
+      type?: string;
+    };
+    
+    const fixedTimesList: FixedTimeEntry[] = [];
+    
+    // Add times from extracted activities
     for (const activity of extractedActivities) {
       if (activity.timeContext?.preferredTime) {
-        fixedTimes.add({
+        fixedTimesList.push({
           location: parsed.startLocation || parsed.destinations[0],
           time: activity.timeContext.preferredTime,
           type: activity.venueType
@@ -151,20 +174,32 @@ Return JSON only, no explanations, in this exact format:
     }
 
     // Add Claude's fixed times
-    if (claudeParsed.fixedTimes) {
+    if (claudeParsed.fixedTimes && Array.isArray(claudeParsed.fixedTimes)) {
       for (const ft of claudeParsed.fixedTimes) {
-        const location = findLocation(ft.location);
-        if (location) {
-          fixedTimes.add({
-            location: location.name,
-            time: parseTimeExpression(ft.time).time || getDefaultTime(ft.type || ''),
-            type: ft.type
-          });
+        if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
+          const location = findLocation(String(ft.location));
+          if (location) {
+            fixedTimesList.push({
+              location: location.name,
+              time: parseTimeExpression(String(ft.time)).time || getDefaultTime(ft.type ? String(ft.type) : ''),
+              type: ft.type ? String(ft.type) : undefined
+            });
+          }
         }
       }
     }
 
-    parsed.fixedTimes = Array.from(fixedTimes);
+    // Remove duplicates without using Set which causes TypeScript issues
+    const stringified = fixedTimesList.map(item => JSON.stringify(item));
+    const uniqueStringified: string[] = [];
+    stringified.forEach(str => {
+      if (!uniqueStringified.includes(str)) {
+        uniqueStringified.push(str);
+      }
+    });
+    const uniqueFixedTimes = uniqueStringified.map(item => JSON.parse(item) as FixedTimeEntry);
+    
+    parsed.fixedTimes = uniqueFixedTimes;
 
     // If no locations were found, provide a helpful error
     if (!parsed.startLocation && parsed.destinations.length === 0) {
