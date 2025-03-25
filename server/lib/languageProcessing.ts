@@ -233,7 +233,7 @@ export function parseActivity(description: string): ActivityContext {
       duration: durationMatch?.[1],
       constraints: timeMatch ? [`prefer_${timeMatch[0]}`] : undefined
     },
-    requirements
+    requirements: requirements.length > 0 ? requirements : []
   };
 }
 

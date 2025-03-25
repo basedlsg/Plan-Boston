@@ -150,6 +150,12 @@ Return JSON only, no explanations, in this exact format:
       }
     }
     
+    // Remove any extra characters after the last closing brace
+    const lastBrace = cleanedContent.lastIndexOf('}');
+    if (lastBrace !== -1) {
+      cleanedContent = cleanedContent.substring(0, lastBrace + 1);
+    }
+    
     console.log("Cleaned JSON content:", cleanedContent);
     
     // Try/catch for JSON parsing with detailed error information
