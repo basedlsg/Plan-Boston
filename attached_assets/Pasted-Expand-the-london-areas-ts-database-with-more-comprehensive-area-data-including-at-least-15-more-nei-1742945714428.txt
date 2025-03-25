@@ -1,0 +1,65 @@
+Expand the london-areas.ts database with more comprehensive area data including at least 15 more neighborhoods/areas.
+
+Implementation:
+1. Add more neighborhoods to the londonAreas array in data/london-areas.ts
+2. Ensure each area has complete data (name, type, characteristics, neighbors, etc.)
+3. Add alternative names/nicknames for popular areas
+4. Ensure symmetric neighbor relationships (if A neighbors B, B should neighbor A)
+
+Testing:
+Create a test file testAreaDatabase.ts:
+
+import { londonAreas, findAreasByCharacteristics } from './data/london-areas';
+
+function testLondonAreas() {
+  console.log(`Total areas in database: ${londonAreas.length}`);
+  
+  // Check for completeness
+  const incompleteAreas = londonAreas.filter(area => {
+    return !area.name || 
+           !area.characteristics || 
+           area.characteristics.length === 0 ||
+           !area.neighbors || 
+           area.neighbors.length === 0 ||
+           !area.popularFor || 
+           area.popularFor.length === 0;
+  });
+  
+  if (incompleteAreas.length > 0) {
+    console.log(`❌ Found ${incompleteAreas.length} areas with incomplete data:`);
+    incompleteAreas.forEach(area => console.log(`  - ${area.name}`));
+  } else {
+    console.log("✅ All areas have complete data");
+  }
+  
+  // Check neighbor relationships
+  let asymmetricRelationships = 0;
+  
+  londonAreas.forEach(area => {
+    area.neighbors.forEach(neighbor => {
+      const neighborArea = londonAreas.find(a => a.name === neighbor);
+      if (!neighborArea) {
+        console.log(`❌ "${area.name}" lists "${neighbor}" as neighbor, but it's not in the database`);
+      } else if (!neighborArea.neighbors.includes(area.name)) {
+        console.log(`❌ "${area.name}" lists "${neighbor}" as neighbor, but not vice versa`);
+        asymmetricRelationships++;
+      }
+    });
+  });
+  
+  console.log(`Asymmetric relationships: ${asymmetricRelationships}`);
+  
+  // Test search by characteristics
+  const areasWithLuxury = findAreasByCharacteristics(["luxury"]);
+  const areasWithCulture = findAreasByCharacteristics(["cultural", "historic"]);
+  
+  console.log(`Luxury areas: ${areasWithLuxury.length}`);
+  console.log(`Cultural/historic areas: ${areasWithCulture.length}`);
+}
+
+testLondonAreas();
+
+Debug:
+- If you find incomplete areas, make sure all required properties are filled
+- For asymmetric relationships, update both areas' neighbor arrays
+- If characteristic searches return no results, check that characteristics are consistent
