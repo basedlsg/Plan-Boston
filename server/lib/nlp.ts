@@ -191,14 +191,16 @@ Return JSON only, no explanations, in this exact format:
     
     const fixedTimesList: FixedTimeEntry[] = [];
     
-    // Add times from extracted activities
-    for (const activity of extractedActivities) {
-      if (activity.timeContext?.preferredTime) {
-        fixedTimesList.push({
-          location: parsed.startLocation || parsed.destinations[0],
-          time: activity.timeContext.preferredTime,
-          type: activity.venueType
-        });
+    // Add times from extracted activities with null/undefined checks
+    if (extractedActivities && extractedActivities.length > 0) {
+      for (const activity of extractedActivities) {
+        if (activity && activity.timeContext?.preferredTime) {
+          fixedTimesList.push({
+            location: parsed.startLocation || parsed.destinations[0] || 'Central London',
+            time: activity.timeContext.preferredTime,
+            type: activity.venueType
+          });
+        }
       }
     }
 

@@ -63,7 +63,7 @@ function findInterestingActivities(
 
   // Handle lunch-specific requests
   if (hour >= 12 && hour <= 15 && preferences.type?.includes('lunch')) {
-    return ['restaurant near ${location}'];
+    return [`restaurant near ${location}`];
   }
 
   // If user wants non-crowded places
@@ -91,7 +91,7 @@ function findInterestingActivities(
   // Find areas matching other characteristics
   const matchingAreas = findAreasByCharacteristics(
     preferences.requirements || [],
-    [location]
+    location ? [location] : []
   );
 
   if (matchingAreas.length > 0) {
