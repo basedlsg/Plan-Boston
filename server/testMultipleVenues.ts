@@ -22,7 +22,11 @@ async function testMultipleVenueOptions() {
     
     console.log("\nAlternatives:");
     landmarkResult.alternatives.forEach((alt, index) => {
-      console.log(`  ${index + 1}. ${alt.name} (${alt.distance_from_primary.toFixed(2)} km away)`);
+      // For venues, distance_from_primary should always be set, but handle the case if it's not
+      const distance = typeof alt.distance_from_primary === 'number' ? 
+                      alt.distance_from_primary.toFixed(2) : 
+                      'unknown';
+      console.log(`  ${index + 1}. ${alt.name} (${distance} km away)`);
     });
     
     // 2. Test a venue search with activity type
@@ -37,7 +41,11 @@ async function testMultipleVenueOptions() {
     
     console.log("\nAlternatives:");
     cafeResult.alternatives.forEach((alt, index) => {
-      console.log(`  ${index + 1}. ${alt.name} (${alt.distance_from_primary.toFixed(2)} km away)`);
+      // For venues, distance_from_primary should always be set, but handle the case if it's not
+      const distance = typeof alt.distance_from_primary === 'number' ? 
+                      alt.distance_from_primary.toFixed(2) : 
+                      'unknown';
+      console.log(`  ${index + 1}. ${alt.name} (${distance} km away)`);
     });
     
     // 3. Test restaurant search with minimum rating
@@ -53,7 +61,11 @@ async function testMultipleVenueOptions() {
     
     console.log("\nAlternatives:");
     restaurantResult.alternatives.forEach((alt, index) => {
-      console.log(`  ${index + 1}. ${alt.name} (rating: ${alt.rating || 'unknown'}, ${alt.distance_from_primary.toFixed(2)} km away)`);
+      // For venues, distance_from_primary should always be set, but handle the case if it's not
+      const distance = typeof alt.distance_from_primary === 'number' ? 
+                     alt.distance_from_primary.toFixed(2) : 
+                     'unknown';
+      console.log(`  ${index + 1}. ${alt.name} (rating: ${alt.rating || 'unknown'}, ${distance} km away)`);
     });
     
     // Test successfully completed

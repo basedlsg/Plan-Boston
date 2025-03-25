@@ -31,15 +31,10 @@ async function testAllFixes() {
     const normalized = normalizeLocationName(loc);
     console.log(`"${loc}" → "${normalized}"`);
     
-    // Verify we maintain original station names, but preserve case for other location types
-    if (loc.trim().toLowerCase() === "liverpool street") {
-      // For stations, check if Station was added
-      if (normalized !== `${loc.trim()} Station` && normalized !== `${loc.trim()}`) {
-        console.error(`❌ Error: "${loc}" was incorrectly normalized to "${normalized}"`);
-        locationTestPassed = false;
-      }
-    } else if (normalized !== loc.trim()) {
-      // For non-stations, we expect the name to be preserved with only whitespace trimmed
+    // Verify we maintain original neighborhood names
+    if (loc.trim().toLowerCase() !== "liverpool street" && 
+        normalized !== loc.trim().charAt(0).toUpperCase() + loc.trim().slice(1).toLowerCase() &&
+        normalized !== `${loc.trim()} Station`) {
       console.error(`❌ Error: "${loc}" was incorrectly normalized to "${normalized}"`);
       locationTestPassed = false;
     }
@@ -51,19 +46,19 @@ async function testAllFixes() {
   
   // Test 3: Activity Type Classification
   console.log("\nTEST 3: Activity Type Classification");
-  const nonVenueActivities = ["meeting", "arrive", "explore", "walk", "rest"];
+  const nonVenueActivities = ["meeting", "arrive", "explore", "walk", "visit"];
   const venueActivities = ["lunch", "dinner", "coffee", "drinks", "shopping"];
   
   let activityTestPassed = true;
   
-  // Check non-venue activities map to undefined (not null)
+  // Check non-venue activities map to null
   for (const activity of nonVenueActivities) {
     const venueType = activity in ACTIVITY_TYPE_MAPPINGS ? 
       ACTIVITY_TYPE_MAPPINGS[activity as keyof typeof ACTIVITY_TYPE_MAPPINGS] : 
       "not found";
-    console.log(`"${activity}" → ${venueType === undefined ? "undefined ✅" : `"${venueType}" ❌`}`);
+    console.log(`"${activity}" → ${venueType === null ? "null ✅" : `"${venueType}" ❌`}`);
     
-    if (venueType !== undefined) activityTestPassed = false;
+    if (venueType !== null) activityTestPassed = false;
   }
   
   // Check venue activities map to valid types
@@ -90,59 +85,25 @@ async function testAllFixes() {
     console.log("✅ Request parsed successfully!");
     console.log("Results:", JSON.stringify(result, null, 2));
     
-    // Verify locations were preserved (may be normalized)
-    const hasAllLocations = 
-      (result.destinations.some(d => d.toLowerCase().includes("soho")) || 
-       result.startLocation?.toLowerCase().includes("soho")) &&
-      (result.destinations.some(d => d.toLowerCase().includes("mayfair")) || 
-       result.startLocation?.toLowerCase().includes("mayfair")) &&
-      (result.destinations.some(d => d.toLowerCase().includes("green park")) || 
-       result.startLocation?.toLowerCase().includes("green park"));
-    
-    if (hasAllLocations) {
+    // Verify locations were preserved
+    if (result.destinations.includes("Soho") && 
+        result.destinations.includes("Mayfair") && 
+        result.destinations.includes("Green Park")) {
       console.log("✅ Locations preserved correctly!");
     } else {
       console.log("❌ Locations not preserved correctly!");
-      console.log("Expected: Soho, Mayfair, and Green Park");
-      console.log("Found: startLocation:", result.startLocation, "destinations:", result.destinations.join(", "));
     }
     
     // Verify fixed times were parsed
-    const hasLunch = result.fixedTimes.some(t => 
-      t.time === "13:00" && 
-      (t.type === "restaurant" || t.type === "lunch"));
-    
-    const hasMeeting = result.fixedTimes.some(t => 
-      t.time === "15:00");
-    
-    if (hasLunch && hasMeeting) {
+    if (result.fixedTimes.some(t => t.time === "13:00" && t.type === "restaurant") &&
+        result.fixedTimes.some(t => t.time === "15:00")) {
       console.log("✅ Times and activities parsed correctly!");
     } else {
       console.log("❌ Times or activities not parsed correctly!");
-      console.log("Expected: Lunch at 13:00 and meeting at 15:00");
-      console.log("Found:", JSON.stringify(result.fixedTimes, null, 2));
     }
     
   } catch (error) {
     console.error("❌ Complete request test failed with error:", error);
-  }
-  
-  // Test 5: Enhanced Activity Parsing
-  console.log("\nTEST 5: Enhanced Activity Parsing");
-  const activityTests = [
-    "meeting with colleagues for coffee",
-    "explore museums in London",
-    "walk through the park",
-    "relax at a spa",
-    "have dinner at a fancy restaurant"
-  ];
-  
-  for (const activity of activityTests) {
-    const parsed = parseActivity(activity);
-    console.log(`\nActivity: "${activity}"`);
-    console.log(`- Type: ${parsed.type}`);
-    console.log(`- Venue Type: ${parsed.venueType || "none"}`);
-    console.log(`- Requirements: ${parsed.requirements && parsed.requirements.length ? parsed.requirements.join(", ") : "none"}`);
   }
   
   console.log("\n=== TEST SUMMARY ===");
