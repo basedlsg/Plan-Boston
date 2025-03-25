@@ -1,0 +1,87 @@
+Create a React component VenueSwiper.tsx that lets users swipe between venue alternatives with touch and mouse gestures.
+
+Implementation:
+1. Create a new file components/VenueSwiper.tsx with:
+   - Support for a primary venue and multiple alternatives
+   - Horizontal swipeable cards with touch/mouse gesture support
+   - Visual indicators for the primary venue
+   - Navigation buttons and progress indicators
+
+2. The component should accept:
+   - primary venue object
+   - array of alternative venues
+   - onSelect callback function
+
+Testing:
+Create a simple demo component to test it:
+
+// components/VenueSwiperTest.tsx
+import React, { useState } from 'react';
+import VenueSwiper from './VenueSwiper';
+
+const mockVenues = {
+  primary: {
+    id: 'venue1',
+    name: 'Primary Test Venue',
+    address: '123 Test St, London',
+    rating: 4.5,
+    isPrimary: true,
+    types: ['restaurant', 'food']
+  },
+  alternatives: [
+    {
+      id: 'venue2',
+      name: 'Alternative 1',
+      address: '456 Test Ave, London',
+      rating: 4.2,
+      isPrimary: false,
+      types: ['restaurant']
+    },
+    {
+      id: 'venue3',
+      name: 'Alternative 2',
+      address: '789 Test Blvd, London',
+      rating: 4.0,
+      isPrimary: false,
+      types: ['restaurant', 'bar']
+    }
+  ]
+};
+
+const VenueSwiperTest = () => {
+  const [selectedVenue, setSelectedVenue] = useState(null);
+  
+  return (
+    <div className="p-4">
+      <h1 className="text-xl font-bold mb-4">Venue Swiper Test</h1>
+      
+      <VenueSwiper
+        primary={mockVenues.primary}
+        alternatives={mockVenues.alternatives}
+        onSelect={(venue) => {
+          setSelectedVenue(venue);
+          console.log("Selected venue:", venue);
+        }}
+      />
+      
+      {selectedVenue && (
+        <div className="mt-4 p-2 bg-green-100 rounded">
+          <p>Selected: {selectedVenue.name}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default VenueSwiperTest;
+
+Add a test route in your app to display this component and test:
+- Swiping gestures work correctly
+- Navigation buttons function
+- Primary venue is properly highlighted
+- onSelect callback works when a venue is selected
+
+Debug:
+- For swipe detection issues, check the event handlers
+- For style issues, verify CSS classes and tailwind configuration
+- If venue data isn't displayed correctly, check the prop types and data structure

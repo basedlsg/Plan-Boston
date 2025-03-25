@@ -17,6 +17,7 @@ import type { Itinerary, Place } from "@shared/schema";
 import { format } from "date-fns";
 import { TimeInput } from "@/components/TimeInput";
 import { formatDateTime, formatTime, getLocalTimeNow } from "@/lib/dateUtils";
+import { Link } from "wouter";
 
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
@@ -83,6 +84,13 @@ export default function Home() {
             <p className="text-muted-foreground">
               Tell us your plans and we'll create a verified itinerary
             </p>
+            <div className="flex justify-center mt-2">
+              <Link href="/venue-swiper-test">
+                <Button variant="outline" size="sm">
+                  Try Venue Swiper Demo
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Form Card */}
