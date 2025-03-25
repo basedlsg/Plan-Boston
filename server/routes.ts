@@ -306,21 +306,44 @@ export async function registerRoutes(app: Express) {
       let lastPlace: PlaceDetails | null = null;
 
       for (const scheduledPlace of itineraryPlaces) {
-        if (lastPlace && scheduledPlace.place.details) {
-          const travelTime = calculateTravelTime(lastPlace, scheduledPlace.place.details);
-          travelTimes.push({
-            from: lastPlace.name,
-            to: scheduledPlace.place.name,
-            duration: travelTime,
-            arrivalTime: scheduledPlace.time.toISOString()
-          });
-        }
-        // Ensure we're assigning a valid PlaceDetails object
-        if (scheduledPlace.place.details && 
+        // First check if we have valid objects for calculating travel time
+        if (lastPlace && 
+            scheduledPlace.place.details && 
             typeof scheduledPlace.place.details === 'object' && 
             'name' in scheduledPlace.place.details && 
             'formatted_address' in scheduledPlace.place.details &&
             'geometry' in scheduledPlace.place.details) {
+          
+          // Type assertion to help TypeScript understand the structure
+          const currentPlaceDetails = scheduledPlace.place.details as PlaceDetails;
+          
+          try {
+            const travelTime = calculateTravelTime(lastPlace, currentPlaceDetails);
+            travelTimes.push({
+              from: lastPlace.name,
+              to: scheduledPlace.place.name,
+              duration: travelTime,
+              arrivalTime: scheduledPlace.time.toISOString()
+            });
+          } catch (error) {
+            console.error("Error calculating travel time:", error);
+            // Add fallback travel time calculation if main calculation fails
+            travelTimes.push({
+              from: lastPlace.name,
+              to: scheduledPlace.place.name,
+              duration: 30, // Default 30 minutes as fallback
+              arrivalTime: scheduledPlace.time.toISOString()
+            });
+          }
+        }
+        
+        // Update last place reference for next iteration
+        if (scheduledPlace.place.details && 
+            typeof scheduledPlace.place.details === 'object' && 
+            'name' in scheduledPlace.place.details && 
+            'formatted_address' in scheduledPlace.place.details &&
+            'geometry' in scheduledPlace.place.details &&
+            'place_id' in scheduledPlace.place.details) {
           lastPlace = scheduledPlace.place.details as PlaceDetails;
         }
       }

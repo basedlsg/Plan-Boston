@@ -130,17 +130,56 @@ Return JSON only, no explanations, in this exact format:
       throw new Error("Empty response received from language model");
     }
 
+    // Clean the text content by removing markdown code block syntax
+    let cleanedContent = textContent.trim();
+    
+    // Remove markdown code block markers if present
+    if (cleanedContent.startsWith('```json') || cleanedContent.startsWith('```')) {
+      // Find the position of the first and last backtick sections
+      const firstBlockEnd = cleanedContent.indexOf('\n');
+      const lastBlockStart = cleanedContent.lastIndexOf('```');
+      
+      if (firstBlockEnd !== -1) {
+        // Remove the opening code block marker
+        cleanedContent = cleanedContent.substring(firstBlockEnd + 1);
+        
+        // Remove the closing code block marker if present
+        if (lastBlockStart !== -1 && lastBlockStart > firstBlockEnd) {
+          cleanedContent = cleanedContent.substring(0, lastBlockStart).trim();
+        }
+      }
+    }
+    
+    console.log("Cleaned JSON content:", cleanedContent);
+    
     // Try/catch for JSON parsing with detailed error information
     let claudeParsed;
     try {
-      claudeParsed = JSON.parse(textContent);
+      claudeParsed = JSON.parse(cleanedContent);
       console.log("Successfully parsed Claude response:", claudeParsed);
     } catch (error: unknown) {
       console.error("JSON parse error:", error);
-      console.error("Problematic text content:", textContent);
-      // Handle unknown error type safely
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to parse JSON response: ${errorMessage}`);
+      console.error("Problematic text content:", cleanedContent);
+      console.log("Original text response:", textContent);
+      
+      // Advanced error recovery - try to extract JSON by looking for { and }
+      try {
+        const jsonStart = cleanedContent.indexOf('{');
+        const jsonEnd = cleanedContent.lastIndexOf('}');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          const extractedJson = cleanedContent.substring(jsonStart, jsonEnd + 1);
+          console.log("Attempting to parse extracted JSON:", extractedJson);
+          claudeParsed = JSON.parse(extractedJson);
+          console.log("Successfully parsed extracted JSON:", claudeParsed);
+        } else {
+          throw new Error("Could not find valid JSON object markers");
+        }
+      } catch (extractError) {
+        // Handle unknown error type safely
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to parse JSON response: ${errorMessage}`);
+      }
     }
 
     // Combine Claude's understanding with our direct extraction
