@@ -8,6 +8,7 @@ import { insertPlaceSchema, insertItinerarySchema, Place, PlaceDetails } from "@
 import { z } from "zod";
 import { format } from 'date-fns';
 import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, LondonArea } from "./data/london-areas";
+import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWeatherAwareVenue } from "./lib/weatherService";
 
 // Improved time parsing and validation
 function parseTimeString(timeStr: string, baseDate?: Date): Date {
@@ -172,7 +173,33 @@ export async function registerRoutes(app: Express) {
             console.error("Failed to find lunch venue near:", parsed.startLocation);
           } else {
             // Use the primary venue from the result
-            const lunchPlace = venueResult.primary;
+            let lunchPlace = venueResult.primary;
+
+            // Apply weather-aware venue selection for lunch
+            if (process.env.WEATHER_API_KEY && lunchPlace.types) {
+              try {
+                const lunchTime = parseTimeString('14:00', baseDate);
+                console.log("Checking weather conditions for lunch venue...");
+                
+                // Check if it's an outdoor venue and if weather conditions are suitable
+                const { venue: recommendedVenue, weatherSuitable } = await getWeatherAwareVenue(
+                  lunchPlace,
+                  venueResult.alternatives,
+                  lunchPlace.geometry.location.lat,
+                  lunchPlace.geometry.location.lng,
+                  lunchTime
+                );
+                
+                // If weather is not suitable and we have an indoor alternative
+                if (!weatherSuitable && recommendedVenue !== lunchPlace) {
+                  console.log(`Weather not optimal for ${lunchPlace.name} - outdoor seating may be uncomfortable`);
+                  console.log(`Suggesting alternative lunch venue: ${recommendedVenue.name}`);
+                  lunchPlace = recommendedVenue;
+                }
+              } catch (weatherError) {
+                console.warn("Weather service error for lunch venue (proceeding with original):", weatherError);
+              }
+            }
 
             console.log("Found lunch venue:", {
               name: lunchPlace.name,
@@ -294,11 +321,38 @@ export async function registerRoutes(app: Express) {
                 }
                 
                 // Use the primary venue from the result
-                const suggestedPlace = venueResult.primary;
+                let suggestedPlace = venueResult.primary;
 
                 if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
                 // Explicitly define the activity time
                 const activityTime: Date = new Date(current.time.getTime() + 90 * 60 * 1000);
+                
+                try {
+                  // Check if we should use a weather-aware venue recommendation
+                  if (process.env.WEATHER_API_KEY && suggestedPlace.types) {
+                    console.log("Checking weather conditions for outdoor activities...");
+                    
+                    // Get weather-aware venue recommendation
+                    const { venue: recommendedVenue, weatherSuitable } = await getWeatherAwareVenue(
+                      suggestedPlace,
+                      venueResult.alternatives,
+                      suggestedPlace.geometry.location.lat,
+                      suggestedPlace.geometry.location.lng,
+                      activityTime
+                    );
+                    
+                    // If conditions are not suitable for outdoor venues and we have an alternative
+                    if (!weatherSuitable && recommendedVenue !== suggestedPlace) {
+                      console.log(`Weather conditions not optimal for ${suggestedPlace.name} (outdoor venue)`);
+                      console.log(`Suggesting indoor alternative: ${recommendedVenue.name}`);
+                      suggestedPlace = recommendedVenue;
+                    } else {
+                      console.log(`Weather conditions suitable for outdoor activities at ${activityTime.toLocaleTimeString()}`);
+                    }
+                  }
+                } catch (weatherError) {
+                  console.warn("Weather service error (proceeding with original venue):", weatherError);
+                }
 
                 const newPlace = await storage.createPlace({
                   placeId: suggestedPlace.place_id,
@@ -402,6 +456,32 @@ export async function registerRoutes(app: Express) {
     }
 
     res.json(itinerary);
+  });
+
+  // Add endpoint to get weather forecast for specific coordinates
+  app.get("/api/weather", async (req, res) => {
+    try {
+      const lat = parseFloat(req.query.lat as string);
+      const lng = parseFloat(req.query.lng as string);
+      
+      if (isNaN(lat) || isNaN(lng)) {
+        return res.status(400).json({ message: "Valid latitude and longitude are required" });
+      }
+      
+      if (!process.env.WEATHER_API_KEY) {
+        return res.status(503).json({ message: "Weather service is not configured" });
+      }
+      
+      const forecast = await getWeatherForecast(lat, lng);
+      res.json({
+        current: forecast.current,
+        hourly: forecast.hourly?.slice(0, 24), // Return 24 hours of forecasts
+        location: { lat, lng }
+      });
+    } catch (error: any) {
+      console.error("Weather API error:", error);
+      res.status(500).json({ message: error.message });
+    }
   });
 
   return httpServer;

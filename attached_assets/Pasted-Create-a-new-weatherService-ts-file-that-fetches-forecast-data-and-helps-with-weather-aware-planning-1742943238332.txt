@@ -1,0 +1,88 @@
+Create a new weatherService.ts file that fetches forecast data and helps with weather-aware planning.
+
+Implementation:
+1. Create a new file lib/weatherService.ts with these functions:
+   - getWeatherForecast(latitude, longitude) - fetches weather with caching
+   - isVenueOutdoor(types) - determines if venue is outdoor based on types
+   - isWeatherSuitableForOutdoor(weatherData, dateTime) - checks if weather is good for outdoor activities
+
+2. Update routes.ts to use this weather service when planning itineraries
+
+Testing:
+Add this code at the bottom of weatherService.ts:
+
+async function testWeatherService() {
+  // Test location (London)
+  const londonLat = 51.5074;
+  const londonLng = -0.1278;
+  
+  console.log("--- Testing Weather Service ---");
+  
+  // Test weather forecast fetch
+  try {
+    console.log("Fetching London weather forecast...");
+    const forecast = await getWeatherForecast(londonLat, londonLng);
+    
+    console.log("✅ Successfully fetched weather data:");
+    console.log(`  Current temp: ${forecast.current.temp}°C`);
+    console.log(`  Conditions: ${forecast.current.weather[0].main}`);
+    
+    // Test cache by making a second request
+    console.log("\nTesting cache (should be instant):");
+    const startTime = Date.now();
+    const cachedForecast = await getWeatherForecast(londonLat, londonLng);
+    const duration = Date.now() - startTime;
+    console.log(`  Second request took ${duration}ms`);
+  } catch (error) {
+    console.error("❌ Error fetching weather:", error);
+  }
+  
+  // Test venue classification
+  console.log("\n--- Testing Venue Classification ---");
+  const testVenueTypes = [
+    ["park"], 
+    ["restaurant"], 
+    ["museum"], 
+    ["tourist_attraction", "park"]
+  ];
+  
+  for (const types of testVenueTypes) {
+    const isOutdoor = isVenueOutdoor(types);
+    console.log(`Types [${types.join(', ')}] → ${isOutdoor ? "Outdoor" : "Indoor"}`);
+  }
+  
+  // Test weather suitability with mock data
+  console.log("\n--- Testing Weather Suitability ---");
+  const mockWeatherData = {
+    hourly: [
+      {
+        dt: Math.floor(Date.now() / 1000),
+        temp: 20,
+        weather: [{ id: 800, main: "Clear", description: "clear sky" }]
+      },
+      {
+        dt: Math.floor(Date.now() / 1000) + 3600,
+        temp: 18,
+        weather: [{ id: 500, main: "Rain", description: "light rain" }]
+      }
+    ]
+  };
+  
+  const testTimes = [
+    new Date(),
+    new Date(Date.now() + 3600 * 1000)
+  ];
+  
+  for (const time of testTimes) {
+    const suitable = isWeatherSuitableForOutdoor(mockWeatherData, time);
+    console.log(`Time ${time.toLocaleTimeString()} → ${suitable ? "Suitable" : "Not suitable"} for outdoor activities`);
+  }
+}
+
+// Comment this out after testing
+// testWeatherService();
+
+Debug:
+- Make sure WEATHER_API_KEY is set in environment variables
+- For API failures, check the endpoint URL and response format
+- For caching issues, verify the cache map is working correctly

@@ -61,6 +61,20 @@ export const londonAreas: LondonArea[] = [
       weekend: 4,
     },
   },
+  {
+    name: "Soho",
+    type: "neighborhood",
+    borough: "Westminster",
+    characteristics: ["vibrant", "nightlife", "entertainment", "diverse"],
+    neighbors: ["Mayfair", "Fitzrovia", "Chinatown", "Covent Garden"],
+    popularFor: ["restaurants", "bars", "nightclubs", "theaters", "shopping"],
+    crowdLevels: {
+      morning: 3,
+      afternoon: 4,
+      evening: 5,
+      weekend: 5,
+    },
+  },
   // Add more areas...
 ];
 
