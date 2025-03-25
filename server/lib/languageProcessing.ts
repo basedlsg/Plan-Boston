@@ -113,6 +113,10 @@ export function findLocation(query: string): LocationContext | null {
 export function parseActivity(description: string): ActivityContext {
   const lowered = description.toLowerCase();
   
+  // Check for meal-related activities first
+  const isDinner = lowered.includes('dinner');
+  const isLunch = lowered.includes('lunch');
+  
   // Extract time context
   const timeMatch = Object.entries(TIME_PERIODS).find(([period]) => 
     lowered.includes(period)
@@ -130,13 +134,14 @@ export function parseActivity(description: string): ActivityContext {
   if (lowered.includes('cheap') || lowered.includes('budget')) requirements.push('budget');
   if (lowered.includes('outdoor') || lowered.includes('outside')) requirements.push('outdoor');
 
-  // Check for non-venue activities first
+  // Check for non-venue activities
   const nonVenueActivities = [
     'meeting', 'arrive', 'depart', 'explore', 'walk', 
     'travel', 'relax', 'break', 'rest'
   ];
   
-  const isNonVenueActivity = nonVenueActivities.some(activity => 
+  // Check for non-venue activities (but don't match on dinner/lunch as priority)
+  const isNonVenueActivity = !isDinner && !isLunch && nonVenueActivities.some(activity => 
     lowered.includes(activity)
   );
   
