@@ -147,7 +147,7 @@ export function parseActivity(description: string): ActivityContext {
 // Function to handle relative time periods
 export function expandRelativeTime(timeString: string): string {
   // Map of relative times to reasonable hour ranges
-  const timeMap = {
+  const timeMap: Record<string, string> = {
     'morning': '10:00',
     'afternoon': '14:00',
     'evening': '18:00',
@@ -159,7 +159,9 @@ export function expandRelativeTime(timeString: string): string {
   
   // Try to match the timeString to our map
   const normalized = timeString.toLowerCase().trim();
-  if (timeMap[normalized]) {
+  
+  // Use safer property access with explicit check
+  if (Object.prototype.hasOwnProperty.call(timeMap, normalized)) {
     return timeMap[normalized];
   }
   

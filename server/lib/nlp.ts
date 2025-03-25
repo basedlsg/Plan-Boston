@@ -99,20 +99,46 @@ Return JSON only, no explanations, in this exact format:
       system: "Extract starting location, destinations, times, and preferences from London itinerary requests. Return as JSON."
     });
 
-    // Check for valid response format from Anthropic API
-    const content = response.content[0];
-    if (!content || typeof content !== 'object') {
-      throw new Error("Invalid response format from language model");
+    // Add detailed logging to debug the response structure
+    console.log("Raw Claude API response:", JSON.stringify(response));
+    
+    // Check if response and content array exist and have valid length
+    if (!response || !response.content || !Array.isArray(response.content) || response.content.length === 0) {
+      console.error("Invalid response structure:", response);
+      throw new Error("Invalid response format: Missing or empty content array from language model");
     }
     
-    // Handle Anthropic API response format
-    const textContent = 'text' in content ? content.text : '';
-    if (typeof textContent !== 'string') {
-      throw new Error("Invalid text content from language model");
+    // Access first content item with proper null checking
+    const content = response.content[0];
+    if (!content || typeof content !== 'object') {
+      console.error("Invalid content object:", content);
+      throw new Error("Invalid response format: First content item is not an object");
+    }
+    
+    // Handle Anthropic API response format with proper type checking
+    let textContent = '';
+    if ('text' in content && content.text !== null && content.text !== undefined) {
+      textContent = String(content.text);
+    } else {
+      console.error("Missing text property in content:", content);
+      throw new Error("Invalid response format: Content object missing 'text' property");
+    }
+    
+    if (textContent.trim() === '') {
+      console.error("Empty text content received");
+      throw new Error("Empty response received from language model");
     }
 
-    // Parse Claude's response
-    const claudeParsed = JSON.parse(textContent);
+    // Try/catch for JSON parsing with detailed error information
+    let claudeParsed;
+    try {
+      claudeParsed = JSON.parse(textContent);
+      console.log("Successfully parsed Claude response:", claudeParsed);
+    } catch (error) {
+      console.error("JSON parse error:", error);
+      console.error("Problematic text content:", textContent);
+      throw new Error(`Failed to parse JSON response: ${error.message}`);
+    }
 
     // Combine Claude's understanding with our direct extraction
     const parsed: StructuredRequest = {
