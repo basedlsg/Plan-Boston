@@ -33,8 +33,13 @@
     bottom: 0;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    background: rgba(252, 148, 197, 0.8); /* #FC94C5 at 80% opacity */
-    background-image: radial-gradient(circle at top right, rgba(255, 169, 210, 0.8), rgba(252, 148, 197, 0.8));
+    background: rgba(252, 148, 197, 0.75); /* #FC94C5 at 75% opacity */
+    background-image: radial-gradient(
+      circle at top right, 
+      rgba(255, 169, 210, 0.75), 
+      rgba(252, 148, 197, 0.75) 65%, 
+      rgba(235, 131, 180, 0.75)
+    );
     z-index: 0;
     pointer-events: none;
   }
@@ -47,15 +52,53 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    background-image: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0.1) 100%
+    );
     z-index: 1;
+    pointer-events: none;
+  }
+  
+  /* Subtle geometric accents */
+  .main-glass-effect::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: 
+      linear-gradient(45deg, transparent 98%, rgba(255, 255, 255, 0.3) 99%, transparent 100%),
+      linear-gradient(135deg, transparent 97%, rgba(255, 255, 255, 0.3) 98%, transparent 100%);
+    background-size: 50px 50px;
+    opacity: 0.3;
+    z-index: 0;
     pointer-events: none;
   }
   
   /* The glass effect is now handled by .main-glass-effect */
 
+  /* Typography treatments */
   h1, h2, h3, .logo-font, .font-logo {
     font-family: 'Rozha One', serif;
+    letter-spacing: 0.05em; /* +5% letter spacing for headings */
+    color: var(--brand-black);
+  }
+  
+  body, p, button, input, textarea, select, .body-text {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600; /* SemiBold */
+    color: var(--brand-black);
+  }
+  
+  /* Text hierarchy */
+  .logo {
+    font-size: 32px; /* Logo size as specified */
+  }
+  
+  h1 {
+    font-size: 24px; /* "What's The Plan?" size */
   }
   
   /* Brand colors */
@@ -100,71 +143,126 @@
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
   }
   
-  /* Glass effect containers */
+  /* Premium glass effect containers - enhanced with consistent 12px border radius */
   .glass-effect {
     background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 16px;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 12px;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 1.725rem; /* Increased by 15% for more luxurious spacing */
+    position: relative;
+    transition: all 0.3s ease;
+    z-index: 1;
+  }
+  
+  /* Inner border effect for glass containers */
+  .glass-effect::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 11px; /* 1px smaller than container */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+  }
+  
+  /* Light reflection along top edge */
+  .glass-effect::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 5%;
+    right: 5%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0)
+    );
+    border-radius: 1px;
+    pointer-events: none;
   }
   
   .glass-card {
     background: rgba(255, 255, 255, 0.22);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 16px;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.25);
     position: relative;
     z-index: 1;
+    transition: all 0.3s ease;
+    overflow: hidden;
   }
   
   .glass-panel {
     background: linear-gradient(
       135deg, 
-      rgba(255, 255, 255, 0.12), 
-      rgba(255, 255, 255, 0.06)
+      rgba(255, 255, 255, 0.15), 
+      rgba(255, 255, 255, 0.08)
     );
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 24px;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.18);
     position: relative;
     z-index: 1;
+    transition: all 0.3s ease;
+    overflow: hidden;
   }
   
-  /* Form container - with blue tint */
+  /* Form container - with blue tint gradient */
   .form-container {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(23, 185, 230, 0.15));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-radius: 16px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(23, 185, 230, 0.15);
-    overflow: hidden;
-    position: relative;
-    z-index: 1;
-    transform: translateZ(0);
-  }
-  
-  /* Date/time card glass effect with blue tint */
-  .datetime-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(23, 185, 230, 0.15));
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(23, 185, 230, 0.15);
     overflow: hidden;
     position: relative;
     z-index: 1;
+    transform: translateZ(0);
+    padding: 1.725rem; /* 15% more padding */
+    transition: all 0.3s ease;
   }
   
-  /* Logo styling */
+  /* Form container inner reflection */
+  .form-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0)
+    );
+    pointer-events: none;
+  }
+  
+  /* Date/time card glass effect with blue tint */
+  .datetime-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(23, 185, 230, 0.15));
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 12px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(23, 185, 230, 0.15);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
+  }
+  
+  /* Logo styling - using Rozha One as specified */
   .logo-container {
     display: flex;
     justify-content: center;
@@ -177,32 +275,69 @@
   }
   
   .logo {
-    font-size: 3.5rem;
-    letter-spacing: 0.12em;
+    font-family: 'Rozha One', serif;
+    font-size: 32px; /* Exact size as specified */
+    letter-spacing: 0.12em; /* Letter spacing for PLAN */
     color: var(--brand-black);
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    text-shadow: 0 3px 6px rgba(0, 0, 0, 0.18);
     transition: all 0.3s ease;
     margin: 0;
     padding: 0;
     line-height: 1;
+    position: relative;
   }
   
-  /* Venue swiper glass effect */
+  /* Create subtle text gradient for logo */
+  .logo::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, var(--brand-black), #424242);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    z-index: -1;
+    opacity: 0.6;
+  }
+  
+  /* Venue swiper glass effect - consistent with our premium theme */
   .venue-glass {
     background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     transition: all 0.3s ease;
     position: relative;
     z-index: 1;
+    overflow: hidden;
+  }
+  
+  /* Inner white highlight on venue cards */
+  .venue-glass::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0)
+    );
+    pointer-events: none;
   }
   
   .venue-glass:hover {
     background: rgba(255, 255, 255, 0.25);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
   }
   
   .venue-glass.selected {
@@ -210,31 +345,43 @@
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3), 0 8px 24px rgba(0, 0, 0, 0.12);
   }
   
-  /* Form elements */
+  /* Form elements - refined glass effect with inner shadows */
   input, textarea, select {
     background: rgba(255, 255, 255, 0.18) !important;
-    backdrop-filter: blur(5px) !important;
-    -webkit-backdrop-filter: blur(5px) !important;
+    backdrop-filter: blur(15px) !important;
+    -webkit-backdrop-filter: blur(15px) !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: var(--brand-black) !important;
-  }
-  
-  /* Placeholder opacity */
-  ::placeholder {
-    opacity: 0.5 !important;
-  }
-  
-  /* Create Plan button */
-  .create-plan-btn {
-    background-color: var(--brand-blue) !important;
-    border: none !important;
-    box-shadow: 0 4px 12px rgba(23, 185, 230, 0.2) !important;
+    border-radius: 12px !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04) !important;
     transition: all 0.3s ease !important;
   }
   
+  input:focus, textarea:focus, select:focus {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04), 0 0 0 2px rgba(23, 185, 230, 0.15) !important;
+    border: 1px solid rgba(23, 185, 230, 0.3) !important;
+  }
+  
+  /* Placeholder opacity - set to 60% as specified */
+  ::placeholder {
+    opacity: 0.6 !important;
+  }
+  
+  /* Create Plan button - with subtle gradient */
+  .create-plan-btn {
+    background: linear-gradient(135deg, #17B9E6, rgba(23, 185, 230, 0.9)) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(23, 185, 230, 0.2) !important;
+    transition: all 0.3s ease !important;
+    border-radius: 12px !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+  }
+  
   .create-plan-btn:hover {
-    background-color: rgba(23, 185, 230, 0.9) !important;
-    transform: translateY(-1px) !important;
+    background: linear-gradient(135deg, #1cc4f2, rgba(28, 196, 242, 0.9)) !important;
+    transform: scale(1.02) !important; /* Subtle scale transform of 1.02x as specified */
     box-shadow: 0 6px 16px rgba(23, 185, 230, 0.25) !important;
   }
   

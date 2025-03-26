@@ -1,0 +1,41 @@
+Please enhance the London Day Planner UI with these specific improvements to create a premium glass effect while strictly adhering to our brand guidelines:
+
+1. Typography (Critical):
+   * Logo/Headings: Use Rozha One font ONLY for "PLAN" and main headings
+   * Body Text: Use Poppins SemiBold for ALL other text elements
+   * Apply proper letter spacing (+5% for headings, normal for body)
+   * Ensure proper text hierarchy with Rozha One for "PLAN" at 32px and "What's The Plan?" at 24px
+   * Text color should be #1C1C1C (our brand black) for optimal contrast
+
+2. Enhanced Glass Effect:
+   * Apply a sophisticated frosted glass effect ACROSS THE ENTIRE INTERFACE
+   * Base background: #FC94C5 (our brand pink) with subtle radial gradient
+   * Add refined backdrop-filter: blur(15px) with proper opacity layers
+   * Implement thin (1px) white inner borders on glass panels for definition
+   * Add subtle light reflection along top edges of glass elements
+
+3. Main Card Enhancement:
+   * Implement premium glass card with blue tint gradient: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(23,185,230,0.15))
+   * Add sophisticated depth with box-shadow: 0 4px 30px rgba(0,0,0,0.1)
+   * Increase internal padding by 15% for more luxurious spacing
+   * Apply subtle transition animations between states
+
+4. Interactive Elements:
+   * Style "Create Plan" button with our brand blue (#17B9E6) using a subtle gradient
+   * Add refined hover states with scale transforms (1.02x)
+   * Style form inputs with consistent glass effect and subtle inner shadows
+   * Reduce placeholder text opacity to 60% for elegance
+
+5. Premium Details:
+   * Add minimal decorative elements (subtle geometric accents)
+   * Implement proper spacing hierarchy using golden ratio principles
+   * Add subtle entrance animations for page elements
+   * Ensure all rounded corners are consistent (12px radius)
+
+6. Venue Swiper (if applicable):
+   * Apply consistent glass effect to venue cards
+   * Selected card should have #17B9E6 border highlight
+   * Add minimal pagination dots centered below cards
+   * Include subtle navigation arrows for desktop
+
+Ensure all elements follow a consistent design language with proper visual hierarchy while maintaining the sophisticated glass aesthetic. Typography treatment is particularly critical - Rozha One and Poppins SemiBold must be implemented exactly as specified.
