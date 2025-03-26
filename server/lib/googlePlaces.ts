@@ -1,4 +1,4 @@
-import type { PlaceDetails, VenueSearchResult } from "@shared/schema";
+import type { PlaceDetails, VenueSearchResult, SearchParameters } from "@shared/schema";
 import { normalizeLocationName, verifyPlaceMatch, suggestSimilarLocations } from "./locationNormalizer";
 import { londonAreas, findAreasByCharacteristics } from "../data/london-areas";
 
@@ -10,6 +10,9 @@ interface SearchOptions {
   type?: string;
   openNow?: boolean;
   minRating?: number;
+  searchTerm?: string;
+  keywords?: string[];
+  requireOpenNow?: boolean;
 }
 
 // Helper function to calculate distance between two points using Haversine formula
@@ -47,6 +50,16 @@ export async function searchPlace(
     // Add better search term extraction from complex activity types
     let searchType = options.type;
     let searchKeyword = '';
+    let keywordsList: string[] = [];
+    
+    // Use enhanced search parameters if available
+    if (options.searchTerm) {
+      searchKeyword = options.searchTerm;
+    }
+    
+    if (options.keywords && Array.isArray(options.keywords)) {
+      keywordsList = options.keywords;
+    }
 
     // Extract better search terms from complex activity types
     if (typeof options.type === 'string') {
@@ -136,10 +149,24 @@ export async function searchPlace(
       if (searchKeyword) {
         nearbyParams.append("keyword", searchKeyword);
       }
+      
+      // Use the enhanced keywords list if available
+      if (keywordsList.length > 0) {
+        const combinedKeywords = keywordsList.join(' ');
+        // If we already have a keyword, add the additional keywords with a space
+        if (searchKeyword) {
+          nearbyParams.set("keyword", `${searchKeyword} ${combinedKeywords}`);
+        } else {
+          nearbyParams.append("keyword", combinedKeywords);
+        }
+      }
 
-      if (options.openNow) {
+      // Handle OpenNow parameter - prefer the enhanced requireOpenNow if available
+      if (options.requireOpenNow || options.openNow) {
         nearbyParams.append("opennow", "true");
       }
+      
+      // Use the enhanced minRating parameter if available
       if (options.minRating) {
         nearbyParams.append("minRating", options.minRating.toString());
       }
@@ -237,13 +264,21 @@ export async function searchPlace(
         
         // If we still don't have good results, try a more generic search
         if (results.length === 0) {
-          // First try with our enhanced keyword if available
-          if (searchKeyword) {
-            console.log(`All results filtered out, trying generic search with keyword: ${searchKeyword}`);
+          // First try with our enhanced keywords if available
+          if (searchKeyword || keywordsList.length > 0) {
+            let finalKeyword = searchKeyword;
+            
+            // If we have additional keywords, use them too
+            if (keywordsList.length > 0) {
+              const combinedKeywords = keywordsList.join(' ');
+              finalKeyword = searchKeyword ? `${searchKeyword} ${combinedKeywords}` : combinedKeywords;
+            }
+            
+            console.log(`All results filtered out, trying generic search with keyword: ${finalKeyword}`);
             const keywordParams = new URLSearchParams({
               location: `${lat},${lng}`,
               radius: "2000",
-              keyword: searchKeyword,
+              keyword: finalKeyword,
               key: GOOGLE_PLACES_API_KEY || "",
               language: "en"
             });

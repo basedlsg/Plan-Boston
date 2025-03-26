@@ -245,29 +245,30 @@ RETURN ONLY this JSON structure:
       
       // Process enhanced preferences structure
       if (parsedResponse.preferences) {
+        const requirementsList = [...parsed.preferences.requirements];
+        
         // Handle venue qualities as requirements
         if (parsedResponse.preferences.venueQualities && Array.isArray(parsedResponse.preferences.venueQualities)) {
-          parsed.preferences.requirements = [
-            ...parsed.preferences.requirements,
-            ...parsedResponse.preferences.venueQualities
-          ];
+          for (const quality of parsedResponse.preferences.venueQualities) {
+            requirementsList.push(quality);
+          }
         }
         
         // Handle restrictions as requirements
         if (parsedResponse.preferences.restrictions && Array.isArray(parsedResponse.preferences.restrictions)) {
-          parsed.preferences.requirements = [
-            ...parsed.preferences.requirements,
-            ...parsedResponse.preferences.restrictions
-          ];
+          for (const restriction of parsedResponse.preferences.restrictions) {
+            requirementsList.push(restriction);
+          }
         }
         
         // Still handle legacy format
         if (parsedResponse.preferences.requirements && Array.isArray(parsedResponse.preferences.requirements)) {
-          parsed.preferences.requirements = [
-            ...parsed.preferences.requirements,
-            ...parsedResponse.preferences.requirements
-          ];
+          for (const req of parsedResponse.preferences.requirements) {
+            requirementsList.push(req);
+          }
         }
+        
+        parsed.preferences.requirements = requirementsList;
       }
 
       // Process activities from the enhanced Gemini response
