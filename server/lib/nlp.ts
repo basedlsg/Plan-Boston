@@ -345,7 +345,7 @@ type FixedTimeEntry = {
               
               // Debug log to track search parameters before adding to fixedTimes
               console.log(`Adding activity with search parameters:`, {
-                location: location.name,
+                location: activity.location, // Use original location from activity
                 activityDescription: activity.description,
                 searchTerm: activity.searchParameters?.searchTerm,
                 type: activityType,
@@ -354,7 +354,7 @@ type FixedTimeEntry = {
               });
               
               parsed.fixedTimes.push({
-                location: location.name,
+                location: activity.location, // Use original location from activity
                 time: timeValue,
                 // Use the venue type from searchParameters as the activity type
                 type: activityType,
