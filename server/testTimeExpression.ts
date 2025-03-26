@@ -76,7 +76,9 @@ function testTimeParsing() {
     "museum visit",
     "park walk",
     "gallery exhibition",
-    "pub crawl"
+    "pub crawl",
+    "nightclub",
+    "bar hopping"
   ];
   
   for (const activity of activities) {

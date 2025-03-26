@@ -436,48 +436,44 @@ export function parseTimeExpression(expression: string): {
     };
   }
   
-  // Pattern 2: "from X to Y" with special handling for noon/midnight
-  // First check if contains "noon" or "midnight"
+  // Pattern 2: "from X to Y" with special handling for noon/midnight and similar special time words
   if (lowered.includes("from") && lowered.includes("to")) {
-    // Special case for "from X to noon"
-    if (lowered.includes("to noon")) {
-      const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
-      const match = lowered.match(timePattern);
-      
-      if (match) {
-        const [_, startHours, startMinutes = "00", startMeridian] = match;
-        let startHour = parseInt(startHours);
-        
-        // Handle meridian (am/pm)
-        if (startMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
-        if (startMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
-        
-        return {
-          time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
-          endTime: "12:00",
-          isRange: true
-        };
-      }
-    }
+    // Define special time words and their corresponding 24-hour time values
+    const specialEndTimes: Record<string, string> = {
+      "noon": "12:00",
+      "midday": "12:00",
+      "midnight": "00:00",
+      "morning": "10:00",
+      "afternoon": "14:00",
+      "evening": "18:00",
+      "night": "20:00",
+      "lunch": "12:30",
+      "dinner": "19:00",
+      "breakfast": "08:30"
+    };
     
-    // Special case for "from X to midnight"
-    else if (lowered.includes("to midnight")) {
-      const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
-      const match = lowered.match(timePattern);
-      
-      if (match) {
-        const [_, startHours, startMinutes = "00", startMeridian] = match;
-        let startHour = parseInt(startHours);
+    // Look for "from X to SPECIAL_TIME" patterns
+    for (const [timeWord, timeValue] of Object.entries(specialEndTimes)) {
+      // Use exact word boundaries to ensure we match exact time words
+      const endTimePattern = new RegExp(`to\\s+${timeWord}\\b`, 'i');
+      if (endTimePattern.test(lowered)) {
+        const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+        const match = lowered.match(timePattern);
         
-        // Handle meridian (am/pm)
-        if (startMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
-        if (startMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
-        
-        return {
-          time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
-          endTime: "00:00",
-          isRange: true
-        };
+        if (match) {
+          const [_, startHours, startMinutes = "00", startMeridian] = match;
+          let startHour = parseInt(startHours);
+          
+          // Handle meridian (am/pm)
+          if (startMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+          if (startMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+          
+          return {
+            time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+            endTime: timeValue,
+            isRange: true
+          };
+        }
       }
     }
   }
@@ -515,22 +511,48 @@ export function parseTimeExpression(expression: string): {
   }
   
   // Pattern 3: "X-Y" (e.g., "3-5pm")
-  const rangePattern = /(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
-  const rangeMatch = lowered.match(rangePattern);
+  // Handle the pattern where each time may have its own meridian indicator
+  const rangeWithSeparateMeridianPattern = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+  const rangeWithSeparateMeridianMatch = lowered.match(rangeWithSeparateMeridianPattern);
   
-  if (rangeMatch) {
-    const [_, startHours, startMinutes = "00", endHours, endMinutes = "00", meridian] = rangeMatch;
+  if (rangeWithSeparateMeridianMatch) {
+    const [_, startHours, startMinutes = "00", startMeridian, endHours, endMinutes = "00", endMeridian] = rangeWithSeparateMeridianMatch;
     
     let startHour = parseInt(startHours);
     let endHour = parseInt(endHours);
     
-    // In the X-Y format, if there's a single meridian, it applies to both times
-    if (meridian?.toLowerCase() === "pm") {
-      if (startHour < 12) startHour += 12;
-      if (endHour < 12) endHour += 12;
-    } else if (meridian?.toLowerCase() === "am") {
-      if (startHour === 12) startHour = 0;
-      if (endHour === 12) endHour = 0;
+    // Handle meridian indicators - if end has one but start doesn't, apply the same to start
+    const effectiveStartMeridian = startMeridian || endMeridian || '';
+    const effectiveEndMeridian = endMeridian || startMeridian || '';
+    
+    if (effectiveStartMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+    if (effectiveStartMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+    
+    if (effectiveEndMeridian?.toLowerCase() === "pm" && endHour < 12) endHour += 12;
+    if (effectiveEndMeridian?.toLowerCase() === "am" && endHour === 12) endHour = 0;
+    
+    // If no meridian indicators at all, make a reasonable guess
+    // If both hours are < 12, and the second is greater than the first, 
+    // assume both are in the same half of the day
+    if (!startMeridian && !endMeridian) {
+      // If both times are in the 1-11 range
+      if (startHour >= 1 && startHour < 12 && endHour >= 1 && endHour < 12) {
+        // If start time is later than end time (e.g., 10-3), assume crossing AM/PM boundary
+        if (startHour > endHour) {
+          // Start is AM, end is PM
+          endHour += 12;
+        }
+        // Otherwise both in same half of day, which we'll determine based on typical activity hours
+        // Most activities happen between 9am-10pm, so we'll assume that range
+        else if (startHour >= 9 || endHour <= 10) {
+          // Do nothing - both times are likely AM
+        }
+        else {
+          // Otherwise assume both PM (e.g., 2-5 more likely means 2pm-5pm)
+          startHour += 12;
+          endHour += 12;
+        }
+      }
     }
     
     return {
