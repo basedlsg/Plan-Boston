@@ -139,7 +139,7 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
         {/* Swipeable area - enhanced with premium glass effect */}
         <div 
           className={cn(
-            "venue-glass relative overflow-hidden transition-all cursor-pointer py-5 px-6",
+            "venue-glass relative overflow-hidden transition-all cursor-pointer py-3 sm:py-5 px-4 sm:px-6",
             isSelected ? "selected" : ""
           )}
           onTouchStart={onTouchStart}
@@ -153,29 +153,29 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
         >
           {/* Primary venue indicator */}
           {isPrimary && (
-            <div className="flex items-center gap-1 text-brand-pink mb-3">
-              <CheckCircle2 className="h-4 w-4" />
-              <span className="text-sm font-medium">Primary Recommendation</span>
+            <div className="flex items-center gap-1 text-brand-pink mb-2 sm:mb-3">
+              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm font-medium">Primary Recommendation</span>
             </div>
           )}
           
-          <h3 className="text-xl font-bold text-brand-black mb-1">{currentVenue.name}</h3>
-          <p className="text-sm text-brand-black/70">{currentVenue.formatted_address}</p>
+          <h3 className="text-lg sm:text-xl font-bold text-brand-black mb-1 line-clamp-1">{currentVenue.name}</h3>
+          <p className="text-xs sm:text-sm text-brand-black/70 line-clamp-2">{currentVenue.formatted_address}</p>
           
           {/* Rating if available */}
           {currentVenue.rating && (
-            <div className="mt-3 text-sm text-brand-black/80">
+            <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-brand-black/80">
               <span className="font-medium">Rating:</span> {currentVenue.rating} ★
             </div>
           )}
           
           {/* Venue types */}
           {currentVenue.types && currentVenue.types.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-2 sm:mt-3 flex flex-wrap gap-1 sm:gap-1.5">
               {currentVenue.types.slice(0, 3).map(type => (
                 <span 
                   key={type} 
-                  className="px-2.5 py-1 bg-white/30 backdrop-blur-sm text-brand-black rounded-full text-xs"
+                  className="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-white/30 backdrop-blur-sm text-brand-black rounded-full text-xs"
                 >
                   {type.replace(/_/g, ' ')}
                 </span>
@@ -185,8 +185,8 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
           
           {/* Selected indicator */}
           {isSelected && (
-            <div className="mt-4 pt-3 border-t border-white/20 text-center">
-              <span className="px-4 py-1.5 bg-brand-blue/10 text-brand-blue rounded-full text-sm font-medium">
+            <div className="mt-3 sm:mt-4 pt-2 sm:pt-3 border-t border-white/20 text-center">
+              <span className="px-3 sm:px-4 py-1 sm:py-1.5 bg-brand-blue/10 text-brand-blue rounded-full text-xs sm:text-sm font-medium">
                 Selected Venue
               </span>
             </div>
@@ -194,13 +194,13 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
         </div>
         
         {/* Pagination dots */}
-        <div className="pagination-dots">
+        <div className="pagination-dots mt-2 sm:mt-4">
           {allVenues.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentIndex(idx)}
               className={cn(
-                "pagination-dot",
+                "pagination-dot h-1.5 w-1.5 sm:h-2 sm:w-2 mx-0.5 sm:mx-1",
                 idx === currentIndex ? "active" : ""
               )}
               aria-label={`Go to venue ${idx + 1}`}
@@ -210,7 +210,7 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
       </div>
       
       {/* Counter */}
-      <div className="text-center text-sm text-white/80 mt-2">
+      <div className="text-center text-xs sm:text-sm text-white/80 mt-1.5 sm:mt-2">
         {currentIndex + 1} of {allVenues.length} venues
       </div>
     </div>

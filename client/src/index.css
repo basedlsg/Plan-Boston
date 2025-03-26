@@ -519,4 +519,45 @@
     border-radius: 4px;
     background: var(--brand-blue);
   }
+  
+  /* Mobile responsive adjustments */
+  @media (max-width: 640px) {
+    .pagination-dot.active {
+      width: 12px;
+    }
+    
+    .glass-effect, .glass-card, .glass-panel {
+      border-radius: 10px;
+    }
+    
+    .glass-effect::after, .glass-card::after, .glass-panel::after {
+      border-radius: 9px;
+    }
+    
+    .venue-glass, .datetime-card, .form-container {
+      border-radius: 10px;
+    }
+    
+    .venue-glass::after, .datetime-card::after, .form-container::after {
+      border-radius: 9px;
+    }
+    
+    input, textarea, select, .create-plan-btn {
+      border-radius: 10px !important;
+    }
+    
+    /* Reduce padding for mobile */
+    .form-container, .glass-effect {
+      padding: 1.25rem;
+    }
+    
+    /* Adjust font sizes for mobile */
+    .logo {
+      font-size: 28px;
+    }
+    
+    h1, .heading-primary {
+      font-size: 22px;
+    }
+  }
 }

@@ -124,19 +124,19 @@ export default function Home() {
         {/* Logo Section */}
         <div className="logo-container">
           <h1 
-            className="logo font-logo text-4xl font-bold text-brand-black tracking-wide"
-            style={{ filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }}
+            className="logo font-logo text-3xl sm:text-4xl font-bold text-brand-black tracking-wide"
+            style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.2))" }}
           >
             PLAN
           </h1>
         </div>
         
         {/* Tagline with helper text */}
-        <div className="text-center mb-8">
-          <p className="text-white text-xl font-semibold drop-shadow-md">
+        <div className="text-center mb-6 sm:mb-8">
+          <p className="text-white text-lg sm:text-xl font-semibold drop-shadow-md">
             Plan Your Perfect Day In Seconds
           </p>
-          <p className="text-white text-sm mt-2 font-medium bg-white/10 inline-block px-4 py-1.5 rounded-full backdrop-blur-sm">
+          <p className="text-white text-xs sm:text-sm mt-2 font-medium bg-white/10 inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm">
             Enter your activities, locations and times below
           </p>
         </div>
@@ -201,7 +201,10 @@ export default function Home() {
                           <FormLabel className="text-brand-black">Your Plans</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="e.g. Start at Kings Cross at 9am, café near Covent Garden for brunch, then British Museum until dinner at The Ivy at 7pm."
+                              placeholder={window.innerWidth < 640 ? 
+                                "e.g. Kings Cross 9am, brunch in Covent Garden, British Museum, dinner at The Ivy 7pm" : 
+                                "e.g. Start at Kings Cross at 9am, café near Covent Garden for brunch, then British Museum until dinner at The Ivy at 7pm."
+                              }
                               className="min-h-[100px] resize-y"
                               {...field}
                             />
@@ -247,21 +250,21 @@ export default function Home() {
                       )}
 
                       {/* Activity card */}
-                      <div className="venue-glass p-5">
-                        <div className="flex items-start gap-4 mb-3">
-                          <div className="flex-shrink-0 p-2 bg-brand-blue/20 text-brand-blue rounded-full relative z-10">
-                            <Clock className="w-5 h-5" />
+                      <div className="venue-glass p-4 sm:p-5">
+                        <div className="flex items-start gap-3 sm:gap-4 mb-3">
+                          <div className="flex-shrink-0 p-1.5 sm:p-2 bg-brand-blue/20 text-brand-blue rounded-full relative z-10">
+                            <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                           </div>
-                          <div className="flex-1">
-                            <div className="flex items-baseline justify-between">
-                              <h3 className="font-semibold text-brand-black text-lg">{place.name}</h3>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-2">
+                              <h3 className="font-semibold text-brand-black text-base sm:text-lg truncate">{place.name}</h3>
                               {place.scheduledTime && (
-                                <span className="text-sm text-brand-black/80 font-mono">
+                                <span className="text-xs sm:text-sm text-brand-black/80 font-mono">
                                   {formatTime(place.scheduledTime)}
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-brand-black/70 mt-1">
+                            <p className="text-xs sm:text-sm text-brand-black/70 mt-1 truncate">
                               {place.address}
                             </p>
                           </div>
@@ -297,10 +300,12 @@ export default function Home() {
                         duration: number;
                         arrivalTime: string;
                       }>).length && (
-                        <div className="ml-7 my-4 p-2 flex items-center gap-2 text-sm text-white bg-white/20 backdrop-blur-sm rounded-md">
-                          <MapPin className="w-4 h-4" />
-                          {(itinerary.travelTimes as Array<any>)[index].duration} minutes to{" "}
-                          {(itinerary.travelTimes as Array<any>)[index].to}
+                        <div className="ml-6 sm:ml-7 my-3 sm:my-4 p-2 flex items-center gap-2 text-xs sm:text-sm text-white bg-white/20 backdrop-blur-sm rounded-md">
+                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="truncate">
+                            {(itinerary.travelTimes as Array<any>)[index].duration} minutes to{" "}
+                            {(itinerary.travelTimes as Array<any>)[index].to}
+                          </span>
                         </div>
                       )}
                     </div>
