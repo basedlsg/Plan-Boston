@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
+    "@fontsource/poppins": "^5.2.5",
+    "@fontsource/rozha-one": "^5.2.5",
     "@google/generative-ai": "^0.24.0",
     "@hookform/resolvers": "^3.9.1",
     "@jridgewell/trace-mapping": "^0.3.25",
