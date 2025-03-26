@@ -193,6 +193,13 @@ Return JSON only, in this exact format:
       }
     }
 
+    // Define the expected type for our fixed times entries
+    type FixedTimeEntry = {
+      location: string;
+      time: string;
+      type?: string;
+    };
+
     // Simplify by using ONLY Claude's parsed output without complex additions
     const parsed: StructuredRequest = {
       startLocation: claudeParsed.startLocation,
@@ -228,11 +235,14 @@ Return JSON only, in this exact format:
 
     // Set startLocation if not already set
     if (!parsed.startLocation && parsed.destinations.length > 0) {
-      parsed.startLocation = parsed.destinations.shift();
+      const firstDestination = parsed.destinations.shift();
+      if (firstDestination) {
+        parsed.startLocation = firstDestination;
+      }
     }
 
     // Normalize time formats first (ensure HH:MM 24-hour format)
-    parsed.fixedTimes.forEach(item => {
+    parsed.fixedTimes.forEach((item: FixedTimeEntry) => {
       if (item.time && item.time.includes(':')) {
         const parts = item.time.split(':');
         if (parts.length === 2) {
@@ -245,15 +255,9 @@ Return JSON only, in this exact format:
     });
     
     // Remove duplicates without using Set which causes TypeScript issues
-    type FixedTimeEntry = {
-      location: string;
-      time: string;
-      type?: string;
-    };
-    
-    const stringified = parsed.fixedTimes.map(item => JSON.stringify(item));
+    const stringified = parsed.fixedTimes.map((item: FixedTimeEntry) => JSON.stringify(item));
     const uniqueStringified: string[] = [];
-    stringified.forEach(str => {
+    stringified.forEach((str: string) => {
       if (!uniqueStringified.includes(str)) {
         uniqueStringified.push(str);
       }
