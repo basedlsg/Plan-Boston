@@ -8,9 +8,12 @@
   }
 
   body {
-    @apply antialiased bg-background text-foreground;
+    @apply antialiased text-foreground;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
+    background-color: var(--brand-pink);
+    color: var(--brand-black);
+    background-image: radial-gradient(circle at top right, #FFA9D2, #FC94C5);
   }
 
   h1, h2, h3, .logo-font {
@@ -57,5 +60,80 @@
   .venue-selected {
     border: 2px solid var(--brand-blue);
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
+  }
+  
+  /* Glass effect */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1.5rem;
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .glass-panel {
+    background: linear-gradient(
+      135deg, 
+      rgba(255, 255, 255, 0.22), 
+      rgba(255, 255, 255, 0.12)
+    );
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  
+  /* Venue swiper glass effect */
+  .venue-glass {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .venue-glass:hover {
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+  
+  .venue-glass.selected {
+    border: 2px solid var(--brand-blue);
+    box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3), 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* Navigation arrow buttons */
+  .nav-arrow {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  
+  .venue-container:hover .nav-arrow {
+    opacity: 1;
+  }
+  
+  .nav-arrow:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(1.05);
   }
 }

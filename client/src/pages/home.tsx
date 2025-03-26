@@ -117,45 +117,44 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid gap-8 max-w-3xl mx-auto">
-          {/* Header Section */}
-          <div className="text-center space-y-4">
-            <div className="flex flex-col items-center justify-center">
-              <img 
-                src="/Illustration + Name.png" 
-                alt="Plan Logo" 
-                className="h-24 mb-2" 
-              />
-            </div>
-            <p className="text-muted-foreground text-lg">
-              Plan Your Perfect Day In Seconds
-            </p>
+    <div className="min-h-screen py-12 px-4">
+      <div className="container mx-auto max-w-5xl">
+        {/* Header Section */}
+        <div className="text-center space-y-4 mb-8">
+          <div className="flex flex-col items-center justify-center">
+            <img 
+              src="/Illustration + Name.png" 
+              alt="Plan Logo" 
+              className="h-28 mb-3" 
+            />
           </div>
+          <p className="text-white text-xl font-semibold drop-shadow-md">
+            Plan Your Perfect Day In Seconds
+          </p>
+        </div>
 
+        <div className="glass-panel p-8 mb-12">
           {/* Form Card */}
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Create Your Plan</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="glass-card mb-10">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-brand-black mb-6">Create Your Plan</h2>
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
                   className="space-y-6"
                 >
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="grid sm:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
                       name="date"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Date</FormLabel>
+                          <FormLabel className="text-brand-black">Date</FormLabel>
                           <FormControl>
                             <Input
                               type="date"
                               {...field}
+                              className="bg-white/30 backdrop-blur-sm border-white/20 text-brand-black"
                             />
                           </FormControl>
                         </FormItem>
@@ -167,12 +166,12 @@ export default function Home() {
                       name="startTime"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Start Time</FormLabel>
+                          <FormLabel className="text-brand-black">Start Time</FormLabel>
                           <FormControl>
                             <TimeInput
                               value={field.value || ""}
                               onChange={field.onChange}
-                              className="w-full"
+                              className="w-full bg-white/30 backdrop-blur-sm border-white/20 text-brand-black"
                             />
                           </FormControl>
                         </FormItem>
@@ -185,11 +184,11 @@ export default function Home() {
                     name="query"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Your Plans</FormLabel>
+                        <FormLabel className="text-brand-black">Your Plans</FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
-                            className="min-h-[120px] resize-y"
+                            className="min-h-[120px] resize-y bg-white/30 backdrop-blur-sm border-white/20 text-brand-black"
                             {...field}
                           />
                         </FormControl>
@@ -199,57 +198,55 @@ export default function Home() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-brand-pink hover:bg-brand-pink/90 text-white"
+                    className="w-full bg-brand-blue hover:bg-brand-blue/90 text-white shadow-md"
                     disabled={planMutation.isPending}
                   >
                     {planMutation.isPending ? "Creating plan..." : "Create Plan"}
                   </Button>
                 </form>
               </Form>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Itinerary Display */}
           {itinerary && (
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  Your Itinerary
+            <div className="glass-card">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-brand-black">Your Itinerary</h2>
                   <Button
                     variant="outline"
-                    className="text-brand-black border-brand-blue hover:text-brand-blue"
+                    className="text-brand-black border-brand-blue hover:text-brand-blue bg-white/30 backdrop-blur-sm"
                     onClick={() => generateICS(itinerary)}
                   >
                     <Calendar className="w-4 h-4 mr-2" />
                     Export to Calendar
                   </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </div>
                 <div className="space-y-6">
                   {(itinerary.places as Place[]).map((place, index) => (
                     <div key={`${place.placeId}-${index}`} className="relative">
                       {/* Timeline connector */}
                       {index > 0 && (
-                        <div className="absolute top-0 left-7 h-full w-px bg-border -translate-x-1/2" />
+                        <div className="absolute top-0 left-7 h-full w-px bg-white/40 -translate-x-1/2" />
                       )}
 
                       {/* Activity card */}
-                      <div className="bg-card rounded-lg p-4 shadow-sm">
+                      <div className="venue-glass p-5">
                         <div className="flex items-start gap-4 mb-3">
-                          <div className="flex-shrink-0 p-2 bg-primary/5 rounded-full relative z-10">
-                            <Clock className="w-5 h-5 text-primary" />
+                          <div className="flex-shrink-0 p-2 bg-brand-blue/20 text-brand-blue rounded-full relative z-10">
+                            <Clock className="w-5 h-5" />
                           </div>
                           <div className="flex-1">
                             <div className="flex items-baseline justify-between">
-                              <h3 className="font-semibold">{place.name}</h3>
+                              <h3 className="font-semibold text-brand-black text-lg">{place.name}</h3>
                               {place.scheduledTime && (
-                                <span className="text-sm text-muted-foreground font-mono">
+                                <span className="text-sm text-brand-black/80 font-mono">
                                   {formatTime(place.scheduledTime)}
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
+                            <p className="text-sm text-brand-black/70 mt-1">
                               {place.address}
                             </p>
                           </div>
@@ -263,7 +260,7 @@ export default function Home() {
                               place.details && 
                               (place.alternatives as PlaceDetails[]).length > 0) {
                             return (
-                              <div className="mt-2">
+                              <div className="mt-3 venue-container">
                                 <VenueSwiper 
                                   primary={place.details as PlaceDetails}
                                   alternatives={place.alternatives as PlaceDetails[]}
@@ -285,7 +282,7 @@ export default function Home() {
                         duration: number;
                         arrivalTime: string;
                       }>).length && (
-                        <div className="ml-7 my-4 p-2 flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-md">
+                        <div className="ml-7 my-4 p-2 flex items-center gap-2 text-sm text-white bg-white/20 backdrop-blur-sm rounded-md">
                           <MapPin className="w-4 h-4" />
                           {(itinerary.travelTimes as Array<any>)[index].duration} minutes to{" "}
                           {(itinerary.travelTimes as Array<any>)[index].to}
@@ -294,8 +291,8 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>
