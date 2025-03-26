@@ -440,17 +440,21 @@ export async function registerRoutes(app: Express) {
 
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
           
-          // Enhanced search options
+          // Enhanced search options with parameters from fixedTimes
           const searchOptions: any = {
             type: timeSlot.type,
             requireOpenNow: true,
-            keywords: []
+            keywords: timeSlot.keywords || [],
+            searchTerm: timeSlot.searchTerm || timeSlot.type,
+            minRating: timeSlot.minRating || 0
           };
           
           // Add additional search context based on activity type
           if (timeSlot.type) {
-            // Use the activity type as search term for better context
-            searchOptions.searchTerm = timeSlot.type;
+            // Use the activity type as search term only if not explicitly provided
+            if (!timeSlot.searchTerm) {
+              searchOptions.searchTerm = timeSlot.type;
+            }
             
             // Add keywords based on common activity types
             if (timeSlot.type.includes('coffee') || timeSlot.type.includes('cafe')) {
