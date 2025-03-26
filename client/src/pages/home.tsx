@@ -136,7 +136,7 @@ export default function Home() {
           <p className="text-white text-xl font-semibold drop-shadow-md">
             Plan Your Perfect Day In Seconds
           </p>
-          <p className="text-white/80 text-sm mt-2 font-medium">
+          <p className="text-white text-sm mt-2 font-medium bg-white/10 inline-block px-4 py-1.5 rounded-full backdrop-blur-sm">
             Enter your activities, locations and times below
           </p>
         </div>
@@ -146,7 +146,7 @@ export default function Home() {
           {/* Form Container - With blue tint */}
           <div className="form-container mb-10">
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-brand-black mb-6">What's The Plan?</h2>
+              <h2 className="text-2xl font-bold text-brand-black mb-6 text-center">What's The Plan?</h2>
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
