@@ -86,15 +86,15 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         role: "user",
         content: `Parse this London itinerary request: "${query}"
 
-Extract the core elements regardless of phrasing:
-1. LOCATIONS: Any mentioned place in London (neighborhoods, landmarks, streets, stations)
-2. ACTIVITIES: ALL things they want to do (dining, sightseeing, etc.) - INCLUDE vague activities like "do something nice" or "see the area"
-3. TIMES: ALL time references (convert to 24-hour format) - capture EVERY time mentioned (morning, afternoon, specific times)
-4. PREFERENCES: Desired qualities (quiet, fancy, cheap, etc.)
+Extract ONLY the explicitly mentioned elements:
+1. LOCATIONS: Specific places mentioned in London
+2. ACTIVITIES: Only activities clearly stated in the request
+3. TIMES: Only times explicitly mentioned (convert to 24-hour format)
+4. PREFERENCES: Qualities mentioned for the experience
 
-Be EXHAUSTIVE - capture EVERY activity with its corresponding time and location.
+DO NOT add activities, times or locations that aren't clearly in the request.
 
-Return JSON only, no explanations, in this exact format:
+Return JSON only, in this exact format:
 {
   "startLocation": string | null,
   "destinations": string[],
@@ -102,7 +102,7 @@ Return JSON only, no explanations, in this exact format:
   "preferences": {"type"?: string, "requirements"?: string[]}
 }`
       }],
-      system: "Extract ALL activities, times, and locations from London itinerary requests. Be comprehensive and thorough. Return as JSON."
+      system: "Extract ONLY explicitly mentioned elements from London itinerary requests. DO NOT add anything not clearly stated. Return as JSON."
     });
 
     // Add detailed logging to debug the response structure
@@ -193,10 +193,10 @@ Return JSON only, no explanations, in this exact format:
       }
     }
 
-    // Combine Claude's understanding with our direct extraction
+    // Simplify by using ONLY Claude's parsed output without complex additions
     const parsed: StructuredRequest = {
-      startLocation: null,
-      destinations: [],
+      startLocation: claudeParsed.startLocation,
+      destinations: claudeParsed.destinations || [],
       fixedTimes: [],
       preferences: {
         type: claudeParsed.preferences?.type,
@@ -204,65 +204,21 @@ Return JSON only, no explanations, in this exact format:
       }
     };
 
-    // Use locations from both sources with null/undefined checks
-    const allLocationsList = [
-      ...(extractedLocations && extractedLocations.length > 0 ? extractedLocations.map(l => l.name) : []),
-      ...(claudeParsed.destinations || []),
-      claudeParsed.startLocation
-    ].filter(Boolean);
-    
-    // Remove duplicates without using Set spread which causes TypeScript issues
-    const uniqueLocations: string[] = [];
-    allLocationsList.forEach(loc => {
-      if (!uniqueLocations.includes(loc)) {
-        uniqueLocations.push(loc);
-      }
-    });
-
-    // Validate each location
-    for (const loc of uniqueLocations) {
-      const validatedLoc = findLocation(loc);
-      if (validatedLoc) {
-        if (!parsed.startLocation) {
-          parsed.startLocation = validatedLoc.name;
-        } else {
-          parsed.destinations.push(validatedLoc.name);
-        }
-      }
-    }
-
-    // Combine activities and times
-    // Define the expected type for our fixed times entries
-    type FixedTimeEntry = {
-      location: string;
-      time: string;
-      type?: string;
-    };
-    
-    const fixedTimesList: FixedTimeEntry[] = [];
-    
-    // Add times from extracted activities with null/undefined checks
-    if (extractedActivities && extractedActivities.length > 0) {
-      for (const activity of extractedActivities) {
-        if (activity && activity.timeContext?.preferredTime) {
-          fixedTimesList.push({
-            location: parsed.startLocation || parsed.destinations[0] || 'Central London',
-            time: activity.timeContext.preferredTime,
-            type: activity.venueType === null ? undefined : activity.venueType
-          });
-        }
-      }
-    }
-
-    // Add Claude's fixed times
+    // Process fixed times from Claude's response
     if (claudeParsed.fixedTimes && Array.isArray(claudeParsed.fixedTimes)) {
       for (const ft of claudeParsed.fixedTimes) {
         if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
           const location = findLocation(String(ft.location));
           if (location) {
-            fixedTimesList.push({
+            // Convert relative times like "afternoon" to specific times
+            let timeValue = String(ft.time);
+            if (!timeValue.includes(':')) {
+              timeValue = expandRelativeTime(timeValue);
+            }
+            
+            parsed.fixedTimes.push({
               location: location.name,
-              time: parseTimeExpression(String(ft.time)).time || getDefaultTime(ft.type ? String(ft.type) : ''),
+              time: timeValue,
               type: ft.type ? String(ft.type) : undefined
             });
           }
@@ -270,8 +226,13 @@ Return JSON only, no explanations, in this exact format:
       }
     }
 
+    // Set startLocation if not already set
+    if (!parsed.startLocation && parsed.destinations.length > 0) {
+      parsed.startLocation = parsed.destinations.shift();
+    }
+
     // Normalize time formats first (ensure HH:MM 24-hour format)
-    fixedTimesList.forEach(item => {
+    parsed.fixedTimes.forEach(item => {
       if (item.time && item.time.includes(':')) {
         const parts = item.time.split(':');
         if (parts.length === 2) {
@@ -284,7 +245,13 @@ Return JSON only, no explanations, in this exact format:
     });
     
     // Remove duplicates without using Set which causes TypeScript issues
-    const stringified = fixedTimesList.map(item => JSON.stringify(item));
+    type FixedTimeEntry = {
+      location: string;
+      time: string;
+      type?: string;
+    };
+    
+    const stringified = parsed.fixedTimes.map(item => JSON.stringify(item));
     const uniqueStringified: string[] = [];
     stringified.forEach(str => {
       if (!uniqueStringified.includes(str)) {
@@ -422,7 +389,7 @@ Return JSON only, no explanations, in this exact format:
           const minute = parseInt(timeComponents[1]);
           
           // Generate all potential time formats for comparison
-          const potentialTimeFormats = [];
+          const potentialTimeFormats: string[] = [];
           
           // 24-hour format: 03:00 or 15:00
           potentialTimeFormats.push(hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'));

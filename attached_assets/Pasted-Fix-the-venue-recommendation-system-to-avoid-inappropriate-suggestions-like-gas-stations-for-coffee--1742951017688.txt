@@ -1,0 +1,113 @@
+Fix the venue recommendation system to avoid inappropriate suggestions like gas stations for coffee and duplicate activities.
+
+Implementation:
+1. Update searchPlace() in googlePlaces.ts to use better type filtering:
+
+```typescript
+// Add this to the searchPlace function where it processes search results
+if (options.type) {
+  // Add basic type filtering to exclude inappropriate venues
+  if (options.type === 'cafe' || options.type === 'coffee') {
+    // For cafes/coffee, exclude gas stations and prioritize dedicated cafes
+    nearbyData.results = nearbyData.results.filter(place => 
+      !place.types.includes('gas_station') && 
+      (place.types.includes('cafe') || place.types.includes('coffee'))
+    );
+  } else if (options.type === 'restaurant') {
+    // For restaurants, prioritize dedicated restaurants
+    nearbyData.results = nearbyData.results.sort((a, b) => {
+      const aIsRestaurant = a.types.includes('restaurant');
+      const bIsRestaurant = b.types.includes('restaurant');
+      return (bIsRestaurant ? 1 : 0) - (aIsRestaurant ? 1 : 0);
+    });
+  }
+  
+  // If we still don't have good results, try a more generic search
+  if (nearbyData.results.length === 0) {
+    console.log(`No ${options.type} found with strict filtering, using more generic search`);
+    const genericParams = new URLSearchParams({
+      location: `${lat},${lng}`,
+      radius: "2000",
+      keyword: options.type,
+      key: GOOGLE_PLACES_API_KEY || "",
+      language: "en"
+    });
+    
+    const genericUrl = `${PLACES_API_BASE}/nearbysearch/json?${genericParams.toString()}`;
+    const genericRes = await fetch(genericUrl);
+    const genericData = await genericRes.json();
+    
+    if (genericData.status === "OK" && genericData.results?.length > 0) {
+      nearbyData.results = genericData.results;
+    }
+  }
+}
+1. Fix the NLP parsing in nlp.ts to avoid phantom activities:
+// In parseItineraryRequest, after processing Claude's response:
+// Simplify by using ONLY Claude's parsed output without complex additions
+const parsed: StructuredRequest = {
+  startLocation: claudeParsed.startLocation,
+  destinations: claudeParsed.destinations || [],
+  fixedTimes: [],
+  preferences: {
+    type: claudeParsed.preferences?.type,
+    requirements: claudeParsed.preferences?.requirements || []
+  }
+};
+
+// Process fixed times from Claude's response
+if (claudeParsed.fixedTimes && Array.isArray(claudeParsed.fixedTimes)) {
+  for (const ft of claudeParsed.fixedTimes) {
+    if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
+      const location = findLocation(String(ft.location));
+      if (location) {
+        // Convert relative times like "afternoon" to specific times
+        let timeValue = String(ft.time);
+        if (!timeValue.includes(':')) {
+          timeValue = expandRelativeTime(timeValue);
+        }
+        
+        parsed.fixedTimes.push({
+          location: location.name,
+          time: timeValue,
+          type: ft.type ? String(ft.type) : undefined
+        });
+      }
+    }
+  }
+}
+
+// Set startLocation if not already set
+if (!parsed.startLocation && parsed.destinations.length > 0) {
+  parsed.startLocation = parsed.destinations.shift();
+}
+1. Update the system prompt to Claude to be more explicit about expectations:
+const response = await anthropic.messages.create({
+  model: "claude-3-opus-20240229",
+  max_tokens: 1000,
+  messages: [{
+    role: "user",
+    content: `Parse this London itinerary request: "${query}"
+
+Extract ONLY the explicitly mentioned elements:
+1. LOCATIONS: Specific places mentioned in London
+2. ACTIVITIES: Only activities clearly stated in the request
+3. TIMES: Only times explicitly mentioned (convert to 24-hour format)
+4. PREFERENCES: Qualities mentioned for the experience
+
+DO NOT add activities, times or locations that aren't clearly in the request.
+
+Return JSON only, in this exact format:
+{
+  "startLocation": string | null,
+  "destinations": string[],
+  "fixedTimes": [{"location": string, "time": string, "type"?: string}],
+  "preferences": {"type"?: string, "requirements"?: string[]}
+}`
+  }],
+  system: "Extract ONLY explicitly mentioned elements from London itinerary requests. DO NOT add anything not clearly stated. Return as JSON."
+});
+This simpler approach focuses on:
+1. Filtering out inappropriate venue types
+2. Using only what Claude explicitly extracts without adding phantom activities
+3. Making the Claude prompt more strict about only extracting what's explicitly mentioned

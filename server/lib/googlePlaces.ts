@@ -132,6 +132,49 @@ export async function searchPlace(
         }
       }
       
+      // Add basic type filtering to exclude inappropriate venues
+      if (options.type) {
+        if (options.type === 'cafe' || options.type === 'coffee') {
+          // For cafes/coffee, exclude gas stations and prioritize dedicated cafes
+          const filteredResults = results.filter(place => 
+            !place.types.includes('gas_station') && 
+            (place.types.includes('cafe') || place.types.includes('coffee'))
+          );
+          
+          // Only use filtered results if we didn't filter everything out
+          if (filteredResults.length > 0) {
+            results = filteredResults;
+          }
+        } else if (options.type === 'restaurant') {
+          // For restaurants, prioritize dedicated restaurants
+          results = results.sort((a, b) => {
+            const aIsRestaurant = a.types.includes('restaurant');
+            const bIsRestaurant = b.types.includes('restaurant');
+            return (bIsRestaurant ? 1 : 0) - (aIsRestaurant ? 1 : 0);
+          });
+        }
+        
+        // If we still don't have good results, try a more generic search
+        if (results.length === 0) {
+          console.log(`No ${options.type} found with strict filtering, using more generic search`);
+          const genericParams = new URLSearchParams({
+            location: `${lat},${lng}`,
+            radius: "2000",
+            keyword: options.type,
+            key: GOOGLE_PLACES_API_KEY || "",
+            language: "en"
+          });
+          
+          const genericUrl = `${PLACES_API_BASE}/nearbysearch/json?${genericParams.toString()}`;
+          const genericRes = await fetch(genericUrl);
+          const genericData = await genericRes.json();
+          
+          if (genericData.status === "OK" && genericData.results?.length > 0) {
+            results = genericData.results;
+          }
+        }
+      }
+      
       // Limit to maximum results (1 primary + MAX_ALTERNATIVES)
       results = results.slice(0, 1 + MAX_ALTERNATIVES);
       
