@@ -44,6 +44,26 @@ export async function searchPlace(
   options: SearchOptions = {}
 ): Promise<VenueSearchResult> {
   try {
+    // Add better search term extraction from complex activity types
+    let searchType = options.type;
+    let searchKeyword = '';
+
+    // Extract better search terms from complex activity types
+    if (typeof options.type === 'string') {
+      // Map complex activity types to better search terms
+      if (options.type.includes('coffee shop') || options.type.includes('cafe')) {
+        searchType = 'cafe';
+        searchKeyword = 'coffee shop';
+      } else if (options.type.includes('dinner') || options.type.includes('restaurant')) {
+        searchType = 'restaurant';
+        searchKeyword = options.type;
+      } else if (options.type.includes('library')) {
+        searchType = 'library';
+      } else if (options.type.includes('bar') || options.type.includes('pub')) {
+        searchType = 'bar';
+      }
+    }
+    
     // First check if this matches any of our known areas
     const matchingArea = londonAreas.find(area => 
       area.name.toLowerCase() === query.toLowerCase() ||
@@ -69,7 +89,7 @@ export async function searchPlace(
 
     // When searching for an activity type near a landmark, use a two-step approach
     if (options.type && options.type !== "landmark") {
-      console.log(`Searching for ${options.type} near ${searchQuery}`);
+      console.log(`Searching for ${options.type} near ${searchQuery} (using searchType: ${searchType}, searchKeyword: ${searchKeyword})`);
 
       // First find the landmark
       const landmarkParams = new URLSearchParams({
@@ -100,10 +120,22 @@ export async function searchPlace(
       const nearbyParams = new URLSearchParams({
         location: `${lat},${lng}`,
         radius: "2000", // 2km radius
-        type: options.type,
         key: GOOGLE_PLACES_API_KEY || "",
         language: "en"
       });
+
+      // Add proper search parameters
+      if (searchType && searchType !== "landmark") {
+        nearbyParams.append("type", searchType);
+      } else if (options.type && options.type !== "landmark") {
+        // Fallback to original type if no improved searchType was extracted
+        nearbyParams.append("type", options.type);
+      }
+      
+      // Add keyword for better results
+      if (searchKeyword) {
+        nearbyParams.append("keyword", searchKeyword);
+      }
 
       if (options.openNow) {
         nearbyParams.append("opennow", "true");
@@ -205,21 +237,51 @@ export async function searchPlace(
         
         // If we still don't have good results, try a more generic search
         if (results.length === 0) {
-          console.log(`No ${options.type} found with strict filtering, using more generic search`);
-          const genericParams = new URLSearchParams({
-            location: `${lat},${lng}`,
-            radius: "2000",
-            keyword: options.type,
-            key: GOOGLE_PLACES_API_KEY || "",
-            language: "en"
-          });
+          // First try with our enhanced keyword if available
+          if (searchKeyword) {
+            console.log(`All results filtered out, trying generic search with keyword: ${searchKeyword}`);
+            const keywordParams = new URLSearchParams({
+              location: `${lat},${lng}`,
+              radius: "2000",
+              keyword: searchKeyword,
+              key: GOOGLE_PLACES_API_KEY || "",
+              language: "en"
+            });
+            
+            const keywordUrl = `${PLACES_API_BASE}/nearbysearch/json?${keywordParams.toString()}`;
+            const keywordRes = await fetch(keywordUrl);
+            const keywordData = await keywordRes.json();
+            
+            if (keywordData.status === "OK" && keywordData.results?.length > 0) {
+              results = keywordData.results;
+              
+              // Apply some basic filtering to these results too
+              results = results.filter(place => 
+                !place.types.includes('gas_station') && 
+                !place.types.includes('lawyer') &&
+                !place.types.includes('finance')
+              );
+            }
+          }
           
-          const genericUrl = `${PLACES_API_BASE}/nearbysearch/json?${genericParams.toString()}`;
-          const genericRes = await fetch(genericUrl);
-          const genericData = await genericRes.json();
-          
-          if (genericData.status === "OK" && genericData.results?.length > 0) {
-            results = genericData.results;
+          // If still no results or no keyword was available, try with original type
+          if (results.length === 0) {
+            console.log(`No ${options.type} found with strict filtering, using more generic search`);
+            const genericParams = new URLSearchParams({
+              location: `${lat},${lng}`,
+              radius: "2000",
+              keyword: options.type,
+              key: GOOGLE_PLACES_API_KEY || "",
+              language: "en"
+            });
+            
+            const genericUrl = `${PLACES_API_BASE}/nearbysearch/json?${genericParams.toString()}`;
+            const genericRes = await fetch(genericUrl);
+            const genericData = await genericRes.json();
+            
+            if (genericData.status === "OK" && genericData.results?.length > 0) {
+              results = genericData.results;
+            }
           }
         }
       }

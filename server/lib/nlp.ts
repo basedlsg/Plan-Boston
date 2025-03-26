@@ -232,8 +232,13 @@ Respond strictly with JSON only, no explanations.`
         if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
           const location = findLocation(String(ft.location));
           if (location) {
-            // Convert relative times like "afternoon" to specific times
+            // Parse time but preserve original activity type
             let timeValue = String(ft.time);
+            // Handle time ranges (15:00-17:00)
+            if (timeValue.includes('-')) {
+              timeValue = timeValue.split('-')[0]; // Take the start time
+            }
+            // Handle relative times
             if (!timeValue.includes(':')) {
               timeValue = expandRelativeTime(timeValue);
             }
@@ -241,6 +246,7 @@ Respond strictly with JSON only, no explanations.`
             parsed.fixedTimes.push({
               location: location.name,
               time: timeValue,
+              // Preserve the original activity type from Claude
               type: ft.type ? String(ft.type) : undefined
             });
           }

@@ -1,0 +1,140 @@
+```
+Fix the venue recommendation and activity type mapping issues by leveraging Claude's natural language understanding:
+
+1. Update parseItineraryRequest() in nlp.ts to preserve Claude's original activity types:
+
+```typescript
+// Preserve Claude's original activity types without normalization
+if (claudeParsed.fixedTimes && Array.isArray(claudeParsed.fixedTimes)) {
+  for (const ft of claudeParsed.fixedTimes) {
+    if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
+      const location = findLocation(String(ft.location));
+      if (location) {
+        // Parse time but preserve original activity type
+        let timeValue = String(ft.time);
+        // Handle time ranges (15:00-17:00)
+        if (timeValue.includes('-')) {
+          timeValue = timeValue.split('-')[0]; // Take the start time
+        }
+        // Handle relative times
+        if (!timeValue.includes(':')) {
+          timeValue = expandRelativeTime(timeValue);
+        }
+        
+        parsed.fixedTimes.push({
+          location: location.name,
+          time: timeValue,
+          // Preserve the original activity type from Claude
+          type: ft.type ? String(ft.type) : undefined
+        });
+      }
+    }
+  }
+}
+```
+
+2. Modify searchPlace() in googlePlaces.ts to use Claude's activity types for better searches:
+
+```typescript
+// Add at the beginning of the searchPlace function
+let searchType = options.type;
+let searchKeyword = '';
+
+// Extract better search terms from complex activity types
+if (typeof options.type === 'string') {
+  // Map complex activity types to better search terms
+  if (options.type.includes('coffee shop') || options.type.includes('cafe')) {
+    searchType = 'cafe';
+    searchKeyword = 'coffee shop';
+  } else if (options.type.includes('dinner') || options.type.includes('restaurant')) {
+    searchType = 'restaurant';
+    searchKeyword = options.type;
+  } else if (options.type.includes('library')) {
+    searchType = 'library';
+  } else if (options.type.includes('bar') || options.type.includes('pub')) {
+    searchType = 'bar';
+  }
+}
+
+// Then modify the nearbySearch parameters
+const nearbyParams = new URLSearchParams({
+  location: `${lat},${lng}`,
+  radius: "2000",
+  key: GOOGLE_PLACES_API_KEY || "",
+  language: "en"
+});
+
+// Add proper search parameters
+if (searchType && searchType !== "landmark") {
+  nearbyParams.append("type", searchType);
+}
+if (searchKeyword) {
+  nearbyParams.append("keyword", searchKeyword);
+}
+```
+
+3. Add better venue filtering in searchPlace():
+
+```typescript
+// After getting search results, add this filtering
+if (nearbyData.results && nearbyData.results.length > 0) {
+  // Filter out inappropriate venues based on the type
+  if (searchType === 'cafe' || searchKeyword.includes('coffee')) {
+    // For coffee shops, prioritize actual cafes and filter out hotels and gas stations
+    nearbyData.results = nearbyData.results.filter(place => 
+      !place.types.includes('gas_station') && 
+      !place.types.includes('lodging')
+    );
+    
+    // Further prioritize actual cafes
+    nearbyData.results.sort((a, b) => {
+      const aIsCafe = a.types.includes('cafe');
+      const bIsCafe = b.types.includes('cafe');
+      return (bIsCafe ? 1 : 0) - (aIsCafe ? 1 : 0);
+    });
+  } else if (searchType === 'restaurant' || searchKeyword.includes('dinner')) {
+    // For restaurants, filter out law firms, financial services, etc.
+    nearbyData.results = nearbyData.results.filter(place => 
+      !place.types.includes('lawyer') &&
+      !place.types.includes('finance') &&
+      !place.types.includes('accounting')
+    );
+    
+    // Prioritize actual restaurants over hotels
+    nearbyData.results.sort((a, b) => {
+      const aIsRestaurant = a.types.includes('restaurant') && !a.types.includes('lodging');
+      const bIsRestaurant = b.types.includes('restaurant') && !b.types.includes('lodging');
+      return (bIsRestaurant ? 1 : 0) - (aIsRestaurant ? 1 : 0);
+    });
+  }
+  
+  // If we filtered out all results, try a more generic search with just the keyword
+  if (nearbyData.results.length === 0 && searchKeyword) {
+    console.log(`All results filtered out, trying generic search with keyword: ${searchKeyword}`);
+    const keywordParams = new URLSearchParams({
+      location: `${lat},${lng}`,
+      radius: "2000",
+      keyword: searchKeyword,
+      key: GOOGLE_PLACES_API_KEY || "",
+      language: "en"
+    });
+    
+    const keywordUrl = `${PLACES_API_BASE}/nearbysearch/json?${keywordParams.toString()}`;
+    const keywordRes = await fetch(keywordUrl);
+    const keywordData = await keywordRes.json();
+    
+    if (keywordData.status === "OK" && keywordData.results?.length > 0) {
+      nearbyData.results = keywordData.results;
+    }
+  }
+}
+```
+
+This solution:
+1. Preserves Claude's rich activity descriptions
+2. Maps those descriptions to appropriate search parameters
+3. Filters out inappropriate venues (law offices, hotels when looking for coffee shops)
+4. Has a fallback to search by keyword if type filtering returns no results
+
+It leverages Claude's natural language understanding while still using proper parameters for the Google Places API.
+```
