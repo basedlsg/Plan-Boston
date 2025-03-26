@@ -117,26 +117,29 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4">
+    <div className="min-h-screen py-8 px-4 relative">
       <div className="container mx-auto max-w-5xl">
-        {/* Header Section */}
-        <div className="text-center space-y-4 mb-8">
-          <div className="flex flex-col items-center justify-center">
-            <img 
-              src="/Illustration + Name.png" 
-              alt="Plan Logo" 
-              className="h-28 mb-3" 
-            />
-          </div>
+        {/* Logo Section */}
+        <div className="logo-container">
+          <img 
+            src="/Illustration + Name.png" 
+            alt="Plan Logo" 
+            className="logo"
+          />
+        </div>
+        
+        {/* Tagline */}
+        <div className="text-center mb-10">
           <p className="text-white text-xl font-semibold drop-shadow-md">
             Plan Your Perfect Day In Seconds
           </p>
         </div>
 
-        <div className="glass-panel p-8 mb-12">
-          {/* Form Card */}
-          <div className="glass-card mb-10">
-            <div className="p-6">
+        {/* Main Content */}
+        <div className="mb-12">
+          {/* Form Container - More opaque glass */}
+          <div className="form-container mb-10">
+            <div className="p-8">
               <h2 className="text-2xl font-bold text-brand-black mb-6">Create Your Plan</h2>
               <Form {...form}>
                 <form
@@ -154,7 +157,6 @@ export default function Home() {
                             <Input
                               type="date"
                               {...field}
-                              className="bg-white/30 backdrop-blur-sm border-white/20 text-brand-black"
                             />
                           </FormControl>
                         </FormItem>
@@ -171,7 +173,7 @@ export default function Home() {
                             <TimeInput
                               value={field.value || ""}
                               onChange={field.onChange}
-                              className="w-full bg-white/30 backdrop-blur-sm border-white/20 text-brand-black"
+                              className="w-full"
                             />
                           </FormControl>
                         </FormItem>
@@ -188,7 +190,7 @@ export default function Home() {
                         <FormControl>
                           <Textarea
                             placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
-                            className="min-h-[120px] resize-y bg-white/30 backdrop-blur-sm border-white/20 text-brand-black"
+                            className="min-h-[120px] resize-y"
                             {...field}
                           />
                         </FormControl>
@@ -211,12 +213,12 @@ export default function Home() {
           {/* Itinerary Display */}
           {itinerary && (
             <div className="glass-card">
-              <div className="p-6">
+              <div className="p-8">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-brand-black">Your Itinerary</h2>
                   <Button
                     variant="outline"
-                    className="text-brand-black border-brand-blue hover:text-brand-blue bg-white/30 backdrop-blur-sm"
+                    className="text-brand-black border-brand-blue hover:text-brand-blue bg-white/20 backdrop-blur-sm"
                     onClick={() => generateICS(itinerary)}
                   >
                     <Calendar className="w-4 h-4 mr-2" />

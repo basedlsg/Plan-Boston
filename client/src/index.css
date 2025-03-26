@@ -7,6 +7,11 @@
     @apply border-border;
   }
 
+  html, body {
+    height: 100%;
+    min-height: 100vh;
+  }
+
   body {
     @apply antialiased text-foreground;
     font-family: 'Poppins', sans-serif;
@@ -14,6 +19,21 @@
     background-color: var(--brand-pink);
     color: var(--brand-black);
     background-image: radial-gradient(circle at top right, #FFA9D2, #FC94C5);
+    position: relative;
+  }
+  
+  /* Global glass effect on entire body */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.08);
+    z-index: -1;
   }
 
   h1, h2, h3, .logo-font {
@@ -62,7 +82,7 @@
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
   }
   
-  /* Glass effect */
+  /* Glass effect containers */
   .glass-effect {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(10px);
@@ -74,25 +94,49 @@
   }
   
   .glass-card {
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(7px);
-    -webkit-backdrop-filter: blur(7px);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.22); /* Slightly more opaque */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
   }
   
   .glass-panel {
     background: linear-gradient(
       135deg, 
-      rgba(255, 255, 255, 0.22), 
-      rgba(255, 255, 255, 0.12)
+      rgba(255, 255, 255, 0.12), 
+      rgba(255, 255, 255, 0.06)
     );
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: 24px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  
+  /* Form container - slightly more opaque than other glass elements */
+  .form-container {
+    background: rgba(255, 255, 255, 0.25); /* More opaque for contrast */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: hidden;
+  }
+  
+  /* Logo styling */
+  .logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  
+  .logo {
+    height: 120px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
   }
   
   /* Venue swiper glass effect */
@@ -114,6 +158,15 @@
   .venue-glass.selected {
     border: 2px solid var(--brand-blue);
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3), 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* Form elements */
+  input, textarea, select {
+    background: rgba(255, 255, 255, 0.18) !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: var(--brand-black) !important;
   }
   
   /* Navigation arrow buttons */
