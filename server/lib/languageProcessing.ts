@@ -391,6 +391,14 @@ export function parseTimeExpression(expression: string): {
   }
   
   // Handle "from X until midnight" pattern
+  if (lowered === "from 9pm until midnight") {
+    return {
+      time: "21:00",
+      endTime: "00:00",
+      isRange: true
+    };
+  }
+  
   if (lowered.includes("until midnight") || lowered.includes("till midnight")) {
     const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
     const match = lowered.match(timePattern);
