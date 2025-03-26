@@ -45,6 +45,10 @@ export type StructuredRequest = {
     location: string;
     time: string;  // Format: "HH:MM" (24-hour)
     type?: string; // e.g., "restaurant", "cafe"
+    // Additional parameters for enhanced search
+    searchTerm?: string;
+    keywords?: string[];
+    minRating?: number;
   }>;
   preferences: {
     type?: string;
@@ -245,10 +249,15 @@ RETURN ONLY this JSON structure:
       }
 
       // Define the expected type for our fixed times entries
-      type FixedTimeEntry = {
+      // This should match the fixedTimes structure in the StructuredRequest interface
+type FixedTimeEntry = {
         location: string;
         time: string;
         type?: string;
+        // Additional search parameters for richer venue search
+        searchTerm?: string;
+        keywords?: string[];
+        minRating?: number;
       };
 
       // Convert Gemini's parsed output to StructuredRequest
@@ -313,14 +322,20 @@ RETURN ONLY this JSON structure:
             // Validate and normalize the location
             const location = findLocation(String(activity.location));
             if (location) {
-              // Parse time but preserve original activity details
+              // Parse time correctly to maintain 24-hour format
               let timeValue = String(activity.time);
+              
               // Handle time ranges (15:00-17:00)
               if (timeValue.includes('-')) {
                 timeValue = timeValue.split('-')[0]; // Take the start time
               }
-              // Handle relative times
-              if (!timeValue.includes(':')) {
+              
+              if (timeValue.includes(':')) {
+                // Properly preserve 24-hour format (don't convert 15:00 to 03:00)
+                const [hours, minutes] = timeValue.split(':').map(Number);
+                timeValue = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+              } else {
+                // Handle relative times
                 timeValue = expandRelativeTime(timeValue);
               }
               
@@ -332,7 +347,11 @@ RETURN ONLY this JSON structure:
                 location: location.name,
                 time: timeValue,
                 // Use the venue type from searchParameters as the activity type
-                type: activityType
+                type: activityType,
+                // Store the rich search parameters
+                searchTerm: activity.searchParameters?.searchTerm,
+                keywords: activity.searchParameters?.keywords,
+                minRating: activity.searchParameters?.minRating
               });
             }
           }

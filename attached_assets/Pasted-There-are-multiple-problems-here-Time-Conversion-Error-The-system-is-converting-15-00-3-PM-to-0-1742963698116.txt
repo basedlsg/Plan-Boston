@@ -1,0 +1,112 @@
+There are multiple problems here:
+
+Time Conversion Error: The system is converting 15:00 (3 PM) to 03:00 (3 AM), causing it to search for venues open at the wrong time
+Lost Search Parameters: The rich search parameters from Gemini aren't being used in the actual search
+Type Mapping Issue: The specific type "restaurant" is being changed to generic "activity"
+Venue Verification: There's no verification that returned places actually exist and are properly categorized
+
+Here's how to fix these issues:
+typescriptCopy// 1. Fix time conversion in nlp.ts:
+// When processing activities to fixedTimes
+geminiResponse.activities.forEach(activity => {
+  // Parse time correctly to maintain 24-hour format
+  let timeValue = activity.time;
+  if (timeValue.includes(':')) {
+    // Properly preserve 24-hour format (don't convert 15:00 to 03:00)
+    const [hours, minutes] = timeValue.split(':').map(Number);
+    timeValue = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  } else if (!timeValue.includes(':')) {
+    timeValue = expandRelativeTime(timeValue);
+  }
+  
+  parsed.fixedTimes.push({
+    location: activity.location,
+    time: timeValue,
+    // Use the proper type from search parameters
+    type: activity.searchParameters.type,
+    // Store the rich search parameters
+    searchTerm: activity.searchParameters.searchTerm,
+    keywords: activity.searchParameters.keywords,
+    minRating: activity.searchParameters.minRating
+  });
+});
+
+// 2. In routes.ts - Update where you process fixed times:
+for (const timeSlot of parsed.fixedTimes) {
+  try {
+    console.log("Processing fixed time appointment:", timeSlot);
+
+    const appointmentTime = parseTimeString(timeSlot.time, baseDate);
+    
+    // Use the rich search parameters from Gemini
+    const searchOptions = {
+      type: timeSlot.type,
+      openNow: false, // Don't restrict to just currently open places
+      minRating: timeSlot.minRating || 4.0,
+      searchTerm: timeSlot.searchTerm || undefined,
+      keywords: timeSlot.keywords || []
+    };
+    
+    console.log(`Searching for ${timeSlot.searchTerm || timeSlot.type} in ${timeSlot.location} with options:`, searchOptions);
+    
+    const venueResult = await searchPlace(timeSlot.location, searchOptions);
+    
+    // Rest of your existing code...
+  } catch (error) {
+    // Error handling...
+  }
+}
+
+// 3. In googlePlaces.ts - Add venue verification to searchPlace:
+// Add this to where you process search results:
+
+function verifyVenueExists(result: any): boolean {
+  // Check for key indicators that this is a real, established place
+  const hasPhoneNumber = !!result.formatted_phone_number;
+  const hasWebsite = !!result.website;
+  const hasReviews = result.reviews && result.reviews.length > 2;
+  const hasPhotos = result.photos && result.photos.length > 0;
+  const hasPermanentlyClosed = result.permanently_closed === true;
+  
+  // Places with permanently_closed flag should be excluded
+  if (hasPermanentlyClosed) {
+    return false;
+  }
+  
+  // Real businesses typically have at least some of these attributes
+  const confidenceScore = [
+    hasPhoneNumber ? 1 : 0,
+    hasWebsite ? 1 : 0,
+    hasReviews ? 1 : 0,
+    hasPhotos ? 1 : 0
+  ].reduce((a, b) => a + b, 0);
+  
+  // More than one indicator suggests this is a real place
+  return confidenceScore >= 1;
+}
+
+// Then filter results:
+nearbyData.results = nearbyData.results.filter(result => verifyVenueExists(result));
+
+// 4. Also add a type matching verification to avoid incorrect categorization:
+if (options.type) {
+  nearbyData.results = nearbyData.results.filter(place => {
+    // Check if place types contain the requested type
+    const placeTypes = place.types || [];
+    const matchesRequestedType = placeTypes.includes(options.type);
+    
+    // For restaurants, also accept related types
+    if (options.type === 'restaurant') {
+      return matchesRequestedType || 
+             placeTypes.includes('food') ||
+             placeTypes.includes('meal_takeaway');
+    }
+    
+    // For cafes, also accept bakeries and coffee shops
+    if (options.type === 'cafe') {
+      return matchesRequestedType || 
+             placeTypes.includes('bakery') ||
+             placeTypes.includes('coffee');
+    }
+    
+    return matchesRequestedTy
