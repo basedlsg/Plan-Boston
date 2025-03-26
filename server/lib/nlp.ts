@@ -295,15 +295,70 @@ Return JSON only, no explanations, in this exact format:
     
     parsed.fixedTimes = uniqueFixedTimes;
     
+    // Clear any duplicate entries with the same time value but different formatting
+    const uniqueTimeEntries = new Map<string, any>();
+    const timeEquivalences = new Map<string, string>();
+    
+    // First, find all 12-hour / 24-hour equivalences (e.g., 3:00 PM = 15:00)
+    parsed.fixedTimes.forEach(entry => {
+      if (entry.time && entry.time.includes(':')) {
+        const [hourStr, minuteStr] = entry.time.split(':');
+        const hour = parseInt(hourStr);
+        const minute = parseInt(minuteStr);
+        
+        if (hour >= 0 && hour < 24) {
+          // Generate both 12-hour and 24-hour versions for tracking
+          const hour24 = hour;
+          const hour12 = hour24 > 12 ? hour24 - 12 : (hour24 === 0 ? 12 : hour24);
+          
+          const time24h = `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          const time12h = `${hour12}:${minute.toString().padStart(2, '0')}`;
+          
+          // Map all variations to the 24-hour format for normalization
+          timeEquivalences.set(time12h, time24h);
+          timeEquivalences.set(time24h, time24h);
+          
+          // Also handle non-zero-padded versions
+          timeEquivalences.set(`${hour24}:${minute.toString().padStart(2, '0')}`, time24h);
+          timeEquivalences.set(`${hour12}:${minute.toString().padStart(2, '0')}`, time24h);
+        }
+      }
+    });
+    
+    // Now process entries with normalized times
+    parsed.fixedTimes.forEach(entry => {
+      // Normalize the time to 24-hour format
+      if (entry.time) {
+        const normalizedTime = timeEquivalences.get(entry.time) || entry.time;
+        
+        // Create a unique key for each activity (using time, location, and activity type)
+        const activityKey = `${normalizedTime}-${entry.location}-${entry.type || 'activity'}`;
+        
+        if (!uniqueTimeEntries.has(activityKey)) {
+          // Update the entry with the normalized time format
+          entry.time = normalizedTime;
+          uniqueTimeEntries.set(activityKey, entry);
+        }
+      } else {
+        // Handle entries without time values
+        uniqueTimeEntries.set(`no-time-${entry.location}-${entry.type || 'activity'}`, entry);
+      }
+    });
+    
+    // Replace the fixed times with de-duplicated list
+    parsed.fixedTimes = Array.from(uniqueTimeEntries.values());
+    
     // Post-processing step: Ensure all time references have corresponding activities
     // Extract all time references from the query
     const timeReferenceRegexes = [
       /\b(around|at|by|from|until|before|after)\s+(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap]\.?m\.?)?/gi,
+      /\b(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap]\.?m\.?)/gi, // Direct time reference without preposition
       /\b(morning|afternoon|evening|night|noon|midnight)\b/gi,
       /\b(breakfast|brunch|lunch|dinner|tea)\s+time\b/gi
     ];
     
     const timeReferences: { time: string, originalText: string }[] = [];
+    const existingTimes = new Set(parsed.fixedTimes.map(ft => ft.time));
     
     // Find all time references
     for (const regex of timeReferenceRegexes) {
@@ -312,8 +367,21 @@ Return JSON only, no explanations, in this exact format:
         const fullMatch = match[0];
         let standardizedTime = '';
         
-        // Process numeric times
-        if (match[2]) {
+        // Process numeric times - handle both cases with or without preposition
+        if (match[1] && /^\d+$/.test(match[1])) {
+          // No preposition case (direct time reference - "3pm")
+          const hour = parseInt(match[1]);
+          const minute = match[2] ? parseInt(match[2]) : 0;
+          const meridian = match[3]?.toLowerCase().includes('p') ? 'pm' : 
+                          match[3]?.toLowerCase().includes('a') ? 'am' : null;
+          
+          let hour24 = hour;
+          if (meridian === 'pm' && hour < 12) hour24 += 12;
+          if (meridian === 'am' && hour === 12) hour24 = 0;
+          
+          standardizedTime = `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        } else if (match[2]) {
+          // With preposition case ("at 3pm")
           const hour = parseInt(match[2]);
           const minute = match[3] ? parseInt(match[3]) : 0;
           const meridian = match[4]?.toLowerCase().includes('p') ? 'pm' : 
@@ -324,7 +392,7 @@ Return JSON only, no explanations, in this exact format:
           if (meridian === 'am' && hour === 12) hour24 = 0;
           
           standardizedTime = `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        } else if (match[1]) {
+        } else if (match[1] && /^(morning|afternoon|evening|night|noon|midnight|breakfast|brunch|lunch|dinner|tea)$/.test(match[1].toLowerCase())) {
           // Handle time periods
           standardizedTime = expandRelativeTime(match[1]);
         }
@@ -345,7 +413,7 @@ Return JSON only, no explanations, in this exact format:
         ft.time === timeRef.time
       );
       
-      // Check for alternative time formats (e.g., 3:00 vs 03:00, 15:00 vs 3:00 PM)
+      // Check for alternative time formats and ambiguous times (3:00 could be 3 AM or PM)
       if (!hasMatchingActivity) {
         // Parse the time to handle potential format differences
         const timeComponents = timeRef.time.split(':');
@@ -353,12 +421,28 @@ Return JSON only, no explanations, in this exact format:
           const hour = parseInt(timeComponents[0]);
           const minute = parseInt(timeComponents[1]);
           
-          // Check for: 3:00 vs 03:00 and 15:00 vs 03:00 PM
-          const hour24Format = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
-          const hour12Format = (hour > 12 ? hour - 12 : hour).toString() + ':' + minute.toString().padStart(2, '0');
+          // Generate all potential time formats for comparison
+          const potentialTimeFormats = [];
           
+          // 24-hour format: 03:00 or 15:00
+          potentialTimeFormats.push(hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'));
+          
+          // 12-hour format: 3:00
+          potentialTimeFormats.push((hour > 12 ? hour - 12 : hour).toString() + ':' + minute.toString().padStart(2, '0'));
+          
+          // If hour < 12, also check the PM equivalent (e.g., 3:00 → check 15:00 too)
+          if (hour < 12) {
+            potentialTimeFormats.push((hour + 12).toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'));
+          }
+          
+          // If hour > 12, also check the AM equivalent (e.g., 15:00 → check 3:00 too)
+          if (hour >= 12 && hour < 24) {
+            potentialTimeFormats.push((hour - 12).toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0'));
+          }
+          
+          // Check all time formats
           hasMatchingActivity = parsed.fixedTimes.some(ft => 
-            ft.time === hour24Format || ft.time === hour12Format
+            potentialTimeFormats.includes(ft.time)
           );
         }
       }
