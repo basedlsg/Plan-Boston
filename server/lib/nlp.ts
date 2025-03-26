@@ -207,6 +207,11 @@ RETURN ONLY this JSON structure:
         cleanedContent = cleanedContent.substring(0, lastBrace + 1);
       }
       
+      // Remove any comments in the JSON which are causing parsing errors
+      cleanedContent = cleanedContent
+        .replace(/\/\/.*$/gm, '') // Remove single-line comments
+        .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+      
       console.log("Cleaned JSON content:", cleanedContent);
       
       // Parse the JSON response
@@ -362,12 +367,25 @@ RETURN ONLY this JSON structure:
         }
       }
 
-      // Set startLocation if not already set
+      // Critical fix: If no startLocation but we have activities, use the first activity's location
+      if (!parsed.startLocation && parsed.activities && parsed.activities.length > 0) {
+        parsed.startLocation = parsed.activities[0].location;
+        console.log(`No startLocation provided, using first activity location: ${parsed.startLocation}`);
+      }
+      
+      // Backup: If we have destinations but no startLocation, use first destination
       if (!parsed.startLocation && parsed.destinations.length > 0) {
         const firstDestination = parsed.destinations.shift();
         if (firstDestination) {
           parsed.startLocation = firstDestination;
+          console.log(`Using first destination as startLocation: ${parsed.startLocation}`);
         }
+      }
+      
+      // Final check to ensure we have a startLocation
+      if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
+        parsed.startLocation = parsed.fixedTimes[0].location;
+        console.log(`Using first fixed time location as startLocation: ${parsed.startLocation}`);
       }
 
       // Normalize time formats first (ensure HH:MM 24-hour format)
@@ -600,6 +618,9 @@ RETURN ONLY this JSON structure:
         if (!b.time) return 1;
         return a.time.localeCompare(b.time);
       });
+      
+      // Debug logging
+      console.log("Final parsed request:", JSON.stringify(parsed, null, 2));
 
       return parsed;
 

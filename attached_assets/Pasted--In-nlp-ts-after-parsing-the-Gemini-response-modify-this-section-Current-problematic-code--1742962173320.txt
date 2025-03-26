@@ -1,0 +1,64 @@
+// In nlp.ts, after parsing the Gemini response, modify this section:
+
+// Current problematic code (likely something like this):
+const parsed: StructuredRequest = {
+  startLocation: geminiResponse.startLocation,
+  destinations: geminiResponse.destinations || [],
+  fixedTimes: [],
+  preferences: {
+    type: geminiResponse.preferences?.type,
+    requirements: geminiResponse.preferences?.requirements || []
+  }
+};
+
+// REPLACE WITH THIS IMPLEMENTATION:
+const parsed: StructuredRequest = {
+  // First, try to use explicit startLocation from Gemini
+  startLocation: geminiResponse.startLocation,
+  destinations: geminiResponse.destinations || [],
+  fixedTimes: [],
+  preferences: {
+    type: geminiResponse.preferences?.type,
+    requirements: geminiResponse.preferences?.requirements || []
+  }
+};
+
+// Critical fix: If no startLocation but we have activities, use the first activity's location
+if (!parsed.startLocation && geminiResponse.activities && geminiResponse.activities.length > 0) {
+  parsed.startLocation = geminiResponse.activities[0].location;
+  console.log(`No startLocation provided, using first activity location: ${parsed.startLocation}`);
+}
+
+// Backup: If we have destinations but no startLocation, use first destination
+if (!parsed.startLocation && parsed.destinations.length > 0) {
+  parsed.startLocation = parsed.destinations.shift();
+  console.log(`Using first destination as startLocation: ${parsed.startLocation}`);
+}
+
+// Create fixedTimes from activities
+if (geminiResponse.activities && geminiResponse.activities.length > 0) {
+  geminiResponse.activities.forEach(activity => {
+    // Convert time periods to specific times if needed
+    let timeValue = activity.time;
+    if (!timeValue.includes(':')) {
+      timeValue = expandRelativeTime(timeValue);
+    }
+    
+    parsed.fixedTimes.push({
+      location: activity.location,
+      time: timeValue,
+      type: activity.searchParameters.type,
+      // Store the rich search parameters for later use
+      searchParameters: activity.searchParameters
+    });
+  });
+}
+
+// Final check to ensure we have a startLocation
+if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
+  parsed.startLocation = parsed.fixedTimes[0].location;
+  console.log(`Using first fixed time location as startLocation: ${parsed.startLocation}`);
+}
+
+// Debug logging
+console.log("Final parsed request:", parsed);
