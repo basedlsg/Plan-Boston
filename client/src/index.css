@@ -8,6 +8,54 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply antialiased bg-background text-foreground;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+  }
+
+  h1, h2, h3, .logo-font {
+    font-family: 'Rozha One', serif;
+  }
+  
+  /* Brand colors */
+  :root {
+    --brand-pink: #FC94C5;
+    --brand-black: #1C1C1C;
+    --brand-blue: #17B9E6;
+  }
+  
+  /* Custom utility classes */
+  .text-brand-pink {
+    color: var(--brand-pink);
+  }
+  
+  .text-brand-black {
+    color: var(--brand-black);
+  }
+  
+  .text-brand-blue {
+    color: var(--brand-blue);
+  }
+  
+  .bg-brand-pink {
+    background-color: var(--brand-pink);
+  }
+  
+  .bg-brand-black {
+    background-color: var(--brand-black);
+  }
+  
+  .bg-brand-blue {
+    background-color: var(--brand-blue);
+  }
+  
+  .border-brand-blue {
+    border-color: var(--brand-blue);
+  }
+
+  /* Selected venue highlight */
+  .venue-selected {
+    border: 2px solid var(--brand-blue);
+    box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
   }
 }

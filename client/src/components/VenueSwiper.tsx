@@ -21,6 +21,7 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [selectedVenueId, setSelectedVenueId] = useState<string>(primary.place_id);
   
   // The required minimum distance between touchStart and touchEnd to be detected as a swipe
   const minSwipeDistance = 50;
@@ -37,8 +38,9 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
     }
   };
   
-  const handleSelect = () => {
-    onSelect(allVenues[currentIndex]);
+  const handleSelect = (venue: PlaceDetails) => {
+    setSelectedVenueId(venue.place_id);
+    onSelect(venue);
   };
   
   // Touch event handlers
@@ -107,13 +109,39 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
   // Get current venue
   const currentVenue = allVenues[currentIndex];
   const isPrimary = currentIndex === 0;
+  const isSelected = currentVenue.place_id === selectedVenueId;
 
   return (
     <div className={cn("w-full", className)}>
       <div className="relative">
+        {/* Navigation arrows for desktop - left */}
+        {currentIndex > 0 && (
+          <button
+            onClick={handlePrev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 md:flex hidden items-center justify-center w-8 h-8 rounded-full bg-white shadow-md text-brand-black hover:text-brand-blue transition-colors"
+            aria-label="Previous venue"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        )}
+        
+        {/* Navigation arrows for desktop - right */}
+        {currentIndex < allVenues.length - 1 && (
+          <button
+            onClick={handleNext}
+            className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 md:flex hidden items-center justify-center w-8 h-8 rounded-full bg-white shadow-md text-brand-black hover:text-brand-blue transition-colors"
+            aria-label="Next venue"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        )}
+        
         {/* Swipeable area */}
         <div 
-          className="relative overflow-hidden rounded-lg shadow-md bg-white dark:bg-gray-800"
+          className={cn(
+            "relative overflow-hidden rounded-lg shadow-md bg-white dark:bg-gray-800 cursor-pointer transition-all",
+            isSelected ? "venue-selected" : ""
+          )}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -121,17 +149,18 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseLeave}
+          onClick={() => handleSelect(currentVenue)}
         >
           <div className="p-4">
             {/* Primary venue indicator */}
             {isPrimary && (
-              <div className="flex items-center gap-1 text-primary mb-2">
+              <div className="flex items-center gap-1 text-brand-pink mb-2">
                 <CheckCircle2 className="h-4 w-4" />
                 <span className="text-sm font-medium">Primary Recommendation</span>
               </div>
             )}
             
-            <h3 className="text-lg font-bold">{currentVenue.name}</h3>
+            <h3 className="text-lg font-bold text-brand-black">{currentVenue.name}</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">{currentVenue.formatted_address}</p>
             
             {/* Rating if available */}
@@ -147,56 +176,40 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
                 {currentVenue.types.map(type => (
                   <span 
                     key={type} 
-                    className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-xs"
+                    className="px-2 py-1 bg-brand-pink/10 text-brand-black rounded-full text-xs"
                   >
-                    {type.replace('_', ' ')}
+                    {type.replace(/_/g, ' ')}
                   </span>
                 ))}
               </div>
             )}
             
-            {/* Selection button */}
-            <button
-              onClick={handleSelect}
-              className="mt-4 w-full py-2 px-4 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
-            >
-              Select This Venue
-            </button>
+            {/* Selected indicator instead of button */}
+            {isSelected && (
+              <div className="mt-3 text-center text-brand-blue font-semibold text-sm">
+                Selected Venue
+              </div>
+            )}
           </div>
         </div>
         
-        {/* Navigation buttons */}
-        <div className="flex justify-between mt-2">
-          <button
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          
-          {/* Pagination indicator */}
-          <div className="flex items-center gap-1">
+        {/* Pagination dots */}
+        <div className="flex justify-center mt-3">
+          <div className="flex items-center gap-2">
             {allVenues.map((_, idx) => (
-              <div 
+              <button
                 key={idx}
+                onClick={() => setCurrentIndex(idx)}
                 className={cn(
-                  "h-2 w-2 rounded-full",
+                  "h-2.5 w-2.5 rounded-full transition-all",
                   idx === currentIndex 
-                    ? "bg-primary" 
+                    ? "bg-brand-blue w-4" 
                     : "bg-gray-300 dark:bg-gray-600"
                 )}
+                aria-label={`Go to venue ${idx + 1}`}
               />
             ))}
           </div>
-          
-          <button
-            onClick={handleNext}
-            disabled={currentIndex === allVenues.length - 1}
-            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
         </div>
       </div>
       

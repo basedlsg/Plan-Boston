@@ -122,19 +122,16 @@ export default function Home() {
         <div className="grid gap-8 max-w-3xl mx-auto">
           {/* Header Section */}
           <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight">
-              Plan
-            </h1>
-            <p className="text-muted-foreground">
-              Tell us your plans and we'll create a verified itinerary
-            </p>
-            <div className="flex justify-center mt-2">
-              <Link href="/venue-swiper-test">
-                <Button variant="outline" size="sm">
-                  Try Venue Swiper Demo
-                </Button>
-              </Link>
+            <div className="flex flex-col items-center justify-center">
+              <img 
+                src="/Illustration + Name.png" 
+                alt="Plan Logo" 
+                className="h-24 mb-2" 
+              />
             </div>
+            <p className="text-muted-foreground text-lg">
+              Plan Your Perfect Day In Seconds
+            </p>
           </div>
 
           {/* Form Card */}
@@ -202,7 +199,7 @@ export default function Home() {
 
                   <Button
                     type="submit"
-                    className="w-full"
+                    className="w-full bg-brand-pink hover:bg-brand-pink/90 text-white"
                     disabled={planMutation.isPending}
                   >
                     {planMutation.isPending ? "Creating plan..." : "Create Plan"}
@@ -220,6 +217,7 @@ export default function Home() {
                   Your Itinerary
                   <Button
                     variant="outline"
+                    className="text-brand-black border-brand-blue hover:text-brand-blue"
                     onClick={() => generateICS(itinerary)}
                   >
                     <Calendar className="w-4 h-4 mr-2" />
