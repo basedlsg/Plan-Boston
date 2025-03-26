@@ -345,21 +345,21 @@
     opacity: 0.6;
   }
   
-  /* Venue swiper glass effect - consistent with our premium theme */
+  /* Venue swiper glass effect - enhanced premium look */
   .venue-glass {
-    background: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.18));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     transition: all 0.3s ease;
     position: relative;
     z-index: 1;
     overflow: hidden;
   }
   
-  /* Inner white highlight on venue cards */
+  /* Inner white highlight on venue cards - enhanced reflection */
   .venue-glass::before {
     content: "";
     position: absolute;
@@ -370,16 +370,27 @@
     background: linear-gradient(
       to right,
       rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0.7),
       rgba(255, 255, 255, 0)
     );
     pointer-events: none;
   }
   
+  /* Inner border for subtle depth effect */
+  .venue-glass::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 11px; /* 1px smaller than container */
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    pointer-events: none;
+    z-index: -1;
+  }
+  
   .venue-glass:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.22));
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
+    transform: translateY(-2px); /* Subtle lift on hover */
   }
   
   .venue-glass.selected {
@@ -404,9 +415,9 @@
     border: 1px solid rgba(23, 185, 230, 0.3) !important;
   }
   
-  /* Placeholder opacity - set to 60% as specified */
+  /* Placeholder opacity - set to 65% as specified */
   ::placeholder {
-    opacity: 0.6 !important;
+    opacity: 0.65 !important;
   }
   
   /* Create Plan button - premium gradient from lighter to brand blue */
@@ -446,16 +457,35 @@
     box-shadow: 0 4px 15px rgba(23, 185, 230, 0.15) !important; /* Enhanced shadow on hover */
   }
   
-  /* Navigation arrow buttons */
+  /* Navigation arrow buttons - enhanced premium look */
   .nav-arrow {
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.2));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border-radius: 50%;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  /* Arrow button reflection */
+  .nav-arrow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.7),
+      rgba(255, 255, 255, 0)
+    );
+    pointer-events: none;
   }
   
   .venue-container:hover .nav-arrow {
@@ -463,8 +493,9 @@
   }
   
   .nav-arrow:hover {
-    background: rgba(255, 255, 255, 0.35);
-    transform: scale(1.05);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.25));
+    transform: scale(1.08);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
   }
   
   /* Pagination dots */

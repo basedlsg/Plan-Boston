@@ -131,10 +131,13 @@ export default function Home() {
           </h1>
         </div>
         
-        {/* Tagline */}
-        <div className="text-center mb-10">
+        {/* Tagline with helper text */}
+        <div className="text-center mb-8">
           <p className="text-white text-xl font-semibold drop-shadow-md">
             Plan Your Perfect Day In Seconds
+          </p>
+          <p className="text-white/80 text-sm mt-2 font-medium">
+            Enter your activities, locations and times below
           </p>
         </div>
 
@@ -198,8 +201,8 @@ export default function Home() {
                           <FormLabel className="text-brand-black">Your Plans</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
-                              className="min-h-[120px] resize-y placeholder-opacity-50"
+                              placeholder="e.g. I'm starting at Kings Cross at 9am, need a quaint café near Covent Garden for brunch, then want to explore British Museum until my dinner reservation at The Ivy at 7pm. I prefer places with outdoor seating when possible."
+                              className="min-h-[120px] resize-y"
                               {...field}
                             />
                           </FormControl>

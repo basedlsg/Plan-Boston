@@ -136,7 +136,7 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
           </button>
         )}
         
-        {/* Swipeable area */}
+        {/* Swipeable area - enhanced with premium glass effect */}
         <div 
           className={cn(
             "venue-glass relative overflow-hidden transition-all cursor-pointer py-5 px-6",
