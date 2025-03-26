@@ -426,10 +426,44 @@ export async function registerRoutes(app: Express) {
           });
 
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
-          const venueResult = await searchPlace(timeSlot.location, {
+          
+          // Enhanced search options
+          const searchOptions: any = {
             type: timeSlot.type,
-            openNow: true
-          });
+            requireOpenNow: true,
+            keywords: []
+          };
+          
+          // Add additional search context based on activity type
+          if (timeSlot.type) {
+            // Use the activity type as search term for better context
+            searchOptions.searchTerm = timeSlot.type;
+            
+            // Add keywords based on common activity types
+            if (timeSlot.type.includes('coffee') || timeSlot.type.includes('cafe')) {
+              searchOptions.keywords.push('coffee', 'espresso', 'cafe');
+              searchOptions.type = 'cafe';
+            } else if (timeSlot.type.includes('dinner') || 
+                      timeSlot.type.includes('lunch') || 
+                      timeSlot.type.includes('restaurant')) {
+              searchOptions.keywords.push('restaurant', 'food', 'dining');
+              searchOptions.type = 'restaurant';
+              // Rating expectations are higher for restaurants
+              searchOptions.minRating = 4.0;
+            } else if (timeSlot.type.includes('museum') || timeSlot.type.includes('gallery')) {
+              searchOptions.keywords.push('art', 'museum', 'exhibit');
+              searchOptions.type = 'museum';
+            } else if (timeSlot.type.includes('park') || timeSlot.type.includes('garden')) {
+              searchOptions.keywords.push('park', 'green space', 'outdoor');
+              searchOptions.type = 'park';
+            } else if (timeSlot.type.includes('shopping')) {
+              searchOptions.keywords.push('shopping', 'mall', 'store');
+              searchOptions.type = 'shopping_mall';
+            }
+          }
+          
+          // Search for the venue with enhanced parameters
+          const venueResult = await searchPlace(timeSlot.location, searchOptions);
 
           if (!venueResult || !venueResult.primary) {
             throw new Error(`Could not find location: ${timeSlot.location}. Try specifying the full name (e.g. "The Green Park" instead of "Green Park")`);
@@ -568,8 +602,8 @@ export async function registerRoutes(app: Express) {
       }
 
       // Handle cases where preferences exist but no fixed times
-      if (itineraryPlaces.length === 0 && parsed.preferences?.type) {
-        console.log(`No fixed times but found preference for ${parsed.preferences.type}`);
+      if (itineraryPlaces.length === 0 && (parsed.preferences?.type || parsed.preferences?.requirements?.length > 0)) {
+        console.log(`No fixed times but found preference for ${parsed.preferences.type || 'activities with requirements'}`);
         
         try {
           // Use current time as default
@@ -577,25 +611,60 @@ export async function registerRoutes(app: Express) {
           const formattedTime = `${currentTime.getHours()}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
           
           // Set up search options based on preferences
-          const searchOptions: any = {};
+          const searchOptions: any = {
+            keywords: [],
+            requireOpenNow: true,
+            minRating: 4.0
+          };
           
-          // Map preference type to search type
-          if (parsed.preferences.type.includes('coffee') || 
-              parsed.preferences.type.includes('cafe')) {
-            searchOptions.type = 'cafe';
-          } else if (parsed.preferences.type.includes('restaurant') || 
-                     parsed.preferences.type.includes('dinner')) {
-            searchOptions.type = 'restaurant';
-          } else {
-            // Generic search based on preference type
-            searchOptions.type = parsed.preferences.type;
+          // Add requirements as keywords for better place matching
+          if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
+            searchOptions.keywords = [...parsed.preferences.requirements];
           }
           
-          console.log(`Searching for ${searchOptions.type} near ${parsed.startLocation}`);
+          // Map preference type to search type
+          if (parsed.preferences.type) {
+            if (parsed.preferences.type.includes('coffee') || 
+                parsed.preferences.type.includes('cafe')) {
+              searchOptions.type = 'cafe';
+              searchOptions.searchTerm = 'coffee shop';
+            } else if (parsed.preferences.type.includes('restaurant') || 
+                      parsed.preferences.type.includes('dinner') ||
+                      parsed.preferences.type.includes('lunch')) {
+              searchOptions.type = 'restaurant';
+              searchOptions.searchTerm = parsed.preferences.type;
+            } else if (parsed.preferences.type.includes('bar') || 
+                      parsed.preferences.type.includes('pub') ||
+                      parsed.preferences.type.includes('drinks')) {
+              searchOptions.type = 'bar';
+              searchOptions.searchTerm = parsed.preferences.type;
+            } else {
+              // Generic search based on preference type
+              searchOptions.type = parsed.preferences.type;
+              // Also use it as a search term
+              searchOptions.searchTerm = parsed.preferences.type;
+            }
+          } else if (parsed.preferences.requirements?.length > 0) {
+            // Try to determine type from requirements
+            const requirements = parsed.preferences.requirements.map(r => r.toLowerCase());
+            
+            if (requirements.some(r => r.includes('coffee') || r.includes('cafe') || r.includes('quiet'))) {
+              searchOptions.type = 'cafe';
+              searchOptions.searchTerm = 'coffee shop';
+            } else if (requirements.some(r => r.includes('restaurant') || r.includes('dinner') || r.includes('food'))) {
+              searchOptions.type = 'restaurant';
+              searchOptions.searchTerm = 'restaurant';
+            } else if (requirements.some(r => r.includes('bar') || r.includes('pub') || r.includes('drinks'))) {
+              searchOptions.type = 'bar';
+              searchOptions.searchTerm = 'bar';
+            } else {
+              // Default to a generic activity
+              searchOptions.type = 'tourist_attraction';
+              searchOptions.searchTerm = 'attraction';
+            }
+          }
           
-          // Add openNow and rating filters
-          searchOptions.openNow = true;
-          searchOptions.minRating = 4.0;
+          console.log(`Searching for ${searchOptions.type} near ${parsed.startLocation} with params:`, searchOptions);
           
           // Perform the search
           const venueResult = await searchPlace(parsed.startLocation, searchOptions);
