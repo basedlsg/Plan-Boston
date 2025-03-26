@@ -348,11 +348,24 @@ export async function registerRoutes(app: Express) {
       if (parsed.preferences?.type?.includes('lunch')) {
         console.log("Searching for lunch venue near:", parsed.startLocation);
         try {
-          const venueResult = await searchPlace(parsed.startLocation, {
+          // Enhanced search options for lunch
+          const searchOptions: any = {
             type: 'restaurant',
-            openNow: true,
-            minRating: 4.0
-          });
+            requireOpenNow: true,
+            minRating: 4.0,
+            searchTerm: 'lunch restaurant',
+            keywords: ['restaurant', 'lunch', 'dining']
+          };
+          
+          // Add requirements as keywords for better place matching
+          if (parsed.preferences?.requirements && parsed.preferences.requirements.length > 0) {
+            searchOptions.keywords = [
+              ...searchOptions.keywords,
+              ...parsed.preferences.requirements
+            ];
+          }
+          
+          const venueResult = await searchPlace(parsed.startLocation, searchOptions);
           
           if (!venueResult || !venueResult.primary) {
             console.error("Failed to find lunch venue near:", parsed.startLocation);
@@ -529,10 +542,60 @@ export async function registerRoutes(app: Express) {
 
             for (const activity of suggestedActivities) {
               try {
-                const venueResult = await searchPlace(activity, {
-                  openNow: true,
-                  minRating: 4.0
-                });
+                // Enhanced search options for gap filling
+                const searchOptions: any = {
+                  requireOpenNow: true,
+                  minRating: 4.0,
+                  keywords: []
+                };
+                
+                // Add activity name as search term for better context
+                searchOptions.searchTerm = activity;
+                
+                // Add keywords based on common activity types
+                if (activity.toLowerCase().includes('coffee') || 
+                    activity.toLowerCase().includes('cafe')) {
+                  searchOptions.type = 'cafe';
+                  searchOptions.keywords.push('coffee', 'espresso', 'cafe');
+                } else if (activity.toLowerCase().includes('dinner') || 
+                          activity.toLowerCase().includes('lunch') || 
+                          activity.toLowerCase().includes('restaurant') ||
+                          activity.toLowerCase().includes('food')) {
+                  searchOptions.type = 'restaurant';
+                  searchOptions.keywords.push('restaurant', 'food', 'dining');
+                } else if (activity.toLowerCase().includes('museum') || 
+                          activity.toLowerCase().includes('gallery') ||
+                          activity.toLowerCase().includes('exhibition')) {
+                  searchOptions.type = 'museum';
+                  searchOptions.keywords.push('art', 'museum', 'exhibit');
+                } else if (activity.toLowerCase().includes('park') || 
+                          activity.toLowerCase().includes('garden') ||
+                          activity.toLowerCase().includes('green')) {
+                  searchOptions.type = 'park';
+                  searchOptions.keywords.push('park', 'green space', 'outdoor');
+                } else if (activity.toLowerCase().includes('shop') || 
+                          activity.toLowerCase().includes('shopping') ||
+                          activity.toLowerCase().includes('mall')) {
+                  searchOptions.type = 'shopping_mall';
+                  searchOptions.keywords.push('shopping', 'shop', 'store');
+                } else if (activity.toLowerCase().includes('market')) {
+                  searchOptions.type = 'store';
+                  searchOptions.keywords.push('market', 'food market', 'shops');
+                } else {
+                  // Default to attraction
+                  searchOptions.type = 'tourist_attraction';
+                  searchOptions.keywords.push('attraction', 'sight', 'landmark');
+                }
+                
+                // Use parsed requirements if available
+                if (parsed.preferences?.requirements && Array.isArray(parsed.preferences.requirements)) {
+                  searchOptions.keywords = [
+                    ...searchOptions.keywords,
+                    ...parsed.preferences.requirements
+                  ];
+                }
+                
+                const venueResult = await searchPlace(activity, searchOptions);
                 
                 if (!venueResult || !venueResult.primary) {
                   console.log(`No suitable venue found for activity: ${activity}`);
@@ -602,7 +665,7 @@ export async function registerRoutes(app: Express) {
       }
 
       // Handle cases where preferences exist but no fixed times
-      if (itineraryPlaces.length === 0 && (parsed.preferences?.type || parsed.preferences?.requirements?.length > 0)) {
+      if (itineraryPlaces.length === 0 && (parsed.preferences?.type || (parsed.preferences?.requirements && parsed.preferences.requirements.length > 0))) {
         console.log(`No fixed times but found preference for ${parsed.preferences.type || 'activities with requirements'}`);
         
         try {
@@ -644,7 +707,7 @@ export async function registerRoutes(app: Express) {
               // Also use it as a search term
               searchOptions.searchTerm = parsed.preferences.type;
             }
-          } else if (parsed.preferences.requirements?.length > 0) {
+          } else if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
             // Try to determine type from requirements
             const requirements = parsed.preferences.requirements.map(r => r.toLowerCase());
             

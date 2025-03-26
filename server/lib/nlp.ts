@@ -245,7 +245,12 @@ RETURN ONLY this JSON structure:
       
       // Process enhanced preferences structure
       if (parsedResponse.preferences) {
-        const requirementsList = [...parsed.preferences.requirements];
+        // Initialize requirements array if it doesn't exist
+        if (!parsed.preferences.requirements) {
+          parsed.preferences.requirements = [];
+        }
+        
+        const requirementsList: string[] = [];
         
         // Handle venue qualities as requirements
         if (parsedResponse.preferences.venueQualities && Array.isArray(parsedResponse.preferences.venueQualities)) {
