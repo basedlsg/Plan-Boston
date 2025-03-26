@@ -117,7 +117,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4 relative">
+    <div className="min-h-screen py-4 sm:py-8 px-3 sm:px-4 relative">
       {/* Fixed position glass effect container */}
       <div className="main-glass-effect"></div>
       <div className="container mx-auto max-w-5xl">
@@ -144,8 +144,8 @@ export default function Home() {
         {/* Main Content */}
         <div className="mb-12">
           {/* Form Container - With blue tint */}
-          <div className="form-container mb-10">
-            <div className="p-8">
+          <div className="form-container mb-8 sm:mb-10">
+            <div className="p-4 sm:p-8">
               <h2 className="text-2xl font-bold text-brand-black mb-6 text-center">What's The Plan?</h2>
               <Form {...form}>
                 <form
@@ -201,8 +201,8 @@ export default function Home() {
                           <FormLabel className="text-brand-black">Your Plans</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="e.g. I'm starting at Kings Cross at 9am, need a quaint café near Covent Garden for brunch, then want to explore British Museum until my dinner reservation at The Ivy at 7pm. I prefer places with outdoor seating when possible."
-                              className="min-h-[120px] resize-y"
+                              placeholder="e.g. Start at Kings Cross at 9am, café near Covent Garden for brunch, then British Museum until dinner at The Ivy at 7pm."
+                              className="min-h-[100px] resize-y"
                               {...field}
                             />
                           </FormControl>
@@ -226,12 +226,12 @@ export default function Home() {
           {/* Itinerary Display */}
           {itinerary && (
             <div className="glass-card">
-              <div className="p-8">
-                <div className="flex justify-between items-center mb-6">
+              <div className="p-4 sm:p-8">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
                   <h2 className="text-2xl font-bold text-brand-black">Your Itinerary</h2>
                   <Button
                     variant="outline"
-                    className="text-brand-black border-brand-blue hover:text-brand-blue bg-white/20 backdrop-blur-sm"
+                    className="text-brand-black border-brand-blue hover:text-brand-blue bg-white/20 backdrop-blur-sm w-full sm:w-auto"
                     onClick={() => generateICS(itinerary)}
                   >
                     <Calendar className="w-4 h-4 mr-2" />
