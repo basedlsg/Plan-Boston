@@ -1,0 +1,64 @@
+Fix the incomplete activity parsing by ensuring all destinations mentioned have associated activities:
+
+1. Add a simple validation in parseItineraryRequest() to check that all destinations have activities:
+
+```typescript
+// In parseItineraryRequest, after processing Claude's response but before returning:
+
+// Ensure all destinations have at least one activity
+const destinationsWithActivities = new Set(parsed.fixedTimes.map(ft => ft.location));
+
+// Check for destinations without activities
+const destinationsWithoutActivities = [];
+if (parsed.startLocation && !destinationsWithActivities.has(parsed.startLocation)) {
+  destinationsWithoutActivities.push(parsed.startLocation);
+}
+
+parsed.destinations.forEach(destination => {
+  if (!destinationsWithActivities.has(destination)) {
+    destinationsWithoutActivities.push(destination);
+  }
+});
+
+// Add default activities for destinations without any
+for (const destination of destinationsWithoutActivities) {
+  // Determine a sensible time and activity type based on position in the itinerary
+  let defaultTime = '12:00'; // Default to noon
+  let defaultType = 'activity'; // Default activity type
+  
+  // If we have existing activities, schedule after the last one
+  if (parsed.fixedTimes.length > 0) {
+    // Sort by time
+    parsed.fixedTimes.sort((a, b) => {
+      const timeA = a.time.split(':').map(Number);
+      const timeB = b.time.split(':').map(Number);
+      return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+    });
+    
+    // Last activity time
+    const lastTime = parsed.fixedTimes[parsed.fixedTimes.length - 1].time;
+    const [hours, minutes] = lastTime.split(':').map(Number);
+    
+    // Add 2 hours to the last activity
+    defaultTime = `${String((hours + 2) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    
+    // Choose appropriate activity based on time of day
+    const newHour = (hours + 2) % 24;
+    if (newHour >= 7 && newHour < 11) defaultType = 'breakfast';
+    else if (newHour >= 11 && newHour < 15) defaultType = 'lunch';
+    else if (newHour >= 17 && newHour < 22) defaultType = 'dinner';
+    else if (newHour >= 15 && newHour < 17) defaultType = 'coffee';
+    else defaultType = 'activity';
+  }
+  
+  // Add this activity
+  parsed.fixedTimes.push({
+    location: destination,
+    time: defaultTime,
+    type: defaultType
+  });
+  
+  console.log(`Added default activity: ${defaultType} at ${defaultTime} in ${destination}`);
+}
+
+console.log("Final fixed times:", parsed.fixedTimes);
