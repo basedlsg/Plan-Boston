@@ -33,25 +33,26 @@
     bottom: 0;
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    background: rgba(255, 255, 255, 0.2); /* Semi-transparent white overlay for frosted look */
+    background: rgba(252, 148, 197, 0.8); /* #FC94C5 at 80% opacity */
+    background-image: radial-gradient(circle at top right, rgba(255, 169, 210, 0.8), rgba(252, 148, 197, 0.8));
     z-index: 0;
     pointer-events: none;
   }
   
-  /* Global glass effect on entire body */
-  body::before {
+  /* Semi-transparent white overlay for frosted look */
+  .main-glass-effect::after {
     content: "";
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    background: rgba(255, 255, 255, 0.2); /* Semi-transparent white overlay for frosted look */
-    z-index: 0;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: 1;
     pointer-events: none;
   }
+  
+  /* The glass effect is now handled by .main-glass-effect */
 
   h1, h2, h3, .logo-font, .font-logo {
     font-family: 'Rozha One', serif;
