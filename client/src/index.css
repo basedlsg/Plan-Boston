@@ -16,14 +16,16 @@
     @apply antialiased text-foreground;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-    background-color: rgba(252, 148, 197, 0.8); /* #FC94C5 at 80% opacity */
+    background-color: #FFFFFF; /* Clean white background */
     color: var(--brand-black);
-    background-image: radial-gradient(circle at top right, rgba(255, 169, 210, 0.8), rgba(252, 148, 197, 0.8));
+    background-image: 
+      linear-gradient(135deg, rgba(23, 185, 230, 0.03) 0%, rgba(252, 148, 197, 0.05) 100%),
+      url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='rgba(23, 185, 230, 0.02)' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
     position: relative;
     overflow-x: hidden;
   }
   
-  /* Fixed position container for main background glass effect */
+  /* Fixed position container for main background with subtle gradient */
   .main-glass-effect {
     content: "";
     position: fixed;
@@ -31,20 +33,13 @@
     left: 0;
     right: 0;
     bottom: 0;
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    background: rgba(252, 148, 197, 0.75); /* #FC94C5 at 75% opacity */
-    background-image: radial-gradient(
-      circle at top right, 
-      rgba(255, 169, 210, 0.75), 
-      rgba(252, 148, 197, 0.75) 65%, 
-      rgba(235, 131, 180, 0.75)
-    );
+    background: #FFFFFF; /* White base */
+    background-image: linear-gradient(135deg, rgba(23, 185, 230, 0.02) 0%, rgba(252, 148, 197, 0.03) 100%);
     z-index: 0;
     pointer-events: none;
   }
   
-  /* Semi-transparent white overlay for frosted look */
+  /* Subtle overlay for enhanced depth */
   .main-glass-effect::after {
     content: "";
     position: absolute;
@@ -52,11 +47,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.8);
     background-image: linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.25) 0%,
-      rgba(255, 255, 255, 0.1) 100%
+      rgba(255, 255, 255, 0.95) 0%,
+      rgba(255, 255, 255, 0.85) 100%
     );
     z-index: 1;
     pointer-events: none;
@@ -69,10 +64,10 @@
     width: 100%;
     height: 100%;
     background-image: 
-      linear-gradient(45deg, transparent 98%, rgba(255, 255, 255, 0.3) 99%, transparent 100%),
-      linear-gradient(135deg, transparent 97%, rgba(255, 255, 255, 0.3) 98%, transparent 100%);
+      linear-gradient(45deg, transparent 98%, rgba(23, 185, 230, 0.1) 99%, transparent 100%),
+      linear-gradient(135deg, transparent 97%, rgba(252, 148, 197, 0.1) 98%, transparent 100%);
     background-size: 50px 50px;
-    opacity: 0.3;
+    opacity: 0.5;
     z-index: 0;
     pointer-events: none;
   }
@@ -146,14 +141,14 @@
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
   }
   
-  /* Premium glass effect containers - enhanced with consistent 12px border radius */
+  /* Premium glass effect containers with subtle blue-to-pink gradient */
   .glass-effect {
-    background: rgba(255, 255, 255, 0.15);
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03); /* Refined shadows as requested */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Thin border with slight opacity */
     padding: 1.725rem; /* Increased by 15% for more luxurious spacing */
     position: relative;
     transition: all 0.3s ease;
@@ -166,7 +161,7 @@
     position: absolute;
     inset: 0;
     border-radius: 11px; /* 1px smaller than container */
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 0 0 1px rgba(23, 185, 230, 0.05); /* Subtle blue inner border */
     pointer-events: none;
   }
   
@@ -189,12 +184,12 @@
   }
   
   .glass-card {
-    background: rgba(255, 255, 255, 0.22);
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03); /* Refined shadows as requested */
+    border: 1px solid rgba(255, 255, 255, 0.3);
     position: relative;
     z-index: 1;
     transition: all 0.3s ease;
@@ -204,28 +199,28 @@
   .glass-panel {
     background: linear-gradient(
       135deg, 
-      rgba(255, 255, 255, 0.15), 
-      rgba(255, 255, 255, 0.08)
+      rgba(23, 185, 230, 0.05), 
+      rgba(252, 148, 197, 0.08)
     );
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03); /* Refined shadows as requested */
+    border: 1px solid rgba(255, 255, 255, 0.3);
     position: relative;
     z-index: 1;
     transition: all 0.3s ease;
     overflow: hidden;
   }
   
-  /* Form container - with blue tint gradient - enhanced with more contrast */
+  /* Form container - with blue-to-pink gradient - enhanced with more contrast */
   .form-container {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(23, 185, 230, 0.18));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(23, 185, 230, 0.2); /* Increased contrast of border */
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03); /* Refined shadows as requested */
+    border: 1px solid rgba(255, 255, 255, 0.3);
     overflow: hidden;
     position: relative;
     z-index: 1;
@@ -262,14 +257,14 @@
     z-index: -1;
   }
   
-  /* Date/time card glass effect with blue tint - enhanced contrast */
+  /* Date/time card glass effect with blue-to-pink gradient */
   .datetime-card {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(23, 185, 230, 0.18));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(23, 185, 230, 0.2);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03); /* Refined shadows as requested */
+    border: 1px solid rgba(255, 255, 255, 0.3);
     overflow: hidden;
     position: relative;
     z-index: 1;
@@ -345,13 +340,13 @@
     opacity: 0.6;
   }
   
-  /* Venue swiper glass effect - enhanced premium look */
+  /* Venue swiper glass effect with blue-to-pink gradient */
   .venue-glass {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.18));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03); /* Refined shadows as requested */
     border: 1px solid rgba(255, 255, 255, 0.3);
     transition: all 0.3s ease;
     position: relative;
