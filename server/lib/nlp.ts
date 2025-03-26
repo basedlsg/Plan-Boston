@@ -50,6 +50,20 @@ export type StructuredRequest = {
     type?: string;
     requirements?: string[];
   };
+  // Enhanced response from Gemini with detailed activity information
+  activities?: Array<{
+    description: string;
+    location: string;
+    time: string;
+    searchParameters: {
+      searchTerm: string;
+      type: string;
+      keywords: string[];
+      minRating: number;
+      requireOpenNow: boolean;
+    };
+    requirements: string[];
+  }>;
 };
 
 // Extract locations with confidence scores
@@ -240,7 +254,10 @@ RETURN ONLY this JSON structure:
         preferences: {
           type: undefined, // Will extract from activities or searchParameters
           requirements: []
-        }
+        },
+        // Include the activities array directly from Gemini's output
+        activities: parsedResponse.activities && Array.isArray(parsedResponse.activities) ? 
+                   parsedResponse.activities : []
       };
       
       // Extract activity type from the first activity's searchParameters if available

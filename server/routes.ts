@@ -676,13 +676,14 @@ export async function registerRoutes(app: Express) {
           let searchOptions: any = { keywords: [], requireOpenNow: true, minRating: 4.0 };
           
           // Check if we have an activity with search parameters from the NLP parsing
-          const hasRichParams = Array.isArray(parsed.activities) && 
+          const hasRichParams = parsed.activities !== undefined && 
+                              Array.isArray(parsed.activities) && 
                               parsed.activities.length > 0 && 
-                              parsed.activities[0].searchParameters;
+                              parsed.activities[0]?.searchParameters !== undefined;
           
           if (hasRichParams) {
             // Use the rich search parameters directly from Gemini's activity details
-            const activity = parsed.activities[0];
+            const activity = parsed.activities![0];
             console.log(`Using rich search parameters from Gemini for "${activity.description}"`);
             
             searchOptions = {
@@ -718,7 +719,7 @@ export async function registerRoutes(app: Express) {
               const foodKeywords = activity.description
                 .toLowerCase()
                 .split(' ')
-                .filter(word => 
+                .filter((word: string) => 
                   word.length > 3 && 
                   !['with', 'and', 'the', 'for', 'near', 'good', 'nice', 'best'].includes(word)
                 );
