@@ -122,7 +122,7 @@ export default function Home() {
         {/* Logo Section */}
         <div className="logo-container">
           <img 
-            src="/Illustration + Name.png" 
+            src="/logo.png" 
             alt="Plan Logo" 
             className="logo"
           />
@@ -137,7 +137,7 @@ export default function Home() {
 
         {/* Main Content */}
         <div className="mb-12">
-          {/* Form Container - More opaque glass */}
+          {/* Form Container - With blue tint */}
           <div className="form-container mb-10">
             <div className="p-8">
               <h2 className="text-2xl font-bold text-brand-black mb-6">Create Your Plan</h2>
@@ -157,6 +157,7 @@ export default function Home() {
                             <Input
                               type="date"
                               {...field}
+                              className="placeholder-opacity-50"
                             />
                           </FormControl>
                         </FormItem>
@@ -173,7 +174,7 @@ export default function Home() {
                             <TimeInput
                               value={field.value || ""}
                               onChange={field.onChange}
-                              className="w-full"
+                              className="w-full placeholder-opacity-50"
                             />
                           </FormControl>
                         </FormItem>
@@ -190,7 +191,7 @@ export default function Home() {
                         <FormControl>
                           <Textarea
                             placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
-                            className="min-h-[120px] resize-y"
+                            className="min-h-[120px] resize-y placeholder-opacity-50"
                             {...field}
                           />
                         </FormControl>
@@ -200,7 +201,7 @@ export default function Home() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-brand-blue hover:bg-brand-blue/90 text-white shadow-md"
+                    className="w-full create-plan-btn text-white"
                     disabled={planMutation.isPending}
                   >
                     {planMutation.isPending ? "Creating plan..." : "Create Plan"}

@@ -16,10 +16,11 @@
     @apply antialiased text-foreground;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-    background-color: var(--brand-pink);
+    background-color: rgba(252, 148, 197, 0.8); /* #FC94C5 at 80% opacity */
     color: var(--brand-black);
-    background-image: radial-gradient(circle at top right, #FFA9D2, #FC94C5);
+    background-image: radial-gradient(circle at top right, rgba(255, 169, 210, 0.8), rgba(252, 148, 197, 0.8));
     position: relative;
+    overflow-x: hidden;
   }
   
   /* Global glass effect on entire body */
@@ -30,10 +31,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    background: rgba(255, 255, 255, 0.08);
-    z-index: -1;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent white overlay for frosted look */
+    z-index: 0;
+    pointer-events: none;
   }
 
   h1, h2, h3, .logo-font {
@@ -94,12 +96,14 @@
   }
   
   .glass-card {
-    background: rgba(255, 255, 255, 0.22); /* Slightly more opaque */
+    background: rgba(255, 255, 255, 0.22);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.25);
+    position: relative;
+    z-index: 1;
   }
   
   .glass-panel {
@@ -113,17 +117,22 @@
     border-radius: 24px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.18);
+    position: relative;
+    z-index: 1;
   }
   
-  /* Form container - slightly more opaque than other glass elements */
+  /* Form container - with blue tint */
   .form-container {
-    background: rgba(255, 255, 255, 0.25); /* More opaque for contrast */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(23, 185, 230, 0.15));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(23, 185, 230, 0.15);
     overflow: hidden;
+    position: relative;
+    z-index: 1;
+    transform: translateZ(0);
   }
   
   /* Logo styling */
@@ -131,12 +140,18 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 2rem;
+    padding-top: 2rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    position: relative;
+    z-index: 2;
   }
   
   .logo {
-    height: 120px;
+    width: 180px;
+    height: auto;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+    transition: all 0.3s ease;
   }
   
   /* Venue swiper glass effect */
@@ -148,6 +163,8 @@
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
   }
   
   .venue-glass:hover {
@@ -169,6 +186,25 @@
     color: var(--brand-black) !important;
   }
   
+  /* Placeholder opacity */
+  ::placeholder {
+    opacity: 0.5 !important;
+  }
+  
+  /* Create Plan button */
+  .create-plan-btn {
+    background-color: var(--brand-blue) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(23, 185, 230, 0.2) !important;
+    transition: all 0.3s ease !important;
+  }
+  
+  .create-plan-btn:hover {
+    background-color: rgba(23, 185, 230, 0.9) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 16px rgba(23, 185, 230, 0.25) !important;
+  }
+  
   /* Navigation arrow buttons */
   .nav-arrow {
     background: rgba(255, 255, 255, 0.25);
@@ -188,5 +224,27 @@
   .nav-arrow:hover {
     background: rgba(255, 255, 255, 0.35);
     transform: scale(1.05);
+  }
+  
+  /* Pagination dots */
+  .pagination-dots {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    gap: 0.5rem;
+  }
+  
+  .pagination-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
+  }
+  
+  .pagination-dot.active {
+    width: 20px;
+    border-radius: 4px;
+    background: var(--brand-blue);
   }
 }

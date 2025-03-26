@@ -194,22 +194,18 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
         </div>
         
         {/* Pagination dots */}
-        <div className="flex justify-center mt-4">
-          <div className="flex items-center gap-2">
-            {allVenues.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={cn(
-                  "h-2.5 rounded-full transition-all",
-                  idx === currentIndex 
-                    ? "bg-brand-blue w-5" 
-                    : "bg-white/40 w-2.5"
-                )}
-                aria-label={`Go to venue ${idx + 1}`}
-              />
-            ))}
-          </div>
+        <div className="pagination-dots">
+          {allVenues.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              className={cn(
+                "pagination-dot",
+                idx === currentIndex ? "active" : ""
+              )}
+              aria-label={`Go to venue ${idx + 1}`}
+            />
+          ))}
         </div>
       </div>
       
