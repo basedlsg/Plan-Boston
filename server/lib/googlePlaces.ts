@@ -132,26 +132,75 @@ export async function searchPlace(
         }
       }
       
-      // Add basic type filtering to exclude inappropriate venues
+      // Enhanced type filtering to exclude inappropriate venues
       if (options.type) {
         if (options.type === 'cafe' || options.type === 'coffee') {
-          // For cafes/coffee, exclude gas stations and prioritize dedicated cafes
+          // For cafes/coffee, exclude inappropriate places and prioritize dedicated cafes
           const filteredResults = results.filter(place => 
+            // Exclude inappropriate venues
             !place.types.includes('gas_station') && 
-            (place.types.includes('cafe') || place.types.includes('coffee'))
+            !place.types.includes('lodging') &&
+            !place.types.includes('hospital') &&
+            !place.types.includes('car_dealer') &&
+            !place.types.includes('car_rental') &&
+            // Prioritize venues that are actually cafes or restaurants
+            (place.types.includes('cafe') || 
+             place.types.includes('restaurant') || 
+             place.types.includes('bakery') ||
+             place.types.includes('food'))
           );
           
           // Only use filtered results if we didn't filter everything out
           if (filteredResults.length > 0) {
             results = filteredResults;
           }
-        } else if (options.type === 'restaurant') {
-          // For restaurants, prioritize dedicated restaurants
+        } else if (options.type === 'restaurant' || options.type === 'lunch' || options.type === 'dinner' || options.type === 'breakfast') {
+          // For food activities, exclude inappropriate venues and prioritize restaurants
+          const filteredResults = results.filter(place => 
+            // Exclude inappropriate venues
+            !place.types.includes('gas_station') && 
+            !place.types.includes('lodging') &&
+            !place.types.includes('hospital') &&
+            !place.types.includes('car_dealer') &&
+            !place.types.includes('car_rental') &&
+            // At least one of these types should be present
+            (place.types.includes('restaurant') || 
+             place.types.includes('meal_takeaway') || 
+             place.types.includes('meal_delivery') ||
+             place.types.includes('food'))
+          );
+          
+          if (filteredResults.length > 0) {
+            results = filteredResults;
+          }
+          
+          // Further sort by prioritizing dedicated restaurants
           results = results.sort((a, b) => {
-            const aIsRestaurant = a.types.includes('restaurant');
-            const bIsRestaurant = b.types.includes('restaurant');
-            return (bIsRestaurant ? 1 : 0) - (aIsRestaurant ? 1 : 0);
+            // Calculate relevance score based on venue types
+            const scoreTypes = (types: string[]) => {
+              let score = 0;
+              if (types.includes('restaurant')) score += 5;
+              if (types.includes('food')) score += 3;
+              if (types.includes('meal_takeaway')) score += 2;
+              if (types.includes('cafe')) score += 1;
+              return score;
+            };
+            
+            return scoreTypes(b.types) - scoreTypes(a.types);
           });
+        } else if (options.type === 'bar' || options.type === 'drinks' || options.type === 'night_club' || options.type === 'nightlife') {
+          // For nightlife venues, prioritize bars and clubs
+          const filteredResults = results.filter(place => 
+            !place.types.includes('gas_station') && 
+            !place.types.includes('hospital') &&
+            (place.types.includes('bar') || 
+             place.types.includes('night_club') ||
+             place.types.includes('restaurant'))
+          );
+          
+          if (filteredResults.length > 0) {
+            results = filteredResults;
+          }
         }
         
         // If we still don't have good results, try a more generic search

@@ -102,7 +102,22 @@ Return JSON only, in this exact format:
   "preferences": {"type"?: string, "requirements"?: string[]}
 }`
       }],
-      system: "Extract ONLY explicitly mentioned elements from London itinerary requests. DO NOT add anything not clearly stated. Return as JSON."
+      system: `You are a precise itinerary extractor for London travel requests. 
+
+IMPORTANT RULES:
+1. ONLY extract what is EXPLICITLY mentioned in the user's request
+2. DO NOT infer, assume, or add ANY activities that are not clearly stated by the user
+3. DO NOT include "default" or "suggested" activities
+4. DO NOT create activities for locations mentioned without a specific activity
+5. DO NOT interpret generic preferences as specific activities
+6. ONLY include locations in "destinations" if they are explicitly mentioned as places to visit
+7. Time references MUST be paired with an actual activity or venue request
+
+Example: 
+If user says "coffee in Hampstead Heath and dinner in Shoreditch", ONLY extract these two activities.
+DO NOT add activities like "exploring Hampstead Heath" or "walk in the park" unless explicitly mentioned.
+
+Respond strictly with JSON only, no explanations.`
     });
 
     // Add detailed logging to debug the response structure
@@ -520,63 +535,8 @@ Return JSON only, in this exact format:
       );
     }
 
-    // Ensure all destinations have at least one activity
-    const destinationsWithActivities = new Set(parsed.fixedTimes.map(ft => ft.location));
-
-    // Check for destinations without activities
-    const destinationsWithoutActivities = [];
-    if (parsed.startLocation && !destinationsWithActivities.has(parsed.startLocation)) {
-      destinationsWithoutActivities.push(parsed.startLocation);
-    }
-
-    parsed.destinations.forEach(destination => {
-      if (!destinationsWithActivities.has(destination)) {
-        destinationsWithoutActivities.push(destination);
-      }
-    });
-
-    // Add default activities for destinations without any
-    for (const destination of destinationsWithoutActivities) {
-      // Determine a sensible time and activity type based on position in the itinerary
-      let defaultTime = '12:00'; // Default to noon
-      let defaultType = 'activity'; // Default activity type
-      
-      // If we have existing activities, schedule after the last one
-      if (parsed.fixedTimes.length > 0) {
-        // Sort by time
-        parsed.fixedTimes.sort((a, b) => {
-          const timeA = a.time.split(':').map(Number);
-          const timeB = b.time.split(':').map(Number);
-          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-        });
-        
-        // Last activity time
-        const lastTime = parsed.fixedTimes[parsed.fixedTimes.length - 1].time;
-        const [hours, minutes] = lastTime.split(':').map(Number);
-        
-        // Add 2 hours to the last activity
-        defaultTime = `${String((hours + 2) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        
-        // Choose appropriate activity based on time of day
-        const newHour = (hours + 2) % 24;
-        if (newHour >= 7 && newHour < 11) defaultType = 'breakfast';
-        else if (newHour >= 11 && newHour < 15) defaultType = 'lunch';
-        else if (newHour >= 17 && newHour < 22) defaultType = 'dinner';
-        else if (newHour >= 15 && newHour < 17) defaultType = 'coffee';
-        else defaultType = 'activity';
-      }
-      
-      // Add this activity
-      parsed.fixedTimes.push({
-        location: destination,
-        time: defaultTime,
-        type: defaultType
-      });
-      
-      console.log(`Added default activity: ${defaultType} at ${defaultTime} in ${destination}`);
-    }
-
-    console.log("Final fixed times:", parsed.fixedTimes);
+    // Note: We removed the auto-activity generation code here to ensure we only use explicitly
+    // mentioned activities. Gap filling will be handled in routes.ts after the initial parsing.
     console.log("Parsed request:", parsed);
     return parsed;
 
