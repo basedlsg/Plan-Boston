@@ -383,25 +383,25 @@
   }
   
   .venue-glass:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.22));
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.08), rgba(252, 148, 197, 0.1));
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.05);
     transform: translateY(-2px); /* Subtle lift on hover */
   }
   
   .venue-glass.selected {
-    border: 2px solid var(--brand-blue);
-    box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3), 0 8px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--brand-blue);
+    box-shadow: 0 0 0 1px rgba(23, 185, 230, 0.3), 0 3px 15px rgba(0, 0, 0, 0.05);
   }
   
-  /* Form elements - refined glass effect with inner shadows */
+  /* Form elements - refined glass effect for white background */
   input, textarea, select {
-    background: rgba(255, 255, 255, 0.18) !important;
+    background: rgba(255, 255, 255, 0.7) !important;
     backdrop-filter: blur(15px) !important;
     -webkit-backdrop-filter: blur(15px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(23, 185, 230, 0.1) !important;
     color: var(--brand-black) !important;
     border-radius: 12px !important;
-    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02) !important;
     transition: all 0.3s ease !important;
   }
   
@@ -452,18 +452,19 @@
     box-shadow: 0 4px 15px rgba(23, 185, 230, 0.15) !important; /* Enhanced shadow on hover */
   }
   
-  /* Navigation arrow buttons - enhanced premium look */
+  /* Navigation arrow buttons - premium look for white background */
   .nav-arrow {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.2));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.1), rgba(252, 148, 197, 0.1));
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-radius: 50%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(23, 185, 230, 0.1);
     opacity: 0;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+    color: var(--brand-blue);
   }
   
   /* Arrow button reflection */
@@ -488,9 +489,9 @@
   }
   
   .nav-arrow:hover {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.25));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.15), rgba(252, 148, 197, 0.15));
     transform: scale(1.08);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.05);
   }
   
   /* Pagination dots */
@@ -505,8 +506,9 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(23, 185, 230, 0.2);
     transition: all 0.3s ease;
+    border: 1px solid rgba(23, 185, 230, 0.1);
   }
   
   .pagination-dot.active {
