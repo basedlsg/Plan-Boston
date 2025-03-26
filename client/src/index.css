@@ -16,13 +16,13 @@
     @apply antialiased text-foreground;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-    background-color: var(--brand-pink);
     color: var(--brand-black);
-    background-image: radial-gradient(circle at top right, #FFA9D2, #FC94C5);
     position: relative;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
-  
-  /* Global glass effect on entire body */
+
+  /* Enhanced background gradient */
   body::before {
     content: "";
     position: fixed;
@@ -30,48 +30,55 @@
     left: 0;
     right: 0;
     bottom: 0;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    background: rgba(255, 255, 255, 0.08);
-    z-index: -1;
+    background: linear-gradient(135deg, rgba(252,148,197,0.8), rgba(255,169,210,0.8));
+    z-index: -2;
+  }
+
+  /* Main container glass effect */
+  .container {
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 2rem;
   }
 
   h1, h2, h3, .logo-font {
     font-family: 'Rozha One', serif;
   }
-  
+
   /* Brand colors */
   :root {
     --brand-pink: #FC94C5;
     --brand-black: #1C1C1C;
     --brand-blue: #17B9E6;
   }
-  
+
   /* Custom utility classes */
   .text-brand-pink {
     color: var(--brand-pink);
   }
-  
+
   .text-brand-black {
     color: var(--brand-black);
   }
-  
+
   .text-brand-blue {
     color: var(--brand-blue);
   }
-  
+
   .bg-brand-pink {
     background-color: var(--brand-pink);
   }
-  
+
   .bg-brand-black {
     background-color: var(--brand-black);
   }
-  
+
   .bg-brand-blue {
     background-color: var(--brand-blue);
   }
-  
+
   .border-brand-blue {
     border-color: var(--brand-blue);
   }
@@ -81,7 +88,7 @@
     border: 2px solid var(--brand-blue);
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
   }
-  
+
   /* Glass effect containers */
   .glass-effect {
     background: rgba(255, 255, 255, 0.15);
@@ -92,16 +99,16 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 1.5rem;
   }
-  
+
   .glass-card {
-    background: rgba(255, 255, 255, 0.22); /* Slightly more opaque */
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(23,185,230,0.15));
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 30px rgba(0,0,0,0.1);
     border: 1px solid rgba(255, 255, 255, 0.25);
   }
-  
+
   .glass-panel {
     background: linear-gradient(
       135deg, 
@@ -114,7 +121,7 @@
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.18);
   }
-  
+
   /* Form container - slightly more opaque than other glass elements */
   .form-container {
     background: rgba(255, 255, 255, 0.25); /* More opaque for contrast */
@@ -125,20 +132,21 @@
     border: 1px solid rgba(255, 255, 255, 0.3);
     overflow: hidden;
   }
-  
+
   /* Logo styling */
   .logo-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 2rem;
+    margin: 2rem auto 1.5rem;
   }
-  
+
   .logo {
-    height: 120px;
+    width: 180px;
+    height: auto;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
   }
-  
+
   /* Venue swiper glass effect */
   .venue-glass {
     background: rgba(255, 255, 255, 0.2);
@@ -149,17 +157,17 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
   }
-  
+
   .venue-glass:hover {
     background: rgba(255, 255, 255, 0.25);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
   }
-  
+
   .venue-glass.selected {
     border: 2px solid var(--brand-blue);
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3), 0 8px 24px rgba(0, 0, 0, 0.12);
   }
-  
+
   /* Form elements */
   input, textarea, select {
     background: rgba(255, 255, 255, 0.18) !important;
@@ -168,7 +176,7 @@
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: var(--brand-black) !important;
   }
-  
+
   /* Navigation arrow buttons */
   .nav-arrow {
     background: rgba(255, 255, 255, 0.25);
@@ -180,11 +188,11 @@
     opacity: 0;
     transition: opacity 0.3s ease, transform 0.3s ease;
   }
-  
+
   .venue-container:hover .nav-arrow {
     opacity: 1;
   }
-  
+
   .nav-arrow:hover {
     background: rgba(255, 255, 255, 0.35);
     transform: scale(1.05);
