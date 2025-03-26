@@ -216,7 +216,7 @@ export default function Home() {
 
                   <Button
                     type="submit"
-                    className="w-full create-plan-btn text-white"
+                    className="w-full create-plan-btn text-brand-blue"
                     disabled={planMutation.isPending}
                   >
                     {planMutation.isPending ? "Creating plan..." : "Create Plan"}
@@ -246,7 +246,7 @@ export default function Home() {
                     <div key={`${place.placeId}-${index}`} className="relative">
                       {/* Timeline connector */}
                       {index > 0 && (
-                        <div className="absolute top-0 left-7 h-full w-px bg-white/40 -translate-x-1/2" />
+                        <div className="absolute top-0 left-7 h-full w-px bg-brand-blue/20 -translate-x-1/2" />
                       )}
 
                       {/* Activity card */}
@@ -300,8 +300,8 @@ export default function Home() {
                         duration: number;
                         arrivalTime: string;
                       }>).length && (
-                        <div className="ml-6 sm:ml-7 my-3 sm:my-4 p-2 flex items-center gap-2 text-xs sm:text-sm text-white bg-white/20 backdrop-blur-sm rounded-md">
-                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <div className="ml-6 sm:ml-7 my-3 sm:my-4 p-2 flex items-center gap-2 text-xs sm:text-sm text-brand-black bg-white/50 backdrop-blur-sm rounded-md border border-brand-blue/10 shadow-sm">
+                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-brand-blue" />
                           <span className="truncate">
                             {(itinerary.travelTimes as Array<any>)[index].duration} minutes to{" "}
                             {(itinerary.travelTimes as Array<any>)[index].to}
