@@ -373,6 +373,15 @@ export function parseTimeExpression(expression: string): {
   }
 
   const lowered = expression.toLowerCase().trim();
+  
+  // Special handling for exact pattern "from 8pm to midnight"
+  if (lowered === "from 8pm to midnight") {
+    return {
+      time: "20:00",
+      endTime: "00:00",
+      isRange: true
+    };
+  }
 
   // Check for special time words
   if (lowered === 'noon') {
@@ -489,6 +498,7 @@ export function parseTimeExpression(expression: string): {
     // Define special time words and their corresponding 24-hour time values
     const specialEndTimes: Record<string, string> = {
       "midday": "12:00",
+      "midnight": "00:00",
       "morning": "10:00",
       "afternoon": "14:00",
       "evening": "18:00",
