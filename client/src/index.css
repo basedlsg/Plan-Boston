@@ -144,13 +144,12 @@
     margin-bottom: 1.5rem;
     width: 100%;
     position: relative;
-    z-index: 10; /* Increased z-index to make sure logo is visible */
+    z-index: 2;
   }
   
   .logo {
     width: 180px;
-    height: 200px; /* Fixed height to ensure proper rendering */
-    object-fit: contain; /* This ensures the image maintains its aspect ratio */
+    height: auto;
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
     transition: all 0.3s ease;
   }

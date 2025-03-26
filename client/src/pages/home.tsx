@@ -122,14 +122,10 @@ export default function Home() {
         {/* Logo Section */}
         <div className="logo-container">
           <img 
-            src="/plan-logo-v2.png" 
+            src="/plan-logo.png" 
             alt="Plan" 
             className="logo"
-            style={{ 
-              filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))",
-              maxWidth: "180px",
-              display: "block"
-            }}
+            style={{ filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }}
           />
         </div>
         
