@@ -7,6 +7,7 @@ import {
   parseActivity, 
   parseTimeExpression, 
   getDefaultTime,
+  expandRelativeTime,
   LocationContext,
   ActivityContext 
 } from "./languageProcessing";
@@ -269,6 +270,19 @@ Return JSON only, no explanations, in this exact format:
       }
     }
 
+    // Normalize time formats first (ensure HH:MM 24-hour format)
+    fixedTimesList.forEach(item => {
+      if (item.time && item.time.includes(':')) {
+        const parts = item.time.split(':');
+        if (parts.length === 2) {
+          const hour = parseInt(parts[0]);
+          const minute = parseInt(parts[1]);
+          // Create normalized 24-hour format
+          item.time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        }
+      }
+    });
+    
     // Remove duplicates without using Set which causes TypeScript issues
     const stringified = fixedTimesList.map(item => JSON.stringify(item));
     const uniqueStringified: string[] = [];
@@ -326,9 +340,28 @@ Return JSON only, no explanations, in this exact format:
     
     // Add placeholder activities for any time reference without a matching activity
     for (const timeRef of timeReferences) {
-      const hasMatchingActivity = parsed.fixedTimes.some(ft => 
+      // Check for exact match first
+      let hasMatchingActivity = parsed.fixedTimes.some(ft => 
         ft.time === timeRef.time
       );
+      
+      // Check for alternative time formats (e.g., 3:00 vs 03:00, 15:00 vs 3:00 PM)
+      if (!hasMatchingActivity) {
+        // Parse the time to handle potential format differences
+        const timeComponents = timeRef.time.split(':');
+        if (timeComponents.length === 2) {
+          const hour = parseInt(timeComponents[0]);
+          const minute = parseInt(timeComponents[1]);
+          
+          // Check for: 3:00 vs 03:00 and 15:00 vs 03:00 PM
+          const hour24Format = hour.toString().padStart(2, '0') + ':' + minute.toString().padStart(2, '0');
+          const hour12Format = (hour > 12 ? hour - 12 : hour).toString() + ':' + minute.toString().padStart(2, '0');
+          
+          hasMatchingActivity = parsed.fixedTimes.some(ft => 
+            ft.time === hour24Format || ft.time === hour12Format
+          );
+        }
+      }
       
       if (!hasMatchingActivity) {
         // Find nearest location mentioned near this time reference

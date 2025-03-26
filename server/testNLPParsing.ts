@@ -81,9 +81,10 @@ async function testSpecificExample() {
 
 // Run all tests
 async function runTests() {
-  await testVagueActivityParsing();
-  console.log("\n" + "=".repeat(80) + "\n");
+  // For brevity, just run the specific example first 
   await testSpecificExample();
+  console.log("\n" + "=".repeat(80) + "\n");
+  await testVagueActivityParsing();
 }
 
 // Execute tests
