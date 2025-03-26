@@ -1,0 +1,143 @@
+
+
+
+Comprehensive Gemini Prompt for London Day Planner
+After carefully analyzing the code and logs, I've identified several systemic issues in the natural language understanding pipeline. The current approach tries to extract entities and then process them through multiple transformations, causing information loss and context dilution.
+The key problems include:
+1. Poor location recognition - gas stations showing up for coffee shops
+2. Context loss - requirements like "quiet" or "nice" not affecting venue selection
+3. Activity-location misalignment - activities assigned to wrong locations
+4. Inappropriate venue types - law offices appearing for restaurant searches
+5. Time interpretation issues - duplicate activities at similar times
+Here's a comprehensive prompt designed to leverage Gemini Flash Pro 1.5's natural language capabilities with Google Places:
+// A comprehensive prompt that addresses the systemic issues
+const response = await gemini.generateContent(`
+You are a London travel planning expert with deep knowledge of London's geography, neighborhoods, and venues. Analyze this request carefully:
+
+"${query}"
+
+TASK: Provide a complete interpretation for creating a London itinerary with Google Places API integration.
+
+Step 1: Identify all London locations with full context:
+- Distinguish between neighborhoods (Soho, Mayfair), landmarks (British Museum), and transport hubs (King's Cross)
+- For ambiguous references, clarify which specific London location is meant
+- Recognize colloquial area names and local terminology (The City, West End, etc.)
+
+Step 2: Understand all activities with venue-specific details:
+- Extract explicit activities (coffee, lunch, museum visit)
+- Infer implied activities based on context ("something nice" → what specifically?)
+- Capture qualitative requirements (quiet, fancy, historic, family-friendly)
+- Note when activities are vague and need appropriate venue suggestions
+
+Step 3: Interpret time references carefully:
+- Convert all time formats to 24-hour format
+- Handle time ranges correctly (e.g., "between 2-4pm" → 14:00-16:00)
+- Interpret relative times (morning, afternoon, evening) 
+- Avoid creating duplicate activities for similar times
+
+Step 4: Create optimal Google Places search parameters:
+- Provide the exact search term to use (e.g., "specialty coffee shop" rather than just "coffee")
+- Specify the correct Google Places 'type' parameter (cafe, restaurant, museum, etc.)
+- Suggest additional keywords that will improve search relevance
+- Recommend minimum rating thresholds based on quality expectations
+
+RETURN ONLY this JSON structure:
+{
+  "startLocation": string | null,
+  "destinations": string[],
+  "activities": [
+    {
+      "description": string, // Original activity description from request
+      "location": string, // Where this should happen
+      "time": string, // Time in 24h format or period name like "afternoon"
+      "searchParameters": { // CRITICAL - Parameters for Google Places API
+        "searchTerm": string, // Optimized search term (e.g., "quiet cafe with workspace")
+        "type": string, // Google Places API type parameter (e.g., "cafe", "restaurant")
+        "keywords": string[], // Additional keywords to improve search
+        "minRating": number, // Recommended minimum rating (1.0-5.0)
+        "requireOpenNow": boolean // Whether time constraints require the venue to be open now
+      },
+      "requirements": string[] // Special requirements like "quiet", "outdoor seating"
+    }
+  ],
+  "preferences": {
+    "venueQualities": string[], // Qualities applying to all venues (upscale, budget, etc.)
+    "restrictions": string[] // Restrictions applying to all venues (no chains, etc.)
+  }
+}
+`);
+Implementation Strategy
+To fully leverage this enhanced prompt, we need to:
+1. Create a direct pipeline from Gemini to Google Places API:
+// Process activities from Gemini directly to searchPlace
+for (const activity of geminiResponse.activities) {
+  try {
+    // Use Gemini's suggested search parameters directly
+    const searchOptions = {
+      query: activity.searchParameters.searchTerm,
+      type: activity.searchParameters.type,
+      keywords: activity.searchParameters.keywords.join(' '),
+      minRating: activity.searchParameters.minRating,
+      openNow: activity.searchParameters.requireOpenNow
+    };
+    
+    const venueResult = await searchPlace(activity.location, searchOptions);
+    
+    // Process venue result...
+  } catch (error) {
+    console.error(`Error finding venue for ${activity.description}:`, error);
+  }
+}
+1. Enhance the Google Places search function:
+// Enhanced searchPlace that uses the rich parameters from Gemini
+export async function searchPlace(location: string, options: {
+  query?: string,
+  type?: string,
+  keywords?: string,
+  minRating?: number,
+  openNow?: boolean
+}): Promise<VenueSearchResult> {
+  // First build a semantically rich search query
+  let searchQuery = '';
+  
+  if (options.query) {
+    // Use the complete natural language query suggested by Gemini
+    searchQuery = `${options.query} in ${location}, London`;
+  } else {
+    // Fallback to basic location search
+    searchQuery = `${location}, London`;
+  }
+  
+  // Use textSearch for natural language searches
+  const params = new URLSearchParams({
+    query: searchQuery,
+    region: "uk",
+    key: GOOGLE_PLACES_API_KEY || "",
+    language: "en"
+  });
+  
+  if (options.openNow) {
+    params.append("opennow", "true");
+  }
+  
+  const searchUrl = `${PLACES_API_BASE}/textsearch/json?${params.toString()}`;
+  const searchRes = await fetch(searchUrl);
+  const searchData = await searchRes.json();
+  
+  // Apply result filtering and processing...
+}
+1. Maintain context throughout the process:
+// Store the original activity description with the venue
+const newPlace = await storage.createPlace({
+  placeId: place.place_id,
+  name: place.name,
+  address: place.formatted_address,
+  location: place.geometry.location,
+  details: place,
+  alternatives: venueResult.alternatives || [],
+  scheduledTime: appointmentTime.toISOString(),
+  // Add these new fields to preserve context
+  activityDescription: activity.description,
+  requirements: activity.requirements,
+  searchTermUsed: activity.searchParameters.searchTerm
+});

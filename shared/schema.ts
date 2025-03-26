@@ -51,9 +51,39 @@ export type PlaceDetails = {
   is_primary?: boolean;
   distance_from_primary?: number;
   area_info?: any;
+  // Additional fields for enhanced context
+  activityDescription?: string;
+  requirements?: string[];
+  searchTermUsed?: string;
 };
 
 export type VenueSearchResult = {
   primary: PlaceDetails;
   alternatives: PlaceDetails[];
+};
+
+export type SearchParameters = {
+  searchTerm: string;
+  type: string;
+  keywords: string[];
+  minRating: number;
+  requireOpenNow: boolean;
+};
+
+export type Activity = {
+  description: string;
+  location: string;
+  time: string;
+  searchParameters: SearchParameters;
+  requirements: string[];
+};
+
+export type EnhancedRequest = {
+  startLocation: string | null;
+  destinations: string[];
+  activities: Activity[];
+  preferences: {
+    venueQualities: string[];
+    restrictions: string[];
+  };
 };

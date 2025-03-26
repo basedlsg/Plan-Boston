@@ -99,39 +99,61 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     const extractedLocations = extractLocations(query);
     const extractedActivities = extractActivities(query);
 
-    // Then use Gemini for additional understanding
-    const prompt = `Parse this London itinerary request: "${query}"
+    // Then use our comprehensive Gemini prompt for enhanced understanding
+    const prompt = `
+You are a London travel planning expert with deep knowledge of London's geography, neighborhoods, and venues. Analyze this request carefully:
 
-Extract ONLY the explicitly mentioned elements:
-1. LOCATIONS: Specific places mentioned in London
-2. ACTIVITIES: Only activities clearly stated in the request
-3. TIMES: Only times explicitly mentioned (convert to 24-hour format)
-4. PREFERENCES: Qualities mentioned for the experience
+"${query}"
 
-DO NOT add activities, times or locations that aren't clearly in the request.
+TASK: Provide a complete interpretation for creating a London itinerary with Google Places API integration.
 
-IMPORTANT RULES:
-1. ONLY extract what is EXPLICITLY mentioned in the user's request
-2. DO NOT infer, assume, or add ANY activities that are not clearly stated by the user
-3. DO NOT include "default" or "suggested" activities
-4. DO NOT create activities for locations mentioned without a specific activity
-5. DO NOT interpret generic preferences as specific activities
-6. ONLY include locations in "destinations" if they are explicitly mentioned as places to visit
-7. Time references MUST be paired with an actual activity or venue request
+Step 1: Identify all London locations with full context:
+- Distinguish between neighborhoods (Soho, Mayfair), landmarks (British Museum), and transport hubs (King's Cross)
+- For ambiguous references, clarify which specific London location is meant
+- Recognize colloquial area names and local terminology (The City, West End, etc.)
 
-Example: 
-If user says "coffee in Hampstead Heath and dinner in Shoreditch", ONLY extract these two activities.
-DO NOT add activities like "exploring Hampstead Heath" or "walk in the park" unless explicitly mentioned.
+Step 2: Understand all activities with venue-specific details:
+- Extract explicit activities (coffee, lunch, museum visit)
+- Infer implied activities based on context ("something nice" → what specifically?)
+- Capture qualitative requirements (quiet, fancy, historic, family-friendly)
+- Note when activities are vague and need appropriate venue suggestions
 
-Return JSON only, in this exact format:
+Step 3: Interpret time references carefully:
+- Convert all time formats to 24-hour format
+- Handle time ranges correctly (e.g., "between 2-4pm" → 14:00-16:00)
+- Interpret relative times (morning, afternoon, evening) 
+- Avoid creating duplicate activities for similar times
+
+Step 4: Create optimal Google Places search parameters:
+- Provide the exact search term to use (e.g., "specialty coffee shop" rather than just "coffee")
+- Specify the correct Google Places 'type' parameter (cafe, restaurant, museum, etc.)
+- Suggest additional keywords that will improve search relevance
+- Recommend minimum rating thresholds based on quality expectations
+
+RETURN ONLY this JSON structure:
 {
   "startLocation": string | null,
   "destinations": string[],
-  "fixedTimes": [{"location": string, "time": string, "type"?: string}],
-  "preferences": {"type"?: string, "requirements"?: string[]}
-}
-
-JSON ONLY, no preamble or explanations.`;
+  "activities": [
+    {
+      "description": string, // Original activity description from request
+      "location": string, // Where this should happen
+      "time": string, // Time in 24h format or period name like "afternoon"
+      "searchParameters": { // CRITICAL - Parameters for Google Places API
+        "searchTerm": string, // Optimized search term (e.g., "quiet cafe with workspace")
+        "type": string, // Google Places API type parameter (e.g., "cafe", "restaurant")
+        "keywords": string[], // Additional keywords to improve search
+        "minRating": number, // Recommended minimum rating (1.0-5.0)
+        "requireOpenNow": boolean // Whether time constraints require the venue to be open now
+      },
+      "requirements": string[] // Special requirements like "quiet", "outdoor seating"
+    }
+  ],
+  "preferences": {
+    "venueQualities": string[], // Qualities applying to all venues (upscale, budget, etc.)
+    "restrictions": string[] // Restrictions applying to all venues (no chains, etc.)
+  }
+}`;
 
     try {
       const result = await model.generateContent(prompt);
@@ -217,12 +239,72 @@ JSON ONLY, no preamble or explanations.`;
         fixedTimes: [],
         preferences: {
           type: parsedResponse.preferences?.type,
-          requirements: parsedResponse.preferences?.requirements || []
+          requirements: []
         }
       };
+      
+      // Process enhanced preferences structure
+      if (parsedResponse.preferences) {
+        // Handle venue qualities as requirements
+        if (parsedResponse.preferences.venueQualities && Array.isArray(parsedResponse.preferences.venueQualities)) {
+          parsed.preferences.requirements = [
+            ...parsed.preferences.requirements,
+            ...parsedResponse.preferences.venueQualities
+          ];
+        }
+        
+        // Handle restrictions as requirements
+        if (parsedResponse.preferences.restrictions && Array.isArray(parsedResponse.preferences.restrictions)) {
+          parsed.preferences.requirements = [
+            ...parsed.preferences.requirements,
+            ...parsedResponse.preferences.restrictions
+          ];
+        }
+        
+        // Still handle legacy format
+        if (parsedResponse.preferences.requirements && Array.isArray(parsedResponse.preferences.requirements)) {
+          parsed.preferences.requirements = [
+            ...parsed.preferences.requirements,
+            ...parsedResponse.preferences.requirements
+          ];
+        }
+      }
 
-      // Process fixed times from Gemini's response
-      if (parsedResponse.fixedTimes && Array.isArray(parsedResponse.fixedTimes)) {
+      // Process activities from the enhanced Gemini response
+      if (parsedResponse.activities && Array.isArray(parsedResponse.activities)) {
+        for (const activity of parsedResponse.activities) {
+          if (activity && typeof activity === 'object' && 'location' in activity && 'time' in activity) {
+            // Validate and normalize the location
+            const location = findLocation(String(activity.location));
+            if (location) {
+              // Parse time but preserve original activity details
+              let timeValue = String(activity.time);
+              // Handle time ranges (15:00-17:00)
+              if (timeValue.includes('-')) {
+                timeValue = timeValue.split('-')[0]; // Take the start time
+              }
+              // Handle relative times
+              if (!timeValue.includes(':')) {
+                timeValue = expandRelativeTime(timeValue);
+              }
+              
+              // Get the activity type from searchParameters or use a default
+              const activityType = activity.searchParameters?.type || 
+                                  (activity.description ? activity.description.split(' ')[0] : undefined);
+              
+              parsed.fixedTimes.push({
+                location: location.name,
+                time: timeValue,
+                // Use the venue type from searchParameters as the activity type
+                type: activityType
+              });
+            }
+          }
+        }
+      }
+      
+      // Fallback to legacy format if activities array isn't present
+      if (parsed.fixedTimes.length === 0 && parsedResponse.fixedTimes && Array.isArray(parsedResponse.fixedTimes)) {
         for (const ft of parsedResponse.fixedTimes) {
           if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
             const location = findLocation(String(ft.location));
