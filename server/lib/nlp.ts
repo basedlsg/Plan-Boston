@@ -238,18 +238,26 @@ RETURN ONLY this JSON structure:
         destinations: parsedResponse.destinations || [],
         fixedTimes: [],
         preferences: {
-          type: parsedResponse.preferences?.type,
+          type: undefined, // Will extract from activities or searchParameters
           requirements: []
         }
       };
       
+      // Extract activity type from the first activity's searchParameters if available
+      if (parsedResponse.activities && 
+          Array.isArray(parsedResponse.activities) && 
+          parsedResponse.activities.length > 0 &&
+          parsedResponse.activities[0].searchParameters &&
+          parsedResponse.activities[0].searchParameters.type) {
+        parsed.preferences.type = parsedResponse.activities[0].searchParameters.type;
+      }
+      
       // Process enhanced preferences structure
       if (parsedResponse.preferences) {
-        // Initialize requirements array if it doesn't exist
-        if (!parsed.preferences.requirements) {
-          parsed.preferences.requirements = [];
-        }
+        // Ensure preferences.requirements is initialized as an array
+        parsed.preferences.requirements = parsed.preferences.requirements || [];
         
+        // Create a new array for collecting all requirements
         const requirementsList: string[] = [];
         
         // Handle venue qualities as requirements
