@@ -37,7 +37,8 @@ const locationSearcher = new Fuse(londonAreas, {
 });
 
 // Time period mappings with flexible ranges
-type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'night' | 'lunch' | 'dinner' | 'breakfast';
+type TimePeriod = 'morning' | 'afternoon' | 'evening' | 'night' | 'lunch' | 'dinner' | 'breakfast' | 
+                  'late evening' | 'happy hour' | 'after dinner' | 'after work' | 'tea time';
 type TimeRange = { start: string; end: string; default: string };
 
 const TIME_PERIODS: Record<TimePeriod, TimeRange> = {
@@ -47,7 +48,13 @@ const TIME_PERIODS: Record<TimePeriod, TimeRange> = {
   night: { start: '21:00', end: '23:59', default: '21:00' },
   lunch: { start: '12:00', end: '14:30', default: '12:30' },
   dinner: { start: '18:00', end: '21:00', default: '19:00' },
-  breakfast: { start: '07:00', end: '10:30', default: '09:00' }
+  breakfast: { start: '07:00', end: '10:30', default: '09:00' },
+  // Additional nightlife periods
+  'late evening': { start: '20:00', end: '23:59', default: '20:00' },
+  'happy hour': { start: '16:00', end: '19:00', default: '17:00' },
+  'after dinner': { start: '20:00', end: '23:59', default: '20:30' },
+  'after work': { start: '17:00', end: '19:00', default: '18:00' },
+  'tea time': { start: '15:00', end: '17:00', default: '16:00' }
 };
 
 // Duration expressions mapping (in minutes)
@@ -374,13 +381,34 @@ export function parseTimeExpression(expression: string): {
 
   const lowered = expression.toLowerCase().trim();
   
-  // Special handling for exact pattern "from 8pm to midnight"
+  // Special handling for midnight patterns
   if (lowered === "from 8pm to midnight") {
     return {
       time: "20:00",
       endTime: "00:00",
       isRange: true
     };
+  }
+  
+  // Handle "from X until midnight" pattern
+  if (lowered.includes("until midnight") || lowered.includes("till midnight")) {
+    const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
+    const match = lowered.match(timePattern);
+    
+    if (match) {
+      const [_, startHours, startMinutes = "00", startMeridian] = match;
+      let startHour = parseInt(startHours);
+      
+      // Handle meridian (am/pm)
+      if (startMeridian?.toLowerCase() === "pm" && startHour < 12) startHour += 12;
+      if (startMeridian?.toLowerCase() === "am" && startHour === 12) startHour = 0;
+      
+      return {
+        time: `${startHour.toString().padStart(2, '0')}:${startMinutes}`,
+        endTime: "00:00",
+        isRange: true
+      };
+    }
   }
 
   // Check for special time words
