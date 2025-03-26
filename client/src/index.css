@@ -520,6 +520,37 @@
     background: var(--brand-blue);
   }
   
+  /* Weather indicators */
+  .weather-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .weather-indicator-suitable {
+    background: rgba(16, 185, 129, 0.1);
+    color: rgb(6, 95, 70);
+  }
+  
+  .weather-indicator-unsuitable {
+    background: rgba(245, 158, 11, 0.1);
+    color: rgb(146, 64, 14);
+  }
+  
+  .weather-indicator-recommendation {
+    background: rgba(23, 185, 230, 0.1);
+    color: var(--brand-blue);
+  }
+  
   /* Mobile responsive adjustments */
   @media (max-width: 640px) {
     .pagination-dot.active {

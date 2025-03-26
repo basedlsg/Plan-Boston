@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle2, Cloud, CloudRain, Sun, Umbrella } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PlaceDetails } from '@shared/schema';
 
@@ -180,6 +180,39 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
                   {type.replace(/_/g, ' ')}
                 </span>
               ))}
+            </div>
+          )}
+          
+          {/* Weather indicators for outdoor venues */}
+          {currentVenue.isOutdoorVenue && (
+            <div className="mt-2 sm:mt-3 flex items-center">
+              {currentVenue.weatherSuitable === false ? (
+                <div className="weather-indicator weather-indicator-unsuitable">
+                  <CloudRain className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs font-medium">
+                    Weather may not be ideal for outdoor activity
+                  </span>
+                </div>
+              ) : (
+                <div className="weather-indicator weather-indicator-suitable">
+                  <Sun className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs font-medium">
+                    Good weather for outdoor activity
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Weather-aware recommendation badge */}
+          {currentVenue.weatherAwareRecommendation && (
+            <div className="mt-2 sm:mt-3 flex items-center">
+              <div className="weather-indicator weather-indicator-recommendation">
+                <Umbrella className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs font-medium">
+                  Weather-aware recommendation
+                </span>
+              </div>
             </div>
           )}
           

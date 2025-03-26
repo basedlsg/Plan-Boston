@@ -379,6 +379,10 @@ export async function registerRoutes(app: Express) {
                 const lunchTime = parseTimeString('14:00', baseDate);
                 console.log("Checking weather conditions for lunch venue...");
                 
+                // Determine if venue is outdoors based on its types
+                const isOutdoor = lunchPlace.types && isVenueOutdoor(lunchPlace.types);
+                lunchPlace.isOutdoorVenue = isOutdoor;
+                
                 // Check if it's an outdoor venue and if weather conditions are suitable
                 const { venue: recommendedVenue, weatherSuitable } = await getWeatherAwareVenue(
                   lunchPlace,
@@ -388,10 +392,22 @@ export async function registerRoutes(app: Express) {
                   lunchTime
                 );
                 
+                // Set weather information on both the suggested place and alternatives
+                lunchPlace.weatherSuitable = weatherSuitable;
+                
+                // If this venue has alternatives, mark them appropriately
+                if (venueResult.alternatives && venueResult.alternatives.length > 0) {
+                  venueResult.alternatives.forEach(alt => {
+                    alt.isOutdoorVenue = alt.types ? isVenueOutdoor(alt.types) : false;
+                    alt.weatherSuitable = weatherSuitable;
+                  });
+                }
+                
                 // If weather is not suitable and we have an indoor alternative
                 if (!weatherSuitable && recommendedVenue !== lunchPlace) {
                   console.log(`Weather not optimal for ${lunchPlace.name} - outdoor seating may be uncomfortable`);
                   console.log(`Suggesting alternative lunch venue: ${recommendedVenue.name}`);
+                  recommendedVenue.weatherAwareRecommendation = true;
                   lunchPlace = recommendedVenue;
                 }
               } catch (weatherError) {
@@ -676,6 +692,10 @@ export async function registerRoutes(app: Express) {
                   if (process.env.WEATHER_API_KEY && suggestedPlace.types) {
                     console.log("Checking weather conditions for outdoor activities...");
                     
+                    // Determine if venue is outdoors based on its types
+                    const isOutdoor = suggestedPlace.types && isVenueOutdoor(suggestedPlace.types);
+                    suggestedPlace.isOutdoorVenue = isOutdoor;
+                    
                     // Get weather-aware venue recommendation
                     const { venue: recommendedVenue, weatherSuitable } = await getWeatherAwareVenue(
                       suggestedPlace,
@@ -685,10 +705,22 @@ export async function registerRoutes(app: Express) {
                       activityTime
                     );
                     
+                    // Set weather information on both the suggested place and alternatives
+                    suggestedPlace.weatherSuitable = weatherSuitable;
+                    
+                    // If this venue has alternatives, mark them appropriately
+                    if (venueResult.alternatives && venueResult.alternatives.length > 0) {
+                      venueResult.alternatives.forEach(alt => {
+                        alt.isOutdoorVenue = alt.types ? isVenueOutdoor(alt.types) : false;
+                        alt.weatherSuitable = weatherSuitable;
+                      });
+                    }
+                    
                     // If conditions are not suitable for outdoor venues and we have an alternative
                     if (!weatherSuitable && recommendedVenue !== suggestedPlace) {
                       console.log(`Weather conditions not optimal for ${suggestedPlace.name} (outdoor venue)`);
                       console.log(`Suggesting indoor alternative: ${recommendedVenue.name}`);
+                      recommendedVenue.weatherAwareRecommendation = true;
                       suggestedPlace = recommendedVenue;
                     } else {
                       console.log(`Weather conditions suitable for outdoor activities at ${activityTime.toLocaleTimeString()}`);
