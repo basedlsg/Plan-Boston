@@ -567,6 +567,67 @@ export async function registerRoutes(app: Express) {
         }
       }
 
+      // Handle cases where preferences exist but no fixed times
+      if (itineraryPlaces.length === 0 && parsed.preferences?.type) {
+        console.log(`No fixed times but found preference for ${parsed.preferences.type}`);
+        
+        try {
+          // Use current time as default
+          const currentTime = new Date();
+          const formattedTime = `${currentTime.getHours()}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+          
+          // Set up search options based on preferences
+          const searchOptions: any = {};
+          
+          // Map preference type to search type
+          if (parsed.preferences.type.includes('coffee') || 
+              parsed.preferences.type.includes('cafe')) {
+            searchOptions.type = 'cafe';
+          } else if (parsed.preferences.type.includes('restaurant') || 
+                     parsed.preferences.type.includes('dinner')) {
+            searchOptions.type = 'restaurant';
+          } else {
+            // Generic search based on preference type
+            searchOptions.type = parsed.preferences.type;
+          }
+          
+          console.log(`Searching for ${searchOptions.type} near ${parsed.startLocation}`);
+          
+          // Add openNow and rating filters
+          searchOptions.openNow = true;
+          searchOptions.minRating = 4.0;
+          
+          // Perform the search
+          const venueResult = await searchPlace(parsed.startLocation, searchOptions);
+          
+          if (venueResult && venueResult.primary) {
+            console.log(`Found venue: ${venueResult.primary.name}`);
+            
+            const newPlace = await storage.createPlace({
+              placeId: venueResult.primary.place_id,
+              name: venueResult.primary.name,
+              address: venueResult.primary.formatted_address,
+              location: venueResult.primary.geometry.location,
+              details: venueResult.primary,
+              scheduledTime: currentTime.toISOString(),
+              alternatives: venueResult.alternatives || []
+            });
+            
+            // Add to itinerary
+            itineraryPlaces.push({
+              place: newPlace,
+              time: currentTime,
+              isFixed: false
+            });
+            
+            // Mark this place as scheduled
+            scheduledPlaces.add(venueResult.primary.place_id);
+          }
+        } catch (error) {
+          console.error(`Error finding venue for preference ${parsed.preferences.type}:`, error);
+        }
+      }
+      
       // Final chronological sort
       itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
