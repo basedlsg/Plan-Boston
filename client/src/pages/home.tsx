@@ -118,6 +118,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen py-8 px-4 relative">
+      {/* Fixed position glass effect container */}
+      <div className="main-glass-effect"></div>
       <div className="container mx-auto max-w-5xl">
         {/* Logo Section */}
         <div className="logo-container">
@@ -141,64 +143,70 @@ export default function Home() {
           {/* Form Container - With blue tint */}
           <div className="form-container mb-10">
             <div className="p-8">
-              <h2 className="text-2xl font-bold text-brand-black mb-6">Create Your Plan</h2>
+              <h2 className="text-2xl font-bold text-brand-black mb-6">What's The Plan?</h2>
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
                   className="space-y-6"
                 >
                   <div className="grid sm:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-brand-black">Date</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              className="placeholder-opacity-50"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
+                    <div className="datetime-card p-3">
+                      <FormField
+                        control={form.control}
+                        name="date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-brand-black">Date</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="date"
+                                {...field}
+                                className="placeholder-opacity-50"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
+                    <div className="datetime-card p-3">
+                      <FormField
+                        control={form.control}
+                        name="startTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-brand-black">Start Time</FormLabel>
+                            <FormControl>
+                              <TimeInput
+                                value={field.value || ""}
+                                onChange={field.onChange}
+                                className="w-full placeholder-opacity-50"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="datetime-card p-3">
                     <FormField
                       control={form.control}
-                      name="startTime"
+                      name="query"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-brand-black">Start Time</FormLabel>
+                          <FormLabel className="text-brand-black">Your Plans</FormLabel>
                           <FormControl>
-                            <TimeInput
-                              value={field.value || ""}
-                              onChange={field.onChange}
-                              className="w-full placeholder-opacity-50"
+                            <Textarea
+                              placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
+                              className="min-h-[120px] resize-y placeholder-opacity-50"
+                              {...field}
                             />
                           </FormControl>
                         </FormItem>
                       )}
                     />
                   </div>
-
-                  <FormField
-                    control={form.control}
-                    name="query"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-brand-black">Your Plans</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="e.g. Starting from Green Park, I need a quiet café to work until my dinner at Duck & Waffle at 8pm"
-                            className="min-h-[120px] resize-y placeholder-opacity-50"
-                            {...field}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
 
                   <Button
                     type="submit"

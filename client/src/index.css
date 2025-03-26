@@ -23,6 +23,21 @@
     overflow-x: hidden;
   }
   
+  /* Fixed position container for main background glass effect */
+  .main-glass-effect {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    background: rgba(255, 255, 255, 0.2); /* Semi-transparent white overlay for frosted look */
+    z-index: 0;
+    pointer-events: none;
+  }
+  
   /* Global glass effect on entire body */
   body::before {
     content: "";
@@ -133,6 +148,19 @@
     position: relative;
     z-index: 1;
     transform: translateZ(0);
+  }
+  
+  /* Date/time card glass effect with blue tint */
+  .datetime-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(23, 185, 230, 0.15));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(23, 185, 230, 0.15);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
   }
   
   /* Logo styling */
