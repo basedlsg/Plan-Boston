@@ -447,29 +447,33 @@ export async function registerRoutes(app: Express) {
           const searchOptions: any = {
             type: timeSlot.type,
             requireOpenNow: true,
-            keywords: timeSlot.keywords || [],
+            // Make a copy of the keywords array if available or use an empty array
+            keywords: Array.isArray(timeSlot.keywords) ? [...timeSlot.keywords] : [],
+            // Use explicitly provided searchTerm or fall back to type
             searchTerm: timeSlot.searchTerm || timeSlot.type,
-            minRating: timeSlot.minRating || 0
+            // Use explicitly provided minRating or default to 0
+            minRating: typeof timeSlot.minRating === 'number' ? timeSlot.minRating : 0
           };
           
-          // Add additional search context based on activity type
-          if (timeSlot.type) {
-            // Use the activity type as search term only if not explicitly provided
-            if (!timeSlot.searchTerm) {
-              searchOptions.searchTerm = timeSlot.type;
-            }
-            
-            // Add keywords based on common activity types
+          // Only add additional context if we don't have rich search parameters already
+          if ((!timeSlot.searchTerm || !timeSlot.keywords || timeSlot.keywords.length === 0) && timeSlot.type) {
+            // Add keywords based on common activity types only if not provided by Gemini
             if (timeSlot.type.includes('coffee') || timeSlot.type.includes('cafe')) {
               searchOptions.keywords.push('coffee', 'espresso', 'cafe');
               searchOptions.type = 'cafe';
+              // Use activity type as search term only if not explicitly provided
+              if (!timeSlot.searchTerm) {
+                searchOptions.searchTerm = 'coffee shop';
+              }
             } else if (timeSlot.type.includes('dinner') || 
                       timeSlot.type.includes('lunch') || 
                       timeSlot.type.includes('restaurant')) {
               searchOptions.keywords.push('restaurant', 'food', 'dining');
               searchOptions.type = 'restaurant';
               // Rating expectations are higher for restaurants
-              searchOptions.minRating = 4.0;
+              if (!timeSlot.minRating) {
+                searchOptions.minRating = 4.0;
+              }
             } else if (timeSlot.type.includes('museum') || timeSlot.type.includes('gallery')) {
               searchOptions.keywords.push('art', 'museum', 'exhibit');
               searchOptions.type = 'museum';
@@ -566,42 +570,83 @@ export async function registerRoutes(app: Express) {
                   keywords: []
                 };
                 
-                // Add activity name as search term for better context
-                searchOptions.searchTerm = activity;
+                // First check if this activity has a matching activity in the activities array
+                // This would allow us to leverage rich search parameters from Gemini if available
+                let matchingActivity;
                 
-                // Add keywords based on common activity types
-                if (activity.toLowerCase().includes('coffee') || 
-                    activity.toLowerCase().includes('cafe')) {
-                  searchOptions.type = 'cafe';
-                  searchOptions.keywords.push('coffee', 'espresso', 'cafe');
-                } else if (activity.toLowerCase().includes('dinner') || 
-                          activity.toLowerCase().includes('lunch') || 
-                          activity.toLowerCase().includes('restaurant') ||
-                          activity.toLowerCase().includes('food')) {
-                  searchOptions.type = 'restaurant';
-                  searchOptions.keywords.push('restaurant', 'food', 'dining');
-                } else if (activity.toLowerCase().includes('museum') || 
-                          activity.toLowerCase().includes('gallery') ||
-                          activity.toLowerCase().includes('exhibition')) {
-                  searchOptions.type = 'museum';
-                  searchOptions.keywords.push('art', 'museum', 'exhibit');
-                } else if (activity.toLowerCase().includes('park') || 
-                          activity.toLowerCase().includes('garden') ||
-                          activity.toLowerCase().includes('green')) {
-                  searchOptions.type = 'park';
-                  searchOptions.keywords.push('park', 'green space', 'outdoor');
-                } else if (activity.toLowerCase().includes('shop') || 
-                          activity.toLowerCase().includes('shopping') ||
-                          activity.toLowerCase().includes('mall')) {
-                  searchOptions.type = 'shopping_mall';
-                  searchOptions.keywords.push('shopping', 'shop', 'store');
-                } else if (activity.toLowerCase().includes('market')) {
-                  searchOptions.type = 'store';
-                  searchOptions.keywords.push('market', 'food market', 'shops');
-                } else {
-                  // Default to attraction
-                  searchOptions.type = 'tourist_attraction';
-                  searchOptions.keywords.push('attraction', 'sight', 'landmark');
+                if (parsed.activities && Array.isArray(parsed.activities) && parsed.activities.length > 0) {
+                  // Try to find a matching activity by similarity
+                  matchingActivity = parsed.activities.find(a => 
+                    a.description.toLowerCase().includes(activity.toLowerCase()) ||
+                    activity.toLowerCase().includes(a.description.toLowerCase())
+                  );
+                  
+                  // If we found a matching activity with search parameters, use them
+                  if (matchingActivity?.searchParameters) {
+                    console.log(`Found matching activity with rich search parameters: "${matchingActivity.description}"`);
+                    
+                    // Copy the rich search parameters
+                    searchOptions.type = matchingActivity.searchParameters.type;
+                    searchOptions.searchTerm = matchingActivity.searchParameters.searchTerm;
+                    searchOptions.keywords = Array.isArray(matchingActivity.searchParameters.keywords) ? 
+                                          [...matchingActivity.searchParameters.keywords] : 
+                                          [];
+                    searchOptions.minRating = typeof matchingActivity.searchParameters.minRating === 'number' ? 
+                                          matchingActivity.searchParameters.minRating : 
+                                          4.0;
+                                          
+                    // Also add any requirements as additional keywords
+                    if (Array.isArray(matchingActivity.requirements) && matchingActivity.requirements.length > 0) {
+                      searchOptions.keywords = [
+                        ...searchOptions.keywords,
+                        ...matchingActivity.requirements
+                      ];
+                    }
+                    
+                    console.log(`Using rich search parameters:`, JSON.stringify(searchOptions, null, 2));
+                  }
+                }
+                
+                // If no matching activity with rich parameters was found, use activity name as search term
+                // and infer other parameters from text
+                if (!matchingActivity?.searchParameters) {
+                  // Add activity name as search term for better context
+                  searchOptions.searchTerm = activity;
+                  
+                  // Add keywords based on common activity types
+                  if (activity.toLowerCase().includes('coffee') || 
+                      activity.toLowerCase().includes('cafe')) {
+                    searchOptions.type = 'cafe';
+                    searchOptions.keywords.push('coffee', 'espresso', 'cafe');
+                  } else if (activity.toLowerCase().includes('dinner') || 
+                            activity.toLowerCase().includes('lunch') || 
+                            activity.toLowerCase().includes('restaurant') ||
+                            activity.toLowerCase().includes('food')) {
+                    searchOptions.type = 'restaurant';
+                    searchOptions.keywords.push('restaurant', 'food', 'dining');
+                  } else if (activity.toLowerCase().includes('museum') || 
+                            activity.toLowerCase().includes('gallery') ||
+                            activity.toLowerCase().includes('exhibition')) {
+                    searchOptions.type = 'museum';
+                    searchOptions.keywords.push('art', 'museum', 'exhibit');
+                  } else if (activity.toLowerCase().includes('park') || 
+                            activity.toLowerCase().includes('garden') ||
+                            activity.toLowerCase().includes('green')) {
+                    searchOptions.type = 'park';
+                    searchOptions.keywords.push('park', 'green space', 'outdoor');
+                  } else if (activity.toLowerCase().includes('shop') || 
+                            activity.toLowerCase().includes('shopping') ||
+                            activity.toLowerCase().includes('mall')) {
+                    searchOptions.type = 'shopping_mall';
+                    searchOptions.keywords.push('shopping', 'shop', 'store');
+                  } else if (activity.toLowerCase().includes('market')) {
+                    searchOptions.type = 'store';
+                    searchOptions.keywords.push('market', 'food market', 'shops');
+                  } else {
+                    // Default to attraction
+                    searchOptions.type = 'tourist_attraction';
+                    searchOptions.keywords.push('attraction', 'sight', 'landmark');
+                  }
                 }
                 
                 // Use parsed requirements if available
