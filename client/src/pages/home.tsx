@@ -133,10 +133,10 @@ export default function Home() {
         
         {/* Tagline with helper text */}
         <div className="text-center mb-6 sm:mb-8">
-          <p className="text-white text-lg sm:text-xl font-semibold drop-shadow-md">
+          <p className="text-brand-black text-lg sm:text-xl font-semibold">
             Plan Your Perfect Day In Seconds
           </p>
-          <p className="text-white text-xs sm:text-sm mt-2 font-medium bg-white/10 inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm">
+          <p className="text-brand-black text-xs sm:text-sm mt-2 font-medium bg-white/30 inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full backdrop-blur-sm border border-brand-blue/10">
             Enter your activities, locations and times below
           </p>
         </div>
