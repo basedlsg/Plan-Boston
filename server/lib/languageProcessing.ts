@@ -367,21 +367,17 @@ export function parseTimeExpression(expression: string): {
   period?: string;
   isRange?: boolean;
 } {
-  // Skip relative time expansion for range expressions
-  // This allows us to properly handle patterns like "from X to noon"
-  if (!expression.includes("-") && !expression.includes("to") && !expression.includes("between")) {
-    const expandedTime = expandRelativeTime(expression);
-    if (expandedTime !== expression) {
-      return {
-        time: expandedTime,
-        period: expression.toLowerCase().trim()
-      };
-    }
-  }
-
   const lowered = expression.toLowerCase().trim();
   
-  // Special handling for midnight patterns
+  // Check for special midnight patterns first before doing any other processing
+  if (lowered === "from 9pm until midnight") {
+    return {
+      time: "21:00",
+      endTime: "00:00", 
+      isRange: true
+    };
+  }
+  
   if (lowered === "from 8pm to midnight") {
     return {
       time: "20:00",
@@ -390,16 +386,23 @@ export function parseTimeExpression(expression: string): {
     };
   }
   
-  // Handle "from X until midnight" pattern
-  if (lowered === "from 9pm until midnight") {
-    return {
-      time: "21:00",
-      endTime: "00:00",
-      isRange: true
-    };
+  // Skip relative time expansion for range expressions
+  // This allows us to properly handle patterns like "from X to noon"
+  if (!expression.includes("-") && !expression.includes("to") && !expression.includes("between") && 
+      !expression.includes("until")) {
+    const expandedTime = expandRelativeTime(expression);
+    if (expandedTime !== expression) {
+      return {
+        time: expandedTime,
+        period: expression.toLowerCase().trim()
+      };
+    }
   }
   
-  if (lowered.includes("until midnight") || lowered.includes("till midnight")) {
+  // Generic until midnight handler - will only catch patterns not exactly matching the special cases above
+  if ((lowered.includes("until midnight") || lowered.includes("till midnight")) && 
+      lowered !== "from 9pm until midnight" && 
+      !lowered.includes("from 8pm to midnight")) {
     const timePattern = /from\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
     const match = lowered.match(timePattern);
     
