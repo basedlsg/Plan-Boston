@@ -435,7 +435,10 @@ export async function registerRoutes(app: Express) {
           console.log("Processing fixed time appointment:", {
             location: timeSlot.location,
             time: timeSlot.time,
-            type: timeSlot.type
+            type: timeSlot.type,
+            searchTerm: timeSlot.searchTerm,
+            keywords: timeSlot.keywords,
+            minRating: timeSlot.minRating
           });
 
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
@@ -480,6 +483,7 @@ export async function registerRoutes(app: Express) {
           }
           
           // Search for the venue with enhanced parameters
+          console.log(`Search options for ${timeSlot.location}:`, JSON.stringify(searchOptions, null, 2));
           const venueResult = await searchPlace(timeSlot.location, searchOptions);
 
           if (!venueResult || !venueResult.primary) {
