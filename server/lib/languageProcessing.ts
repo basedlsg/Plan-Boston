@@ -141,10 +141,11 @@ export function parseActivity(description: string): ActivityContext {
   if (lowered.includes('cheap') || lowered.includes('budget')) requirements.push('budget');
   if (lowered.includes('outdoor') || lowered.includes('outside')) requirements.push('outdoor');
 
-  // Check for non-venue activities
+  // Check for non-venue activities - including vague ones
   const nonVenueActivities = [
     'meeting', 'arrive', 'depart', 'explore', 'walk', 
-    'travel', 'relax', 'break', 'rest'
+    'travel', 'relax', 'break', 'rest', 'something', 'activity',
+    'see', 'visit', 'do', 'experience', 'spend time'
   ];
   
   // Check for non-venue activities (but don't match on dinner/lunch as priority)

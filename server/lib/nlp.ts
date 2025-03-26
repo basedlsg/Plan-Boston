@@ -54,12 +54,14 @@ function extractLocations(text: string): LocationContext[] {
 function extractActivities(text: string): ActivityContext[] {
   const activities: ActivityContext[] = [];
 
-  // Split text into activity segments
-  const segments = text.split(/[,.]|\s+(?:then|and)\s+/);
+  // Split text into activity segments - expanded to catch more transition words
+  const segments = text.split(/[,.]|\s+(?:then|and|afterwards|later|after that|following that|next)\s+/);
 
   for (const segment of segments) {
-    // Look for activity indicators
-    if (segment.match(/(?:want|like|need|do|have|get)\s+(.+)/)) {
+    // Expanded regex to capture more vague activity indicators
+    if (segment.match(/(?:want|like|need|do|have|get|see|visit|explore|enjoy|experience|something|activity)\s+(.+)/) ||
+        segment.match(/(?:around|at|by|from|until|before|after)\s+\d{1,2}(?::\d{2})?(?:\s*[ap]m)?/) || // Time indicators
+        segment.match(/(?:in the|during the|for)\s+(?:morning|afternoon|evening|night)/)) { // Period indicators
       const activity = parseActivity(segment);
       activities.push(activity);
     }
@@ -85,9 +87,11 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
 
 Extract the core elements regardless of phrasing:
 1. LOCATIONS: Any mentioned place in London (neighborhoods, landmarks, streets, stations)
-2. ACTIVITIES: What they want to do (dining, sightseeing, etc.)
-3. TIMES: When activities should occur (convert to 24-hour format)
+2. ACTIVITIES: ALL things they want to do (dining, sightseeing, etc.) - INCLUDE vague activities like "do something nice" or "see the area"
+3. TIMES: ALL time references (convert to 24-hour format) - capture EVERY time mentioned (morning, afternoon, specific times)
 4. PREFERENCES: Desired qualities (quiet, fancy, cheap, etc.)
+
+Be EXHAUSTIVE - capture EVERY activity with its corresponding time and location.
 
 Return JSON only, no explanations, in this exact format:
 {
@@ -97,7 +101,7 @@ Return JSON only, no explanations, in this exact format:
   "preferences": {"type"?: string, "requirements"?: string[]}
 }`
       }],
-      system: "Extract starting location, destinations, times, and preferences from London itinerary requests. Return as JSON."
+      system: "Extract ALL activities, times, and locations from London itinerary requests. Be comprehensive and thorough. Return as JSON."
     });
 
     // Add detailed logging to debug the response structure
@@ -276,6 +280,106 @@ Return JSON only, no explanations, in this exact format:
     const uniqueFixedTimes = uniqueStringified.map(item => JSON.parse(item) as FixedTimeEntry);
     
     parsed.fixedTimes = uniqueFixedTimes;
+    
+    // Post-processing step: Ensure all time references have corresponding activities
+    // Extract all time references from the query
+    const timeReferenceRegexes = [
+      /\b(around|at|by|from|until|before|after)\s+(\d{1,2})(?:[:.]?(\d{2}))?\s*([ap]\.?m\.?)?/gi,
+      /\b(morning|afternoon|evening|night|noon|midnight)\b/gi,
+      /\b(breakfast|brunch|lunch|dinner|tea)\s+time\b/gi
+    ];
+    
+    const timeReferences: { time: string, originalText: string }[] = [];
+    
+    // Find all time references
+    for (const regex of timeReferenceRegexes) {
+      let match;
+      while ((match = regex.exec(query)) !== null) {
+        const fullMatch = match[0];
+        let standardizedTime = '';
+        
+        // Process numeric times
+        if (match[2]) {
+          const hour = parseInt(match[2]);
+          const minute = match[3] ? parseInt(match[3]) : 0;
+          const meridian = match[4]?.toLowerCase().includes('p') ? 'pm' : 
+                          match[4]?.toLowerCase().includes('a') ? 'am' : null;
+          
+          let hour24 = hour;
+          if (meridian === 'pm' && hour < 12) hour24 += 12;
+          if (meridian === 'am' && hour === 12) hour24 = 0;
+          
+          standardizedTime = `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        } else if (match[1]) {
+          // Handle time periods
+          standardizedTime = expandRelativeTime(match[1]);
+        }
+        
+        if (standardizedTime) {
+          timeReferences.push({
+            time: standardizedTime,
+            originalText: fullMatch
+          });
+        }
+      }
+    }
+    
+    // Add placeholder activities for any time reference without a matching activity
+    for (const timeRef of timeReferences) {
+      const hasMatchingActivity = parsed.fixedTimes.some(ft => 
+        ft.time === timeRef.time
+      );
+      
+      if (!hasMatchingActivity) {
+        // Find nearest location mentioned near this time reference
+        const locationBefore = query.substring(0, query.indexOf(timeRef.originalText))
+          .match(/\b(in|at|near|by)\s+([A-Z][a-zA-Z\s]+)\b/i);
+        
+        const locationAfter = query.substring(query.indexOf(timeRef.originalText))
+          .match(/\b(in|at|near|by)\s+([A-Z][a-zA-Z\s]+)\b/i);
+        
+        let locationName = parsed.startLocation;
+        
+        if (locationBefore && locationBefore[2]) {
+          const loc = findLocation(locationBefore[2]);
+          if (loc) locationName = loc.name;
+        } else if (locationAfter && locationAfter[2]) {
+          const loc = findLocation(locationAfter[2]);
+          if (loc) locationName = loc.name;
+        }
+        
+        // Guess activity type based on context
+        const sentenceWithTime = query.substring(
+          Math.max(0, query.indexOf(timeRef.originalText) - 50),
+          Math.min(query.length, query.indexOf(timeRef.originalText) + 50)
+        );
+        
+        let activityType = 'activity'; // Default
+        
+        // Try to infer meaningful activity type from context
+        if (sentenceWithTime.includes('eat') || sentenceWithTime.includes('food') || 
+            sentenceWithTime.includes('restaurant')) {
+          activityType = 'restaurant';
+        } else if (sentenceWithTime.includes('coffee') || sentenceWithTime.includes('cafe')) {
+          activityType = 'coffee';
+        } else if (sentenceWithTime.includes('museum') || sentenceWithTime.includes('gallery')) {
+          activityType = 'museum';
+        } else if (sentenceWithTime.includes('park') || sentenceWithTime.includes('garden')) {
+          activityType = 'park';
+        } else if (sentenceWithTime.includes('shopping') || sentenceWithTime.includes('shop')) {
+          activityType = 'shopping';
+        } else if (sentenceWithTime.includes('something') || sentenceWithTime.includes('activity')) {
+          activityType = 'activity';
+        }
+        
+        // Add a new fixed time entry for this previously uncaptured activity
+        parsed.fixedTimes.push({
+          location: locationName || 'Central London',
+          time: timeRef.time,
+          type: activityType
+        });
+      }
+    }
 
     // Intelligently assign a starting location if none was provided
     if (!parsed.startLocation) {
