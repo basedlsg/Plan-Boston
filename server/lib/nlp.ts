@@ -343,15 +343,29 @@ type FixedTimeEntry = {
               const activityType = activity.searchParameters?.type || 
                                   (activity.description ? activity.description.split(' ')[0] : undefined);
               
+              // Debug log to track search parameters before adding to fixedTimes
+              console.log(`Adding activity with search parameters:`, {
+                location: location.name,
+                activityDescription: activity.description,
+                searchTerm: activity.searchParameters?.searchTerm,
+                type: activityType,
+                keywords: activity.searchParameters?.keywords,
+                minRating: activity.searchParameters?.minRating
+              });
+              
               parsed.fixedTimes.push({
                 location: location.name,
                 time: timeValue,
                 // Use the venue type from searchParameters as the activity type
                 type: activityType,
-                // Store the rich search parameters
+                // Store the rich search parameters - ensure they're copied correctly
                 searchTerm: activity.searchParameters?.searchTerm,
-                keywords: activity.searchParameters?.keywords,
-                minRating: activity.searchParameters?.minRating
+                keywords: Array.isArray(activity.searchParameters?.keywords) ? 
+                         [...activity.searchParameters.keywords] : // Make a copy of the array
+                         undefined,
+                minRating: typeof activity.searchParameters?.minRating === 'number' ? 
+                         activity.searchParameters.minRating : 
+                         undefined
               });
             }
           }
@@ -375,11 +389,22 @@ type FixedTimeEntry = {
                 timeValue = expandRelativeTime(timeValue);
               }
               
+              // Add a debug log for the legacy format too
+              console.log(`Adding legacy format activity:`, {
+                location: location.name,
+                time: timeValue,
+                type: ft.type
+              });
+
               parsed.fixedTimes.push({
                 location: location.name,
                 time: timeValue,
                 // Preserve the original activity type from the response
-                type: ft.type ? String(ft.type) : undefined
+                type: ft.type ? String(ft.type) : undefined,
+                // Include any search parameters if available
+                searchTerm: ft.searchTerm ? String(ft.searchTerm) : undefined,
+                keywords: Array.isArray(ft.keywords) ? [...ft.keywords] : undefined,
+                minRating: typeof ft.minRating === 'number' ? ft.minRating : undefined
               });
             }
           }
