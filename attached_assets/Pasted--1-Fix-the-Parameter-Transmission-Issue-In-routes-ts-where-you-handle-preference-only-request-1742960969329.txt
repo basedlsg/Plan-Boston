@@ -1,0 +1,83 @@
+
+
+
+
+1. Fix the Parameter Transmission Issue
+// In routes.ts where you handle preference-only requests:
+
+// Current problematic code (simplified):
+if (parsed.fixedTimes.length === 0 && parsed.preferences?.type) {
+  console.log(`No fixed times but found preference for ${parsed.preferences.type}`);
+  
+  searchOptions = {
+    type: parsed.preferences.type,
+    requireOpenNow: true,
+    minRating: 4.0,
+    searchTerm: parsed.preferences.type // THIS IS WRONG - using a generic value
+  };
+}
+
+// INSTEAD, preserve Gemini's rich search parameters:
+if (parsed.activities && parsed.activities.length > 0) {
+  const activity = parsed.activities[0]; // Get the first activity
+  
+  searchOptions = {
+    type: activity.searchParameters.type,
+    keywords: activity.searchParameters.keywords,
+    requireOpenNow: activity.searchParameters.requireOpenNow,
+    minRating: activity.searchParameters.minRating,
+    searchTerm: activity.searchParameters.searchTerm // PRESERVE the specific search term
+  };
+  
+  console.log(`Searching for ${activity.description} in ${parsed.startLocation} with params:`, searchOptions);
+}
+2. Enhanced Search with Review Content Matching
+For specific food items like focaccia, we can enhance search by checking reviews:
+// Add this to googlePlaces.ts to help with food-specific searches
+
+async function checkPlaceReviewsForKeywords(placeId: string, keywords: string[]): Promise<boolean> {
+  try {
+    // Get detailed place information including reviews
+    const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${placeId}&fields=reviews&key=${GOOGLE_PLACES_API_KEY}`;
+    const detailsRes = await fetch(detailsUrl);
+    const detailsData = await detailsRes.json();
+    
+    if (detailsData.status !== "OK" || !detailsData.result?.reviews) {
+      return false;
+    }
+    
+    // Check if any keywords appear in review text
+    const reviews = detailsData.result.reviews;
+    return reviews.some((review: any) => {
+      const reviewText = review.text.toLowerCase();
+      return keywords.some(keyword => reviewText.includes(keyword.toLowerCase()));
+    });
+  } catch (error) {
+    console.error("Error checking reviews:", error);
+    return false;
+  }
+}
+
+// Then in your search processing, prioritize places where keywords match reviews
+const foodKeywords = ['focaccia', 'sandwich', 'italian'];
+const resultsWithReviewMatches = [];
+
+// Process each result
+for (const result of nearbyData.results.slice(0, 10)) { // Check top 10 results
+  const hasRelevantReviews = await checkPlaceReviewsForKeywords(result.place_id, foodKeywords);
+  if (hasRelevantReviews) {
+    resultsWithReviewMatches.push(result);
+  }
+}
+
+// Prioritize places with matching reviews
+if (resultsWithReviewMatches.length > 0) {
+  nearbyData.results = resultsWithReviewMatches.concat(
+    nearbyData.results.filter(r => !resultsWithReviewMatches.includes(r))
+  );
+}
+This approach will:
+1. Fix the parameter loss issue by preserving Gemini's rich search parameters
+2. Add an optional enhancement that checks reviews for specific food items
+3. Prioritize venues whose reviews mention the requested food items
+Google Places doesn't provide direct menu access, but checking reviews offers a good proxy since people often mention specific dishes they enjoyed.

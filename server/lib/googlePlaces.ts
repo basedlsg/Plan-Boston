@@ -13,6 +13,7 @@ interface SearchOptions {
   searchTerm?: string;
   keywords?: string[];
   requireOpenNow?: boolean;
+  checkReviewsForKeywords?: boolean; // Whether to perform the more intensive review check
 }
 
 // Helper function to calculate distance between two points using Haversine formula
@@ -30,8 +31,13 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // Helper function to fetch place details
-async function fetchPlaceDetails(placeId: string): Promise<any> {
-  const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${placeId}&fields=name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types&key=${GOOGLE_PLACES_API_KEY}`;
+async function fetchPlaceDetails(placeId: string, includeReviews: boolean = false): Promise<any> {
+  // Add reviews field if requested
+  const fields = includeReviews 
+    ? "name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types,reviews" 
+    : "name,formatted_address,geometry,opening_hours,business_status,rating,price_level,types";
+  
+  const detailsUrl = `${PLACES_API_BASE}/details/json?place_id=${placeId}&fields=${fields}&key=${GOOGLE_PLACES_API_KEY}`;
   const detailsRes = await fetch(detailsUrl);
   const detailsData = await detailsRes.json();
   
@@ -40,6 +46,35 @@ async function fetchPlaceDetails(placeId: string): Promise<any> {
   }
   
   return detailsData.result;
+}
+
+/**
+ * Check if any of the place's reviews mention specific keywords
+ * Useful for food-specific searches like "focaccia sandwich"
+ * 
+ * @param placeId Google Places ID
+ * @param keywords List of keywords to look for in reviews
+ * @returns Boolean indicating if any keywords were found in reviews
+ */
+async function checkPlaceReviewsForKeywords(placeId: string, keywords: string[]): Promise<boolean> {
+  try {
+    // Get detailed place information including reviews
+    const details = await fetchPlaceDetails(placeId, true);
+    
+    if (!details?.reviews || !Array.isArray(details.reviews)) {
+      return false;
+    }
+    
+    // Check if any keywords appear in review text
+    return details.reviews.some((review: any) => {
+      if (!review.text) return false;
+      const reviewText = review.text.toLowerCase();
+      return keywords.some(keyword => reviewText.includes(keyword.toLowerCase()));
+    });
+  } catch (error) {
+    console.error("Error checking reviews:", error);
+    return false;
+  }
 }
 
 export async function searchPlace(
@@ -188,6 +223,37 @@ export async function searchPlace(
         );
         if (qualifiedResults.length > 0) {
           results = qualifiedResults;
+        }
+      }
+      
+      // Check reviews for specific food items or keywords if requested
+      if (options.checkReviewsForKeywords && keywordsList.length > 0) {
+        try {
+          console.log(`Checking reviews for specific keywords: ${keywordsList.join(', ')}`);
+          
+          // Look through the top 10 results for keyword matches in reviews
+          const reviewPromises = results.slice(0, 10).map(async (result) => {
+            const hasKeywords = await checkPlaceReviewsForKeywords(result.place_id, keywordsList);
+            return { result, hasKeywords };
+          });
+          
+          const reviewResults = await Promise.all(reviewPromises);
+          const matchingResults = reviewResults.filter(item => item.hasKeywords).map(item => item.result);
+          
+          // If we found venues with matching reviews, prioritize these results
+          if (matchingResults.length > 0) {
+            console.log(`Found ${matchingResults.length} venues with reviews mentioning keywords`);
+            
+            // Preserve other results but put the matching ones first
+            const nonMatchingResults = results.filter(result => 
+              !matchingResults.some(match => match.place_id === result.place_id)
+            );
+            
+            results = [...matchingResults, ...nonMatchingResults];
+          }
+        } catch (error) {
+          console.error("Error during review checking:", error);
+          // Continue with regular search if review checking fails
         }
       }
       

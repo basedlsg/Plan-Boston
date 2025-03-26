@@ -671,59 +671,114 @@ export async function registerRoutes(app: Express) {
         try {
           // Use current time as default
           const currentTime = new Date();
-          const formattedTime = `${currentTime.getHours()}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
           
-          // Set up search options based on preferences
-          const searchOptions: any = {
-            keywords: [],
-            requireOpenNow: true,
-            minRating: 4.0
-          };
+          // First check if we have direct activity search parameters from Gemini
+          let searchOptions: any = { keywords: [], requireOpenNow: true, minRating: 4.0 };
           
-          // Add requirements as keywords for better place matching
-          if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
-            searchOptions.keywords = [...parsed.preferences.requirements];
-          }
+          // Check if we have an activity with search parameters from the NLP parsing
+          const hasRichParams = Array.isArray(parsed.activities) && 
+                              parsed.activities.length > 0 && 
+                              parsed.activities[0].searchParameters;
           
-          // Map preference type to search type
-          if (parsed.preferences.type) {
-            if (parsed.preferences.type.includes('coffee') || 
-                parsed.preferences.type.includes('cafe')) {
-              searchOptions.type = 'cafe';
-              searchOptions.searchTerm = 'coffee shop';
-            } else if (parsed.preferences.type.includes('restaurant') || 
-                      parsed.preferences.type.includes('dinner') ||
-                      parsed.preferences.type.includes('lunch')) {
-              searchOptions.type = 'restaurant';
-              searchOptions.searchTerm = parsed.preferences.type;
-            } else if (parsed.preferences.type.includes('bar') || 
-                      parsed.preferences.type.includes('pub') ||
-                      parsed.preferences.type.includes('drinks')) {
-              searchOptions.type = 'bar';
-              searchOptions.searchTerm = parsed.preferences.type;
-            } else {
-              // Generic search based on preference type
-              searchOptions.type = parsed.preferences.type;
-              // Also use it as a search term
-              searchOptions.searchTerm = parsed.preferences.type;
-            }
-          } else if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
-            // Try to determine type from requirements
-            const requirements = parsed.preferences.requirements.map(r => r.toLowerCase());
+          if (hasRichParams) {
+            // Use the rich search parameters directly from Gemini's activity details
+            const activity = parsed.activities[0];
+            console.log(`Using rich search parameters from Gemini for "${activity.description}"`);
             
-            if (requirements.some(r => r.includes('coffee') || r.includes('cafe') || r.includes('quiet'))) {
-              searchOptions.type = 'cafe';
-              searchOptions.searchTerm = 'coffee shop';
-            } else if (requirements.some(r => r.includes('restaurant') || r.includes('dinner') || r.includes('food'))) {
-              searchOptions.type = 'restaurant';
-              searchOptions.searchTerm = 'restaurant';
-            } else if (requirements.some(r => r.includes('bar') || r.includes('pub') || r.includes('drinks'))) {
-              searchOptions.type = 'bar';
-              searchOptions.searchTerm = 'bar';
-            } else {
-              // Default to a generic activity
-              searchOptions.type = 'tourist_attraction';
-              searchOptions.searchTerm = 'attraction';
+            searchOptions = {
+              type: activity.searchParameters.type,
+              keywords: Array.isArray(activity.searchParameters.keywords) ? 
+                       activity.searchParameters.keywords : [],
+              requireOpenNow: !!activity.searchParameters.requireOpenNow,
+              minRating: activity.searchParameters.minRating || 4.0,
+              searchTerm: activity.searchParameters.searchTerm
+            };
+            
+            // Add any requirements as additional keywords
+            if (Array.isArray(activity.requirements) && activity.requirements.length > 0) {
+              searchOptions.keywords = [
+                ...searchOptions.keywords,
+                ...activity.requirements
+              ];
+            }
+            
+            // Enable review checking for specific food-related searches
+            const isFoodSpecificSearch = activity.description.toLowerCase().includes('sandwich') || 
+                                        activity.description.toLowerCase().includes('pizza') ||
+                                        activity.description.toLowerCase().includes('pasta') ||
+                                        activity.description.toLowerCase().includes('burger') ||
+                                        activity.description.toLowerCase().includes('focaccia') ||
+                                        activity.description.toLowerCase().includes('sushi');
+            
+            if (isFoodSpecificSearch) {
+              console.log(`Enabling review checking for specific food search: ${activity.description}`);
+              searchOptions.checkReviewsForKeywords = true;
+              
+              // Extract food item keywords from the description
+              const foodKeywords = activity.description
+                .toLowerCase()
+                .split(' ')
+                .filter(word => 
+                  word.length > 3 && 
+                  !['with', 'and', 'the', 'for', 'near', 'good', 'nice', 'best'].includes(word)
+                );
+              
+              if (foodKeywords.length > 0) {
+                // Add specific food keywords at the beginning of the keywords list for higher priority
+                searchOptions.keywords = [
+                  ...foodKeywords,
+                  ...searchOptions.keywords
+                ];
+              }
+            }
+          } else {
+            // Fall back to regular preference-based search parameters
+            
+            // Add requirements as keywords for better place matching
+            if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
+              searchOptions.keywords = [...parsed.preferences.requirements];
+            }
+            
+            // Map preference type to search type
+            if (parsed.preferences.type) {
+              if (parsed.preferences.type.includes('coffee') || 
+                  parsed.preferences.type.includes('cafe')) {
+                searchOptions.type = 'cafe';
+                searchOptions.searchTerm = 'coffee shop';
+              } else if (parsed.preferences.type.includes('restaurant') || 
+                        parsed.preferences.type.includes('dinner') ||
+                        parsed.preferences.type.includes('lunch')) {
+                searchOptions.type = 'restaurant';
+                searchOptions.searchTerm = parsed.preferences.type;
+              } else if (parsed.preferences.type.includes('bar') || 
+                        parsed.preferences.type.includes('pub') ||
+                        parsed.preferences.type.includes('drinks')) {
+                searchOptions.type = 'bar';
+                searchOptions.searchTerm = parsed.preferences.type;
+              } else {
+                // Generic search based on preference type
+                searchOptions.type = parsed.preferences.type;
+                // Also use it as a search term
+                searchOptions.searchTerm = parsed.preferences.type;
+              }
+            } else if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
+              // Try to determine type from requirements
+              const requirements = parsed.preferences.requirements.map(r => r.toLowerCase());
+              
+              if (requirements.some(r => r.includes('coffee') || r.includes('cafe') || r.includes('quiet'))) {
+                searchOptions.type = 'cafe';
+                searchOptions.searchTerm = 'coffee shop';
+              } else if (requirements.some(r => r.includes('restaurant') || r.includes('dinner') || r.includes('food'))) {
+                searchOptions.type = 'restaurant';
+                searchOptions.searchTerm = 'restaurant';
+              } else if (requirements.some(r => r.includes('bar') || r.includes('pub') || r.includes('drinks'))) {
+                searchOptions.type = 'bar';
+                searchOptions.searchTerm = 'bar';
+              } else {
+                // Default to a generic activity
+                searchOptions.type = 'tourist_attraction';
+                searchOptions.searchTerm = 'attraction';
+              }
             }
           }
           
