@@ -64,7 +64,7 @@ function testGapFilling() {
     console.log(`\nAt ${test.time} in ${test.location}:`);
     const suggestions = findInterestingActivities(test.location, 1.5, test.time, {});
     if (suggestions.length > 0) {
-      suggestions.forEach((suggestion, i) => {
+      suggestions.forEach((suggestion: string, i: number) => {
         console.log(`  ${i+1}. ${suggestion}`);
       });
     } else {
@@ -90,7 +90,7 @@ function testGapFilling() {
     );
     
     if (suggestions.length > 0) {
-      suggestions.forEach((suggestion, i) => {
+      suggestions.forEach((suggestion: string, i: number) => {
         console.log(`  ${i+1}. ${suggestion}`);
       });
     } else {
@@ -116,7 +116,7 @@ function testGapFilling() {
     );
     
     if (suggestions.length > 0) {
-      suggestions.forEach((suggestion, i) => {
+      suggestions.forEach((suggestion: string, i: number) => {
         console.log(`  ${i+1}. ${suggestion}`);
       });
     } else {
