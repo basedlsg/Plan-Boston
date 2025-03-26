@@ -38,7 +38,7 @@
     pointer-events: none;
   }
 
-  h1, h2, h3, .logo-font {
+  h1, h2, h3, .logo-font, .font-logo {
     font-family: 'Rozha One', serif;
   }
   
@@ -148,10 +148,14 @@
   }
   
   .logo {
-    width: 180px;
-    height: auto;
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+    font-size: 3.5rem;
+    letter-spacing: 0.12em;
+    color: var(--brand-black);
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     transition: all 0.3s ease;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
   }
   
   /* Venue swiper glass effect */

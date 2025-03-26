@@ -121,12 +121,12 @@ export default function Home() {
       <div className="container mx-auto max-w-5xl">
         {/* Logo Section */}
         <div className="logo-container">
-          <img 
-            src="/plan-logo.png" 
-            alt="Plan" 
-            className="logo"
+          <h1 
+            className="logo font-logo text-4xl font-bold text-brand-black tracking-wide"
             style={{ filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.2))" }}
-          />
+          >
+            PLAN
+          </h1>
         </div>
         
         {/* Tagline */}
