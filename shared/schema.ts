@@ -55,6 +55,10 @@ export type PlaceDetails = {
   activityDescription?: string;
   requirements?: string[];
   searchTermUsed?: string;
+  // Weather-related information
+  isOutdoorVenue?: boolean;
+  weatherSuitable?: boolean;
+  weatherAwareRecommendation?: boolean;
 };
 
 export type VenueSearchResult = {
