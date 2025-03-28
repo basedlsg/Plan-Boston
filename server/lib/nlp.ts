@@ -13,6 +13,7 @@ import {
   ActivityContext 
 } from "./languageProcessing";
 import { getApiKey, isFeatureEnabled, validateApiKey } from "../config";
+import processWithGemini from './geminiProcessor';
 
 // Configure Gemini model with safety settings
 let genAI: GoogleGenerativeAI | null = null;
@@ -71,6 +72,17 @@ if (isFeatureEnabled("AI_PROCESSING")) {
 
 // Using the imported StructuredRequest interface from shared/types.ts
 
+// Define fixed time entry type for use in parsing
+type FixedTimeEntry = {
+  location: string;
+  time: string;
+  type?: string;
+  // Additional search parameters for richer venue search
+  searchTerm?: string;
+  keywords?: string[];
+  minRating?: number;
+};
+
 // Extract locations with confidence scores
 function extractLocations(text: string): LocationContext[] {
   const locations: LocationContext[] = [];
@@ -119,8 +131,7 @@ function extractActivities(text: string): ActivityContext[] {
  * @returns StructuredRequest object with parsed locations, activities and preferences
  */
 export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
-  // Import the new Gemini processor
-  const processWithGemini = require('./geminiProcessor').processWithGemini;
+  // We've already imported processWithGemini from './geminiProcessor'
   
   // Initialize basic fallback structure with direct extraction methods
   const extractedLocations = extractLocations(query);
@@ -410,15 +421,7 @@ RETURN ONLY this JSON structure:
         
         // Map activities to fixed times with enhanced search parameters
         if (Array.isArray(parsedResponse.activities) && parsedResponse.activities.length > 0) {
-          type FixedTimeEntry = {
-            location: string;
-            time: string;
-            type?: string;
-            // Additional search parameters for richer venue search
-            searchTerm?: string;
-            keywords?: string[];
-            minRating?: number;
-          };
+          // Using the FixedTimeEntry type defined at the top of the file
           
           parsed.fixedTimes = parsedResponse.activities.map((activity: any): FixedTimeEntry => {
             // Convert time formats and handle special cases
@@ -460,7 +463,7 @@ RETURN ONLY this JSON structure:
           // Ensure preferences is an array if requirements exist
           if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
             // Deduplicate the requirements array
-            parsed.preferences.requirements = [...new Set(parsed.preferences.requirements)];
+            parsed.preferences.requirements = Array.from(new Set(parsed.preferences.requirements));
           }
         } else {
           // If no activities were extracted, fallback to our basic extraction
