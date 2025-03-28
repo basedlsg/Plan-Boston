@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { AccessibilityToggle } from '@/components/AccessibilityToggle';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,8 +69,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white text-foreground">
-      <div className="fixed top-4 right-4 flex gap-2">
-        <AccessibilityToggle />
+      <div className="fixed top-4 right-4">
         <ThemeToggle />
       </div>
       
