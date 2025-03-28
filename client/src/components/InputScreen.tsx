@@ -20,6 +20,12 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
     return `${year}-${month}-${day}`;
   }
 
+  // Format date for display (DD Month YYYY)
+  function formatDateForDisplay(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
   // Format time for time input (HH:MM)
   function formatTimeForInput(date: Date): string {
     const hours = String(date.getHours()).padStart(2, '0');
@@ -39,53 +45,36 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
     onSubmit({ date, time, plans });
   };
 
+  // Mobile-first design based on the mockup
   return (
-    <div className="input-container" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '2rem',
-      maxWidth: '800px',
-      margin: '2rem auto',
-      position: 'relative',
-      minHeight: 'calc(100vh - 4rem)'
+    <div className="bg-white flex flex-col items-center min-h-screen w-full" style={{
+      fontFamily: "'Poppins', sans-serif"
     }}>
-      <Logo className="mb-8" />
-      
-      <div className="form-container" style={{
-        background: 'linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08))',
-        backdropFilter: 'blur(15px)',
-        WebkitBackdropFilter: 'blur(15px)',
-        borderRadius: '12px',
-        boxShadow: '0 3px 15px rgba(0, 0, 0, 0.03)',
-        border: '1px solid rgba(28, 28, 28, 0.1)',
-        padding: '2rem',
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden'
-      }}>
-        <p className="instruction-text" style={{
-          fontFamily: "'Poppins', sans-serif",
-          color: 'var(--brand-black)',
-          textAlign: 'center',
-          marginBottom: '2rem',
-          fontSize: '1.1rem',
-          fontWeight: 600
+      <div className="w-full max-w-md px-4 py-6 flex flex-col items-center">
+        {/* Logo and Title */}
+        <div className="mb-2">
+          <Logo className="w-24 h-24" />
+        </div>
+        <h1 className="text-4xl font-bold mb-2" style={{ 
+          fontFamily: "'Rozha One', serif",
+          color: 'var(--color-text-black)'
         }}>
-          Enter your activities, locations and times below, we'll create a London day plan for you.
+          Plan
+        </h1>
+        
+        {/* Instruction Text */}
+        <p className="text-center mb-6 text-lg" style={{ color: '#17B9E6' }}>
+          Enter your activities, locations and<br />
+          times below, we'll create a day plan for you.
         </p>
 
-        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="w-full">
+          {/* Date Field */}
+          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <label 
               htmlFor="date"
-              style={{
-                fontFamily: "'Poppins', sans-serif",
-                fontWeight: 600,
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: 'var(--brand-black)'
-              }}
+              className="block mb-1 font-semibold text-gray-700"
             >
               Date
             </label>
@@ -94,30 +83,19 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="input-box"
-              style={{ 
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(23, 185, 230, 0.1)',
-                background: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(15px)',
-                WebkitBackdropFilter: 'blur(15px)'
-              }}
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg"
               required
             />
+            <div className="text-gray-500 pl-2">
+              {formatDateForDisplay(date)}
+            </div>
           </div>
 
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          {/* Time Field */}
+          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <label
               htmlFor="time"
-              style={{
-                fontFamily: "'Poppins', sans-serif",
-                fontWeight: 600,
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: 'var(--brand-black)'
-              }}
+              className="block mb-1 font-semibold text-gray-700"
             >
               Time
             </label>
@@ -126,30 +104,16 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="input-box"
-              style={{ 
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(23, 185, 230, 0.1)',
-                background: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(15px)',
-                WebkitBackdropFilter: 'blur(15px)'
-              }}
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg"
               required
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '2rem' }}>
+          {/* Plans Field */}
+          <div className="mb-8 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <label
               htmlFor="plans"
-              style={{
-                fontFamily: "'Poppins', sans-serif",
-                fontWeight: 600,
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: 'var(--brand-black)'
-              }}
+              className="block mb-1 font-semibold text-gray-700"
             >
               Your Plans
             </label>
@@ -157,60 +121,40 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="plans"
               value={plans}
               onChange={(e) => setPlans(e.target.value)}
-              className="input-box"
-              style={{
-                width: '100%',
-                minHeight: '120px',
-                resize: 'vertical',
-                padding: '0.75rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(23, 185, 230, 0.1)',
-                background: 'rgba(255, 255, 255, 0.7)',
-                backdropFilter: 'blur(15px)',
-                WebkitBackdropFilter: 'blur(15px)'
-              }}
-              placeholder="e.g. 12pm lunch in Mayfair, then grab a coffee in Covent Garden and have a walk along the Thames"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg min-h-[100px]"
+              placeholder="e.g. 12pm lunch in Mayfair, then grab a coffee and have a walk"
               required
             />
           </div>
 
+          {/* Submit Button */}
           <button
             type="submit"
-            className="create-plan-btn"
+            className="w-full py-4 rounded-2xl"
             style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '1rem',
-              borderRadius: '12px',
-              border: 'none',
               background: '#17B9E6',
               color: 'white',
-              fontFamily: "'Poppins', sans-serif",
               fontWeight: 600,
               fontSize: '1rem',
               cursor: isLoading ? 'not-allowed' : 'pointer',
               opacity: isLoading ? 0.8 : 1,
-              transition: 'all 0.3s ease'
             }}
             disabled={isLoading}
           >
             {isLoading ? (
-              <>
+              <div className="flex items-center justify-center gap-2">
                 <div className="loading-indicator" style={{ 
-                  width: 24, 
-                  height: 24,
+                  width: 20, 
+                  height: 20,
                   border: '2px solid rgba(255, 255, 255, 0.3)',
                   borderTopColor: 'white',
                   borderRadius: '50%',
                   animation: 'spin 1s linear infinite'
                 }} />
-                <span>Creating Your London Itinerary...</span>
-              </>
+                <span>Creating Plan...</span>
+              </div>
             ) : (
-              'Create London Itinerary'
+              'Create Plan'
             )}
           </button>
         </form>

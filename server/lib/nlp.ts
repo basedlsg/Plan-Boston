@@ -135,6 +135,18 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
   const extractedLocations = extractLocations(query);
   const extractedActivities = extractActivities(query);
   
+  // Extract time from the query directly for 6PM, 9AM style inputs
+  const timeRegex = /(\d{1,2})\s*(am|pm)/i;
+  const timeMatch = query.match(timeRegex);
+  let timeFromQuery = null;
+  
+  if (timeMatch) {
+    const [_, hour, meridian] = timeMatch;
+    const parsedHour = parseInt(hour);
+    const hourIn24 = meridian.toLowerCase() === 'pm' && parsedHour < 12 ? parsedHour + 12 : parsedHour;
+    timeFromQuery = `${hourIn24.toString().padStart(2, '0')}:00`;
+  }
+
   // Create fallback structure that will be used if AI processing fails
   const fallbackStructure: StructuredRequest = {
     startLocation: null,
@@ -142,7 +154,9 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     fixedTimes: extractedActivities.length > 0 ? 
       extractedActivities.map(activity => {
         const location = extractedLocations[0]?.name || "London";
-        const time = activity.timeContext?.preferredTime || 
+        
+        // Try to extract time from the query directly if it's a simple time reference
+        const time = timeFromQuery || activity.timeContext?.preferredTime || 
               (activity.type === 'breakfast' ? '09:00' : 
                activity.type === 'lunch' ? '13:00' : 
                activity.type === 'dinner' ? '19:00' : '12:00');
@@ -154,7 +168,13 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
           searchTerm: activity.naturalDescription
         };
       }) : 
-      [],
+      // If no activities extracted but we found a time, create an entry with that time
+      timeFromQuery ? [{
+        location: extractedLocations[0]?.name || "London",
+        time: timeFromQuery,
+        type: 'activity',
+        searchTerm: query
+      }] : [],
     preferences: {
       requirements: extractedActivities
         .filter(a => a.requirements)

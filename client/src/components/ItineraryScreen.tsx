@@ -34,169 +34,91 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
   const hasTravelInfo = travelInfo && Array.isArray(travelInfo);
 
   return (
-    <div className="itinerary-container glass-panel" style={{
-      padding: '2rem',
-      maxWidth: '800px',
-      margin: '1rem auto', // Reduced from 2rem to 1rem to reduce gap
-      position: 'relative',
-      borderRadius: '12px',
-      overflow: 'hidden',
-      boxShadow: '0 3px 15px rgba(0, 0, 0, 0.03)',
-      border: '1px solid rgba(28, 28, 28, 0.1)'
-    }}>
-      <div className="itinerary-header">
-        <h1 className="heading-primary" style={{
-          fontFamily: "'Rozha One', serif",
-          fontSize: '2.5rem',
-          letterSpacing: '0.08em',
-          textAlign: 'center',
-          marginBottom: '1.5rem', // Reduced from 2rem
-          color: 'var(--brand-black)',
-          position: 'relative'
-        }}>
-          Your London Itinerary
-        </h1>
-
-        <button
-          onClick={onExport}
-          className="create-plan-btn"
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            marginBottom: '1.5rem', // Reduced from 2rem
-            fontFamily: "'Poppins', sans-serif",
-            fontWeight: 600,
-            borderRadius: '12px',
-            transition: 'all 0.3s ease',
-            background: '#17B9E6', // Specific blue color #17B9E6
-            color: 'white',
-            border: 'none'
-          }}
-        >
-          Export to Calendar
-        </button>
-      </div>
-
-      <div className="venues-list" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1.5rem'
-      }}>
-        {hasVenues ? (
-          venues.map((venue, index) => (
-            <React.Fragment key={`${venue.name}-${index}`}>
-              <div className="venue-card glass-card" style={{
-                padding: '1.5rem',
-                borderRadius: '12px',
-                position: 'relative',
-                transition: 'all 0.3s ease',
-                border: '1px solid rgba(28, 28, 28, 0.1)',
-                background: 'rgba(255, 255, 255, 0.7)', // Changed to white background
-                backdropFilter: 'blur(15px)',
-                WebkitBackdropFilter: 'blur(15px)'
-              }}>
-                <h2 className="venue-name" style={{
-                  fontFamily: "'Rozha One', serif",
-                  fontSize: '1.5rem',
-                  color: 'var(--brand-black)',
-                  marginBottom: '0.75rem'
-                }}>{venue.name}</h2>
-                
-                <div className="venue-details" style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                  marginBottom: '1rem'
-                }}>
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '1rem',
-                    color: 'var(--brand-black)',
-                    marginBottom: '0.25rem',
-                    fontWeight: 600
-                  }}>{venue.time}</p>
-                  
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.9rem',
-                    color: 'var(--brand-black-70)',
-                    marginBottom: '0.25rem'
-                  }}>{venue.address}</p>
-                  
-                  <p style={{
-                    fontFamily: "'Poppins', sans-serif",
-                    fontSize: '0.9rem',
-                    color: 'var(--brand-black-70)'
-                  }}>Rating: {venue.rating || 'N/A'}</p>
-                </div>
-                
-                <div className="venue-tags" style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem'
-                }}>
-                  {venue.categories && Array.isArray(venue.categories) && venue.categories.map((category, catIndex) => (
-                    <span key={`${category}-${catIndex}`} className="tag" style={{
-                      background: 'rgba(23, 185, 230, 0.1)', // Changed to blue
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '50px',
-                      fontSize: '0.8rem',
-                      color: 'var(--brand-black)',
-                      border: '1px solid rgba(23, 185, 230, 0.2)'
-                    }}>
-                      {category}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              
-              {index < venues.length - 1 && hasTravelInfo && travelInfo[index] && (
-                <div className="travel-info" style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0.75rem 1rem',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  borderRadius: '8px',
-                  margin: '0.5rem 0',
-                  border: '1px solid rgba(23, 185, 230, 0.1)',
-                  color: 'var(--brand-black-70)',
-                  boxShadow: '0 3px 10px rgba(0, 0, 0, 0.02)',
-                  fontSize: '0.9rem',
-                  gap: '0.5rem'
-                }}>
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{color: 'var(--brand-blue)'}}
-                  >
-                    <path
-                      d="M8 0C5.87827 0 3.84344 0.842855 2.34315 2.34315C0.842855 3.84344 0 5.87827 0 8C0 10.1217 0.842855 12.1566 2.34315 13.6569C3.84344 15.1571 5.87827 16 8 16C10.1217 16 12.1566 15.1571 13.6569 13.6569C15.1571 12.1566 16 10.1217 16 8C16 5.87827 15.1571 3.84344 13.6569 2.34315C12.1566 0.842855 10.1217 0 8 0ZM8 14.4C6.25044 14.4 4.57275 13.7257 3.32294 12.5259C2.07312 11.326 1.39819 9.64784 1.39819 7.89828C1.39819 6.14872 2.07312 4.47103 3.32294 3.27121C4.57275 2.0714 6.25044 1.39647 8 1.39647C9.74956 1.39647 11.4272 2.0714 12.6771 3.27121C13.9269 4.47103 14.6018 6.14872 14.6018 7.89828C14.6018 9.64784 13.9269 11.326 12.6771 12.5259C11.4272 13.7257 9.74956 14.4 8 14.4Z"
-                      fill="currentColor"
-                    />
-                    <path
-                      d="M8 3.2C7.68174 3.2 7.37652 3.32643 7.15147 3.55147C6.92643 3.77652 6.8 4.08174 6.8 4.4V7.6H4.4C4.08174 7.6 3.77652 7.72643 3.55147 7.95147C3.32643 8.17652 3.2 8.48174 3.2 8.8C3.2 9.11826 3.32643 9.42348 3.55147 9.64853C3.77652 9.87357 4.08174 10 4.4 10H8C8.31826 10 8.62348 9.87357 8.84853 9.64853C9.07357 9.42348 9.2 9.11826 9.2 8.8V4.4C9.2 4.08174 9.07357 3.77652 8.84853 3.55147C8.62348 3.32643 8.31826 3.2 8 3.2Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                  <span>{travelInfo[index].duration} to {travelInfo[index].destination}</span>
-                </div>
-              )}
-            </React.Fragment>
-          ))
-        ) : (
-          <div className="empty-state glass-card" style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'var(--brand-black-70)',
-            borderRadius: '12px',
-            background: 'rgba(255, 255, 255, 0.7)' // Changed to white background
+    <div className="bg-white flex flex-col items-center w-full">
+      <div className="w-full max-w-md px-4 pb-12">
+        {/* Header */}
+        <div className="mb-5 text-center">
+          <h1 className="text-2xl font-bold mb-4" style={{ 
+            fontFamily: "'Rozha One', serif",
+            color: 'var(--color-text-black)'
           }}>
-            <p>Create a plan using the form above to generate your itinerary.</p>
-          </div>
-        )}
+            Your London Itinerary
+          </h1>
+
+          <button
+            onClick={onExport}
+            className="w-full py-3 rounded-2xl text-white font-medium"
+            style={{ background: '#17B9E6' }}
+          >
+            Export to Calendar
+          </button>
+        </div>
+
+        {/* Venues List */}
+        <div className="space-y-6">
+          {hasVenues ? (
+            venues.map((venue, index) => (
+              <React.Fragment key={`${venue.name}-${index}`}>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <h2 className="text-xl font-bold mb-3" style={{ 
+                    fontFamily: "'Rozha One', serif"
+                  }}>
+                    {venue.name}
+                  </h2>
+                  
+                  <div className="space-y-2 mb-4">
+                    <p className="text-lg font-semibold">{venue.time}</p>
+                    <p className="text-gray-500 text-sm">{venue.address}</p>
+                    <p className="text-gray-500 text-sm">Rating: {venue.rating || 'N/A'}</p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {venue.categories && Array.isArray(venue.categories) && venue.categories.map((category, catIndex) => (
+                      <span 
+                        key={`${category}-${catIndex}`} 
+                        className="px-3 py-1 rounded-full text-xs"
+                        style={{
+                          background: 'rgba(23, 185, 230, 0.1)',
+                          color: 'var(--color-text-black)',
+                          border: '1px solid rgba(23, 185, 230, 0.2)'
+                        }}
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                
+                {index < venues.length - 1 && hasTravelInfo && travelInfo[index] && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      style={{color: '#17B9E6'}}
+                    >
+                      <path
+                        d="M8 0C5.87827 0 3.84344 0.842855 2.34315 2.34315C0.842855 3.84344 0 5.87827 0 8C0 10.1217 0.842855 12.1566 2.34315 13.6569C3.84344 15.1571 5.87827 16 8 16C10.1217 16 12.1566 15.1571 13.6569 13.6569C15.1571 12.1566 16 10.1217 16 8C16 5.87827 15.1571 3.84344 13.6569 2.34315C12.1566 0.842855 10.1217 0 8 0ZM8 14.4C6.25044 14.4 4.57275 13.7257 3.32294 12.5259C2.07312 11.326 1.39819 9.64784 1.39819 7.89828C1.39819 6.14872 2.07312 4.47103 3.32294 3.27121C4.57275 2.0714 6.25044 1.39647 8 1.39647C9.74956 1.39647 11.4272 2.0714 12.6771 3.27121C13.9269 4.47103 14.6018 6.14872 14.6018 7.89828C14.6018 9.64784 13.9269 11.326 12.6771 12.5259C11.4272 13.7257 9.74956 14.4 8 14.4Z"
+                        fill="currentColor"
+                      />
+                      <path
+                        d="M8 3.2C7.68174 3.2 7.37652 3.32643 7.15147 3.55147C6.92643 3.77652 6.8 4.08174 6.8 4.4V7.6H4.4C4.08174 7.6 3.77652 7.72643 3.55147 7.95147C3.32643 8.17652 3.2 8.48174 3.2 8.8C3.2 9.11826 3.32643 9.42348 3.55147 9.64853C3.77652 9.87357 4.08174 10 4.4 10H8C8.31826 10 8.62348 9.87357 8.84853 9.64853C9.07357 9.42348 9.2 9.11826 9.2 8.8V4.4C9.2 4.08174 9.07357 3.77652 8.84853 3.55147C8.62348 3.32643 8.31826 3.2 8 3.2Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    <span>{travelInfo[index].duration} to {travelInfo[index].destination}</span>
+                  </div>
+                )}
+              </React.Fragment>
+            ))
+          ) : (
+            <div className="bg-white rounded-2xl p-6 text-center text-gray-500 shadow-sm border border-gray-100">
+              <p>Create a plan using the form above to generate your itinerary.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
