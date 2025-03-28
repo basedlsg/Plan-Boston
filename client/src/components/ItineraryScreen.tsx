@@ -42,8 +42,8 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
     <div className="bg-white flex flex-col items-center w-full">
       <div className="w-full max-w-md px-4 pb-12">
         {/* Header - only shown when we have venues */}
-        <div className="mb-5 text-center">
-          <h1 className="text-3xl font-bold mb-4 itinerary-title" style={{ 
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold mb-6 itinerary-title" style={{ 
             fontFamily: "'Rozha One', serif", /* Keep this font for the title to match the app's branding */
             color: 'var(--color-text-black)',
             fontSize: '1.875rem' // text-3xl is 1.875rem, which is ~20% bigger than text-2xl (1.5rem)
@@ -66,15 +66,15 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
         </div>
 
         {/* Venues List */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {venues.map((venue, index) => (
             <React.Fragment key={`${venue.name}-${index}`}>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 venue-card" style={{ fontFamily: "'Inter', sans-serif" }}>
-                <h2 className="text-xl font-bold mb-3 venue-name" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: 'normal' }}>
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 venue-card" style={{ fontFamily: "'Inter', sans-serif" }}>
+                <h2 className="text-xl font-bold mb-4 venue-name" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: 'normal' }}>
                   {venue.name}
                 </h2>
                 
-                <div className="space-y-2 mb-4">
+                <div className="space-y-3 mb-5">
                   <p className="text-lg font-semibold venue-time" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.time}</p>
                   <p className="text-gray-500 text-sm venue-address" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.address}</p>
                   <p className="text-gray-500 text-sm venue-rating" style={{ fontFamily: "'Inter', sans-serif" }}>Rating: {venue.rating || 'N/A'}</p>
@@ -99,10 +99,10 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
               </div>
               
               {index < venues.length - 1 && hasTravelInfo && travelInfo[index] && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100 travel-info" style={{ fontFamily: "'Inter', sans-serif" }}>
+                <div className="flex items-center gap-3 px-5 py-4 mt-4 mb-4 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100 travel-info" style={{ fontFamily: "'Inter', sans-serif" }}>
                   <svg
-                    width="14"
-                    height="14"
+                    width="16"
+                    height="16"
                     viewBox="0 0 16 16"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
