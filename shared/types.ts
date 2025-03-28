@@ -25,9 +25,10 @@ export interface StructuredRequest {
       searchTerm: string;
       type: string;
       keywords: string[];
-      minRating: number;
-      requireOpenNow: boolean;
+      minRating: number | null;
+      requireOpenNow: boolean | null;
     };
     requirements: string[];
+    confidence?: number;
   }>;
 }

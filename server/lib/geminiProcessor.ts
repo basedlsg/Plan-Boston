@@ -7,22 +7,23 @@ import { StructuredRequest } from "@shared/types";
 const ActivitySchema = z.object({
   description: z.string(),
   location: z.string(),
-  time: z.string(),
+  // For time, if null or undefined, we'll use a default value in transform
+  time: z.string().nullish().transform(val => val || "12:00"),
   searchParameters: z.object({
     searchTerm: z.string(),
     type: z.string(),
-    keywords: z.array(z.string()),
-    minRating: z.number().min(1).max(5),
-    requireOpenNow: z.boolean()
+    keywords: z.array(z.string()).nullish().default([]),
+    minRating: z.number().min(1).max(5).nullish().default(4.0),
+    requireOpenNow: z.boolean().nullish().default(false)
   }),
-  requirements: z.array(z.string()),
-  confidence: z.number().optional()
+  requirements: z.array(z.string()).nullish().default([]),
+  confidence: z.number().optional().default(0.8)
 });
 
 const GeminiResponseSchema = z.object({
   activities: z.array(ActivitySchema),
   startLocation: z.string().nullable(),
-  interpretationNotes: z.string().optional()
+  interpretationNotes: z.string().nullish().default("") // Allow null/undefined with default empty string
 });
 
 // Initialize Gemini API
@@ -133,7 +134,7 @@ Based on your contextual understanding, return a JSON structure with:
     {
       "description": string, // Original or clarified description of the activity
       "location": string, // Specific London neighborhood or area
-      "time": string, // Time in 24-hour format (HH:MM)
+      "time": string, // Time in 24-hour format (HH:MM) - ALWAYS include this field, using defaults like "12:00" if uncertain
       "searchParameters": {
         "searchTerm": string, // Optimized search term for Google Places API
         "type": string, // Venue type (restaurant, cafe, museum, etc.)
@@ -149,7 +150,7 @@ Based on your contextual understanding, return a JSON structure with:
   "interpretationNotes": string // Optional explanation of how you interpreted ambiguous aspects
 }
 
-Return ONLY valid JSON without any additional explanation. Never use "London" when a more specific neighborhood is mentioned or could be inferred.
+Return ONLY valid JSON without any additional explanation. Never use "London" when a more specific neighborhood is mentioned or could be inferred. ALWAYS include ALL fields in the JSON structure, using sensible defaults if necessary (e.g., empty arrays for requirements, 4.0 for minRating if unsure).
 `;
 
     const result = await model.generateContent(systemPrompt);
@@ -204,7 +205,21 @@ function processGeminiResponse(
       type: undefined,
       requirements: []
     },
-    activities: geminiResponse.activities
+    // Process activities to ensure type compatibility
+    activities: geminiResponse.activities.map(activity => ({
+      ...activity,
+      // Ensure requirements is always an array
+      requirements: activity.requirements ?? [],
+      searchParameters: {
+        ...activity.searchParameters,
+        // Ensure keywords is always an array
+        keywords: activity.searchParameters.keywords ?? [],
+        // Ensure minRating is always a number, default to 4.0 if null
+        minRating: activity.searchParameters.minRating === null ? 4.0 : activity.searchParameters.minRating,
+        // Ensure requireOpenNow is always a boolean, default to false if null
+        requireOpenNow: activity.searchParameters.requireOpenNow === null ? false : activity.searchParameters.requireOpenNow
+      }
+    }))
   };
   
   // Add destinations from activities
@@ -219,7 +234,8 @@ function processGeminiResponse(
   // Extract requirements from activities
   const allRequirements = new Set<string>();
   geminiResponse.activities.forEach(activity => {
-    activity.requirements.forEach(req => allRequirements.add(req));
+    // Safe access to requirements with null check
+    (activity.requirements || []).forEach(req => allRequirements.add(req));
   });
   structuredData.preferences.requirements = Array.from(allRequirements);
   
@@ -228,15 +244,28 @@ function processGeminiResponse(
     structuredData.preferences.type = geminiResponse.activities[0].searchParameters.type;
   }
   
-  // Create fixed times from activities
-  structuredData.fixedTimes = geminiResponse.activities.map(activity => ({
-    location: activity.location,
-    time: activity.time,
-    type: activity.searchParameters.type,
-    searchTerm: activity.searchParameters.searchTerm,
-    keywords: activity.searchParameters.keywords,
-    minRating: activity.searchParameters.minRating
-  }));
+  // Create fixed times from activities with correct type handling
+  // Use an explicit loop to handle the typing correctly
+  structuredData.fixedTimes = [];
+  for (const activity of geminiResponse.activities) {
+    const fixedTimeEntry = {
+      location: activity.location,
+      time: activity.time,
+      type: activity.searchParameters.type,
+      searchTerm: activity.searchParameters.searchTerm
+    };
+    
+    // Only add optional fields if they are not null
+    if (activity.searchParameters.keywords !== null) {
+      fixedTimeEntry['keywords'] = activity.searchParameters.keywords;
+    }
+    
+    if (activity.searchParameters.minRating !== null) {
+      fixedTimeEntry['minRating'] = activity.searchParameters.minRating;
+    }
+    
+    structuredData.fixedTimes.push(fixedTimeEntry);
+  }
   
   return structuredData;
 }
