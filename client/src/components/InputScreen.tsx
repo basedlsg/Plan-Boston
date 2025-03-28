@@ -46,8 +46,8 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
     }}>
       <div className="w-full max-w-md px-4 py-6 flex flex-col items-center">
         {/* Logo */}
-        <div className="mb-4">
-          <Logo className="w-24 h-24" />
+        <div className="mb-6">
+          <Logo className="w-36 h-36" />
         </div>
         
         {/* Instruction Text */}
