@@ -58,12 +58,12 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-foreground" style={{ 
+    <div className="bg-white text-foreground" style={{ 
       maxWidth: '1200px', 
       margin: '0 auto',
       display: 'flex',
       flexDirection: 'column',
-      minHeight: '100vh',
+      width: '100%',
       padding: '1rem'
     }}>
       {/* Main Container with optimized spacing */}
@@ -71,8 +71,8 @@ function App() {
         display: 'flex', 
         flexDirection: 'column',
         gap: '2rem', // 2rem spacing between sections
-        maxHeight: '100vh',
-        overflow: 'auto'
+        height: 'auto',
+        overflow: 'visible'
       }}>
         {/* Input Section */}
         <section className="py-4">
