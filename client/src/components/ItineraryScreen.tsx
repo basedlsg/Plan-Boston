@@ -52,8 +52,12 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
 
           <button
             onClick={onExport}
-            className="w-full py-3 rounded-2xl text-white font-medium"
-            style={{ background: '#17B9E6' }}
+            className="w-full py-4 rounded-2xl text-white"
+            style={{ 
+              background: '#17B9E6',
+              fontWeight: 600,
+              fontSize: '1rem'
+            }}
           >
             Export to Calendar
           </button>
