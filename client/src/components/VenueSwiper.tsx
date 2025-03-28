@@ -176,6 +176,7 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
                 <span 
                   key={type} 
                   className="px-2 sm:px-2.5 py-0.5 sm:py-1 bg-white/30 backdrop-blur-sm text-brand-black rounded-full text-xs"
+                  style={{ textDecoration: 'none' }}  /* Remove any text-decoration, including underscores */
                 >
                   {type.replace(/_/g, ' ')}
                 </span>

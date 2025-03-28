@@ -82,6 +82,8 @@ export async function searchPlace(
   options: SearchOptions = {}
 ): Promise<VenueSearchResult> {
   try {
+    console.log(`Search request for query: "${query}" with options:`, options);
+    
     // Add better search term extraction from complex activity types
     let searchType = options.type;
     let searchKeyword = '';
@@ -90,6 +92,9 @@ export async function searchPlace(
     // Use enhanced search parameters if available
     if (options.searchTerm) {
       searchKeyword = options.searchTerm;
+    } else {
+      // Ensure we have at least a basic search term for all searches
+      searchKeyword = query;
     }
     
     if (options.keywords && Array.isArray(options.keywords)) {
@@ -211,7 +216,28 @@ export async function searchPlace(
       const nearbyData = await nearbyRes.json();
 
       if (nearbyData.status !== "OK" || !nearbyData.results?.length) {
-        throw new Error(`No ${options.type} found near ${normalizedLocation}. Try a different location or activity type.`);
+        console.log(`No results found for ${options.type} near ${normalizedLocation}. Trying a more generic search...`);
+        
+        // Try a more generic search without the type restriction
+        const fallbackParams = new URLSearchParams({
+          location: `${lat},${lng}`,
+          radius: "2000", // 2km radius
+          keyword: searchKeyword || query,
+          key: GOOGLE_PLACES_API_KEY || "",
+          language: "en"
+        });
+        
+        const fallbackUrl = `${PLACES_API_BASE}/nearbysearch/json?${fallbackParams.toString()}`;
+        const fallbackRes = await fetch(fallbackUrl);
+        const fallbackData = await fallbackRes.json();
+        
+        if (fallbackData.status === "OK" && fallbackData.results?.length > 0) {
+          console.log(`Fallback search successful, found ${fallbackData.results.length} results`);
+          nearbyData.results = fallbackData.results;
+        } else {
+          // If we still couldn't find anything, throw an error
+          throw new Error(`No ${options.type || 'venues'} found near ${normalizedLocation}. Try a different location or activity type.`);
+        }
       }
 
       // Filter results by rating if specified

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ThemeToggle } from "@/components/theme-toggle";
 import InputScreen from './components/InputScreen';
 import ItineraryScreen from './components/ItineraryScreen';
 import { usePlanMutation } from './hooks/usePlanMutation';
+import { exportToCalendar } from './lib/calendar';
 
 interface PlanFormData {
   date: string;
@@ -66,10 +66,6 @@ function App() {
       minHeight: '100vh',
       padding: '1rem'
     }}>
-      <div className="fixed top-4 right-4 z-10">
-        <ThemeToggle />
-      </div>
-      
       {/* Main Container with optimized spacing */}
       <div style={{ 
         display: 'flex', 
@@ -92,8 +88,7 @@ function App() {
             venues={itineraryData?.venues || []}
             travelInfo={itineraryData?.travelInfo || []}
             onExport={() => {
-              // Implement calendar export functionality
-              console.log('Exporting to calendar...');
+              exportToCalendar(itineraryData?.venues || []);
             }}
           />
         </section>
