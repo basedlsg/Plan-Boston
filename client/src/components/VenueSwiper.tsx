@@ -159,7 +159,7 @@ const VenueSwiper: React.FC<VenueSwiperProps> = ({
             </div>
           )}
           
-          <h3 className="text-lg sm:text-xl font-bold text-brand-black mb-1 line-clamp-1">{currentVenue.name}</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-brand-black mb-1 line-clamp-1" style={{ letterSpacing: 'normal' }}>{currentVenue.name}</h3>
           <p className="text-xs sm:text-sm text-brand-black/70 line-clamp-2">{currentVenue.formatted_address}</p>
           
           {/* Rating if available */}

@@ -12,7 +12,7 @@ const Logo: React.FC<LogoProps> = ({ className = '', style = {} }) => {
         className="text-[4.5rem] text-[#1C1C1C]"
         style={{ 
           fontFamily: 'Rozha One, serif',
-          letterSpacing: '0.05em',
+          letterSpacing: 'normal',
           lineHeight: '1',
           fontSize: '4.5rem', // Explicitly set font size in both places
           fontWeight: 'normal' // Changed from 'bold' to 'normal'

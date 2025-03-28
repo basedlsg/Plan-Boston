@@ -9,9 +9,10 @@ interface TimeInputProps {
   onChange: (value: string) => void;
   timeFormat?: TimeFormat;
   className?: string;
+  disabled?: boolean;
 }
 
-export function TimeInput({ value, onChange, timeFormat = '12h', className }: TimeInputProps) {
+export function TimeInput({ value, onChange, timeFormat = '12h', className, disabled }: TimeInputProps) {
   const [inputType, setInputType] = useState<'text' | 'time'>('text');
   const [displayValue, setDisplayValue] = useState(value || "");
 
@@ -43,12 +44,14 @@ export function TimeInput({ value, onChange, timeFormat = '12h', className }: Ti
         onChange={(e) => handleChange(e.target.value)}
         className={className}
         placeholder={timeFormat === '12h' ? "12:00 PM" : "14:00"}
+        disabled={disabled}
       />
       <Button
         variant="ghost"
         size="icon"
         className="absolute right-2 top-1/2 -translate-y-1/2"
         onClick={() => setInputType(inputType === 'text' ? 'time' : 'text')}
+        disabled={disabled}
       >
         <Clock className="h-4 w-4" />
       </Button>

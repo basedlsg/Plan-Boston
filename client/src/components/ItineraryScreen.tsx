@@ -70,7 +70,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
           {venues.map((venue, index) => (
             <React.Fragment key={`${venue.name}-${index}`}>
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 venue-card" style={{ fontFamily: "'Inter', sans-serif" }}>
-                <h2 className="text-xl font-bold mb-3 venue-name" style={{ fontFamily: "'Inter', sans-serif" }}>
+                <h2 className="text-xl font-bold mb-3 venue-name" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: 'normal' }}>
                   {venue.name}
                 </h2>
                 

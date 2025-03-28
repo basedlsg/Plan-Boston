@@ -84,8 +84,8 @@ export default function Home() {
         {/* Logo Section */}
         <div className="logo-container">
           <h1 
-            className="logo font-logo text-3xl sm:text-4xl font-bold text-brand-black tracking-wide"
-            style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.2))" }}
+            className="logo font-logo text-3xl sm:text-4xl font-bold text-brand-black"
+            style={{ filter: "drop-shadow(0 6px 18px rgba(0,0,0,0.2))", letterSpacing: "normal" }}
           >
             PLAN
           </h1>
@@ -110,8 +110,7 @@ export default function Home() {
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
-                  className="space-y-6"
-                  disabled={isFormSubmitting}
+                  className={`space-y-6 ${isFormSubmitting ? 'opacity-70 pointer-events-none' : ''}`}
                 >
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="datetime-card p-3">
@@ -229,7 +228,7 @@ export default function Home() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-2">
-                              <h3 className="font-semibold text-brand-black text-base sm:text-lg truncate">{place.name}</h3>
+                              <h3 className="font-semibold text-brand-black text-base sm:text-lg truncate" style={{ letterSpacing: 'normal' }}>{place.name}</h3>
                               {place.scheduledTime && (
                                 <span className="text-xs sm:text-sm text-brand-black/80 font-mono">
                                   {formatTime(place.scheduledTime)}
