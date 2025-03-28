@@ -591,9 +591,16 @@ type FixedTimeEntry = {
             const meridian = match[3]?.toLowerCase().includes('p') ? 'pm' : 
                             match[3]?.toLowerCase().includes('a') ? 'am' : null;
             
+            // Handle ambiguous times - if no AM/PM is specified, make intelligent assumptions
+            // Assume 1-7 without meridian is PM (common for evening activities)
+            const isPM = meridian === 'pm' || 
+                        (meridian === null && hour >= 1 && hour <= 7);
+            const isAM = meridian === 'am' || 
+                        (meridian === null && (hour === 12 || hour >= 8 && hour <= 11));
+            
             let hour24 = hour;
-            if (meridian === 'pm' && hour < 12) hour24 += 12;
-            if (meridian === 'am' && hour === 12) hour24 = 0;
+            if (isPM && hour < 12) hour24 += 12;
+            if (isAM && hour === 12) hour24 = 0;
             
             standardizedTime = `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
           } else if (match[2]) {
@@ -603,9 +610,16 @@ type FixedTimeEntry = {
             const meridian = match[4]?.toLowerCase().includes('p') ? 'pm' : 
                             match[4]?.toLowerCase().includes('a') ? 'am' : null;
             
+            // Handle ambiguous times - if no AM/PM is specified, make intelligent assumptions
+            // Assume 1-7 without meridian is PM (common for evening activities)
+            const isPM = meridian === 'pm' || 
+                        (meridian === null && hour >= 1 && hour <= 7);
+            const isAM = meridian === 'am' || 
+                        (meridian === null && (hour === 12 || hour >= 8 && hour <= 11));
+            
             let hour24 = hour;
-            if (meridian === 'pm' && hour < 12) hour24 += 12;
-            if (meridian === 'am' && hour === 12) hour24 = 0;
+            if (isPM && hour < 12) hour24 += 12;
+            if (isAM && hour === 12) hour24 = 0;
             
             standardizedTime = `${hour24.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
           } else if (match[1] && /^(morning|afternoon|evening|night|noon|midnight|breakfast|brunch|lunch|dinner|tea)$/.test(match[1].toLowerCase())) {

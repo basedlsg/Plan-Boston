@@ -1,0 +1,66 @@
+I see the problem. The time parsing issue has returned - you specifically mentioned "at 6" in your input, but the system parsed it as 12:00 PM instead of 6:00 PM. Let's create a targeted prompt that focuses exclusively on fixing this time parsing bug:
+
+---
+
+# Critical Fix: Time Parsing in London Day Planner
+
+There is a critical time parsing bug in the London Day Planner application. The system is not correctly extracting time information from user input.
+
+## Specific Issue to Fix:
+The system is incorrectly parsing "at 6" as 12:00 PM instead of 6:00 PM. This appears in the server logs:
+```
+time: '12:00',
+searchTerm: 'Hello at 6 -- where can I have a coffee with some friends in Canary Wharf?'
+```
+
+## Locate and Fix the Time Parsing Function:
+
+1. **Find the Time Parsing Logic:**
+   - Look in `server/lib/nlp.ts` or `server/lib/languageProcessing.ts` 
+   - Search for functions related to time extraction (like `parseTimeExpression`, `extractTime`, etc.)
+   - Find where the system extracts time from user input strings
+
+2. **Fix the Regular Expression Pattern:**
+   - The regex pattern is likely missing or incorrectly handling the "at X" time format
+   - Ensure the regex matches patterns like "at 6", "at 9", etc.
+   - Make sure it correctly converts these to 24-hour format (18:00, 21:00)
+
+3. **Debug With Console Logs:**
+   - Add detailed logging to show exactly what time expressions are being detected
+   - Log the input string, detected time patterns, and final time value
+   - This will help pinpoint where the extraction is failing
+
+## Example Code Fix:
+
+Look for code similar to this and ensure the regex pattern includes the "at X" format:
+
+```javascript
+// Find something like this:
+function parseTimeExpression(text) {
+  // Add or fix regex to handle "at X" format
+  const atTimePattern = /\bat\s+(\d{1,2})(?:\s*([ap]\.?m\.?))?\b/i;
+  
+  // Check for "at X" pattern
+  const atTimeMatch = text.match(atTimePattern);
+  if (atTimeMatch) {
+    let hour = parseInt(atTimeMatch[1]);
+    // Default to PM for ambiguous times like "at 6" (common for dinner/evening times)
+    const isPM = atTimeMatch[2] ? 
+                atTimeMatch[2].toLowerCase().startsWith('p') : 
+                (hour >= 1 && hour <= 7); // Assume 1-7 without AM/PM specified is PM
+    
+    if (isPM && hour < 12) hour += 12;
+    return `${hour.toString().padStart(2, '0')}:00`;
+  }
+  
+  // Rest of the existing time parsing logic...
+}
+```
+
+## Testing:
+Test the fix with various time formats to ensure it works consistently:
+- "at 6" → should become 18:00 (6:00 PM)
+- "at 9 PM" → should become 21:00 (9:00 PM)
+- "at 10 AM" → should remain 10:00 (10:00 AM)
+
+Focus EXCLUSIVELY on fixing this time parsing issue. Do not modify any other code or functionality.
