@@ -1,115 +1,11 @@
-/* Font imports - Must come first */
+/* Import fonts */
 @import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
-/* Then Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* CSS Variables and Design System */
-:root {
-  --brand-pink: #FC94C5;
-  --brand-black: #1C1C1C;
-  --brand-blue: #17B9E6;
-  --brand-neutral: #737373;
-  --brand-box-bg: #E3E9F2;
-  --brand-tag-bg: #BFD4ED;
-}
-
-/* Utility classes for font families */
-.font-rozha {
-  font-family: 'Rozha One', serif;
-}
-
-.font-poppins {
-  font-family: 'Poppins', sans-serif;
-}
-
-.font-inter {
-  font-family: 'Inter', sans-serif;
-}
-
-/* Gradient border for input fields */
-.border-gradient {
-  position: relative;
-  background: linear-gradient(to right, #E6DBEE, #BCC6E6);
-  padding: 1px;
-}
-
-.border-gradient::before {
-  content: '';
-  position: absolute;
-  inset: 1px;
-  background: white;
-  border-radius: inherit;
-  z-index: -1;
-}
-
-/* Glass card styling */
-.glass-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  border: 1px solid rgba(230, 219, 238, 0.5);
-}
-
-.venue-card {
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.venue-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Form container styling */
-.form-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(230, 219, 238, 0.5);
-}
-
-/* Button styling */
-button[type="submit"] {
-  transition: all 0.3s ease;
-}
-
-button[type="submit"]:hover:not(:disabled) {
-  transform: scale(1.02);
-}
-
-button[type="submit"]:disabled {
-  opacity: 0.7;
-}
-
-/* Base styles */
-body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: var(--brand-black);
-  background-color: white;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
 
 @layer base {
   /* Root CSS Variables */
@@ -888,11 +784,6 @@ body {
     font-size: 20px;
   }
 }
-
-/* Import fonts */
-@import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 /* CSS Variables - Design System */
 :root {
