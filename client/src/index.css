@@ -460,6 +460,15 @@
     box-shadow: 0 0 0 1px rgba(23, 185, 230, 0.3), 0 5px 20px rgba(0, 0, 0, 0.06);
   }
   
+  /* Standardized font styling for itinerary cards */
+  .venue-card,
+  .venue-card *,
+  .travel-info,
+  .travel-info *,
+  .export-button {
+    font-family: 'Inter', sans-serif !important;
+  }
+  
   /* Form elements - refined glass effect for white background */
   input, textarea, select {
     background: rgba(255, 255, 255, 0.7) !important;

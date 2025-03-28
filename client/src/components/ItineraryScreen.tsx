@@ -43,8 +43,8 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
       <div className="w-full max-w-md px-4 pb-12">
         {/* Header - only shown when we have venues */}
         <div className="mb-5 text-center">
-          <h1 className="text-3xl font-bold mb-4" style={{ 
-            fontFamily: "'Rozha One', serif",
+          <h1 className="text-3xl font-bold mb-4 itinerary-title" style={{ 
+            fontFamily: "'Rozha One', serif", /* Keep this font for the title to match the app's branding */
             color: 'var(--color-text-black)',
             fontSize: '1.875rem' // text-3xl is 1.875rem, which is ~20% bigger than text-2xl (1.5rem)
           }}>
@@ -53,11 +53,12 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
 
           <button
             onClick={onExport}
-            className="w-full py-4 rounded-2xl text-white"
+            className="w-full py-4 rounded-2xl text-white export-button"
             style={{ 
               background: '#17B9E6',
               fontWeight: 600,
-              fontSize: '1rem'
+              fontSize: '1rem',
+              fontFamily: "'Inter', sans-serif"
             }}
           >
             Export to Calendar
@@ -68,28 +69,27 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
         <div className="space-y-6">
           {venues.map((venue, index) => (
             <React.Fragment key={`${venue.name}-${index}`}>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h2 className="text-xl font-bold mb-3" style={{ 
-                  fontFamily: "'Rozha One', serif"
-                }}>
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 venue-card" style={{ fontFamily: "'Inter', sans-serif" }}>
+                <h2 className="text-xl font-bold mb-3 venue-name" style={{ fontFamily: "'Inter', sans-serif" }}>
                   {venue.name}
                 </h2>
                 
                 <div className="space-y-2 mb-4">
-                  <p className="text-lg font-semibold">{venue.time}</p>
-                  <p className="text-gray-500 text-sm">{venue.address}</p>
-                  <p className="text-gray-500 text-sm">Rating: {venue.rating || 'N/A'}</p>
+                  <p className="text-lg font-semibold venue-time" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.time}</p>
+                  <p className="text-gray-500 text-sm venue-address" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.address}</p>
+                  <p className="text-gray-500 text-sm venue-rating" style={{ fontFamily: "'Inter', sans-serif" }}>Rating: {venue.rating || 'N/A'}</p>
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
                   {venue.categories && Array.isArray(venue.categories) && venue.categories.map((category, catIndex) => (
                     <span 
                       key={`${category}-${catIndex}`} 
-                      className="px-3 py-1 rounded-full text-xs"
+                      className="px-3 py-1 rounded-full text-xs venue-tag"
                       style={{
                         background: 'rgba(23, 185, 230, 0.1)',
                         color: 'var(--color-text-black)',
-                        border: '1px solid rgba(23, 185, 230, 0.2)'
+                        border: '1px solid rgba(23, 185, 230, 0.2)',
+                        fontFamily: "'Inter', sans-serif"
                       }}
                     >
                       {category.replace(/_/g, ' ')}
@@ -99,7 +99,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
               </div>
               
               {index < venues.length - 1 && hasTravelInfo && travelInfo[index] && (
-                <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100 travel-info" style={{ fontFamily: "'Inter', sans-serif" }}>
                   <svg
                     width="14"
                     height="14"
@@ -117,7 +117,9 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="whitespace-normal overflow-visible">{travelInfo[index].duration} minutes to {travelInfo[index].destination}</span>
+                  <span className="whitespace-normal overflow-visible travel-duration" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {travelInfo[index].duration} minutes to {travelInfo[index].destination}
+                  </span>
                 </div>
               )}
             </React.Fragment>
