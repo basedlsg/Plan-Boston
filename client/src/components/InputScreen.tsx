@@ -77,7 +77,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3"
               required
             />
             <div className="text-gray-500 pl-2">
@@ -98,7 +98,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3"
               required
             />
           </div>
@@ -115,7 +115,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="plans"
               value={plans}
               onChange={(e) => setPlans(e.target.value)}
-              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg min-h-[100px]"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg min-h-[100px] p-3"
               placeholder="e.g. 12pm lunch in Mayfair, then grab a coffee and have a walk"
               required
             />

@@ -87,14 +87,14 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                         border: '1px solid rgba(23, 185, 230, 0.2)'
                       }}
                     >
-                      {category}
+                      {category.replace(/_/g, ' ')}
                     </span>
                   ))}
                 </div>
               </div>
               
               {index < venues.length - 1 && hasTravelInfo && travelInfo[index] && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100">
+                <div className="flex items-center gap-2 px-4 py-3 bg-white rounded-lg text-gray-500 text-sm shadow-sm border border-gray-100">
                   <svg
                     width="14"
                     height="14"
@@ -112,7 +112,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                       fill="currentColor"
                     />
                   </svg>
-                  <span>{travelInfo[index].duration} to {travelInfo[index].destination}</span>
+                  <span className="whitespace-normal overflow-visible">{travelInfo[index].duration} to {travelInfo[index].destination}</span>
                 </div>
               )}
             </React.Fragment>
