@@ -15,7 +15,7 @@ const Logo: React.FC<LogoProps> = ({ className = '', style = {} }) => {
           letterSpacing: '0.05em',
           lineHeight: '1',
           fontSize: '4.5rem', // Explicitly set font size in both places
-          fontWeight: 'bold'
+          fontWeight: 'normal' // Changed from 'bold' to 'normal'
         }}
       >
         Plan
