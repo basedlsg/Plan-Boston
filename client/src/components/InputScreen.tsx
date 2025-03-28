@@ -51,16 +51,10 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
       fontFamily: "'Poppins', sans-serif"
     }}>
       <div className="w-full max-w-md px-4 py-6 flex flex-col items-center">
-        {/* Logo and Title */}
-        <div className="mb-2">
+        {/* Logo */}
+        <div className="mb-4">
           <Logo className="w-24 h-24" />
         </div>
-        <h1 className="text-4xl font-bold mb-2" style={{ 
-          fontFamily: "'Rozha One', serif",
-          color: 'var(--color-text-black)'
-        }}>
-          Plan
-        </h1>
         
         {/* Instruction Text */}
         <p className="text-center mb-6 text-lg" style={{ color: '#17B9E6' }}>
