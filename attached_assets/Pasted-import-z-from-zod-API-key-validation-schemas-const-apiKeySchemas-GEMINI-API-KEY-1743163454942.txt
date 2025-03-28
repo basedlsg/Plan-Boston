@@ -1,0 +1,139 @@
+import { z } from "zod";
+
+// API key validation schemas
+const apiKeySchemas = {
+  GEMINI_API_KEY: z.string().min(10),
+  GOOGLE_PLACES_API_KEY: z.string().min(10),
+  WEATHER_API_KEY: z.string().optional()
+};
+
+// Feature flag definitions
+const featureFlags = {
+  AI_PROCESSING: {
+    enabled: true,
+    required: ["GEMINI_API_KEY"],
+    fallback: false,
+    description: "Use AI for natural language understanding"
+  },
+  WEATHER_AWARE: {
+    enabled: true,
+    required: ["WEATHER_API_KEY"],
+    fallback: false,
+    description: "Use weather data to adjust recommendations"
+  }
+};
+
+// Configuration singleton
+class Config {
+  private static instance: Config;
+  private apiKeys: Record<string, string | undefined> = {};
+  private features: Record<string, boolean> = {};
+  private initialized = false;
+
+  private constructor() {
+    // Initialize feature flags based on environment variables
+    this.initializeFeatureFlags();
+  }
+
+  public static getInstance(): Config {
+    if (!Config.instance) {
+      Config.instance = new Config();
+    }
+    return Config.instance;
+  }
+
+  public initialize(): void {
+    if (this.initialized) return;
+    
+    // Load API keys from environment
+    this.loadApiKeys();
+    
+    // Initialize feature flags based on API key availability
+    this.initializeFeatureFlags();
+    
+    // Log configuration status
+    this.logConfigStatus();
+    
+    this.initialized = true;
+  }
+
+  private loadApiKeys(): void {
+    // Load and validate API keys
+    for (const key of Object.keys(apiKeySchemas)) {
+      this.apiKeys[key] = process.env[key];
+    }
+  }
+
+  private initializeFeatureFlags(): void {
+    // Set default feature flags
+    for (const [feature, config] of Object.entries(featureFlags)) {
+      // Check if all required API keys are available
+      const hasRequiredKeys = config.required.every(key => 
+        this.isApiKeyValid(key)
+      );
+      
+      // Enable feature if all requirements are met
+      this.features[feature] = config.enabled && hasRequiredKeys;
+      
+      // Log initialization
+      if (this.features[feature]) {
+        console.log(`${feature} feature flag status: true`);
+      } else {
+        console.log(`${feature} feature flag status: false (missing requirements or disabled)`);
+      }
+    }
+  }
+
+  private isApiKeyValid(key: string): boolean {
+    const value = this.apiKeys[key];
+    const schema = apiKeySchemas[key as keyof typeof apiKeySchemas];
+    
+    if (!schema) return false;
+    
+    const result = schema.safeParse(value);
+    console.log(`${key} validation: ${result.success}`);
+    return result.success;
+  }
+
+  private logConfigStatus(): void {
+    // Log configuration status (without revealing sensitive values)
+    const redactedConfig = {
+      features: this.features,
+      apiKeysPresent: Object.entries(this.apiKeys).reduce((acc, [key, value]) => {
+        acc[key] = !!value;
+        return acc;
+      }, {} as Record<string, boolean>),
+      environment: process.env.NODE_ENV || 'development'
+    };
+    
+    console.log('Application configuration:', redactedConfig);
+  }
+
+  public getApiKey(key: string): string | undefined {
+    return this.apiKeys[key];
+  }
+
+  public isFeatureEnabled(feature: string): boolean {
+    return !!this.features[feature];
+  }
+
+  public get environment(): string {
+    return process.env.NODE_ENV || 'development';
+  }
+}
+
+// Initialize configuration
+const config = Config.getInstance();
+config.initialize();
+
+// Helper functions for easier access
+export function getApiKey(key: string): string | undefined {
+  return config.getApiKey(key);
+}
+
+export function isFeatureEnabled(feature: string): boolean {
+  return config.isFeatureEnabled(feature);
+}
+
+export { config };
+export default config;
