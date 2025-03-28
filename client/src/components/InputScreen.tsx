@@ -51,7 +51,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
         </div>
         
         {/* Instruction Text */}
-        <p className="text-center mb-6 text-sm" style={{ color: '#17B9E6' }}>
+        <p className="text-center mb-6 font-bold text-xl" style={{ color: '#17B9E6' }}>
           Enter your activities, locations and<br />
           times below, we'll create a day plan for you.
         </p>
