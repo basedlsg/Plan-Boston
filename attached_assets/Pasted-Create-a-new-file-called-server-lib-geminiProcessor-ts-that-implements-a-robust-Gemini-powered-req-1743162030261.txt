@@ -1,0 +1,256 @@
+Create a new file called 'server/lib/geminiProcessor.ts' that implements a robust Gemini-powered request processing system. This module should handle all communication with the Gemini API, process responses, and include comprehensive error handling.
+
+Focus on these key aspects:
+1. Optimized API parameters (temperature: 0.2, top_k: 40)
+2. Multi-tiered fallback with retry logic
+3. Proper typing for all input/output
+4. Comprehensive error handling
+
+The file should export a primary function called 'processWithGemini' that accepts a user query and returns a structured request object compatible with our existing system.
+
+Here's the implementation:
+
+```typescript
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { z } from "zod";
+import { config, getApiKey, isFeatureEnabled } from "../config";
+import type { StructuredRequest } from "@shared/schema";
+
+// Schema for validating Gemini's response
+const ActivitySchema = z.object({
+  description: z.string(),
+  location: z.string(),
+  time: z.string(),
+  searchParameters: z.object({
+    searchTerm: z.string(),
+    type: z.string(),
+    keywords: z.array(z.string()),
+    minRating: z.number().min(1).max(5),
+    requireOpenNow: z.boolean()
+  }),
+  requirements: z.array(z.string()),
+  confidence: z.number().optional()
+});
+
+const GeminiResponseSchema = z.object({
+  activities: z.array(ActivitySchema),
+  startLocation: z.string().nullable(),
+  interpretationNotes: z.string().optional()
+});
+
+// Initialize Gemini API
+const initializeGemini = () => {
+  const apiKey = getApiKey('GEMINI_API_KEY');
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is required but not provided');
+  }
+  
+  return new GoogleGenerativeAI(apiKey);
+};
+
+/**
+ * Process a user query using Gemini's natural language understanding
+ */
+export async function processWithGemini(query: string): Promise<StructuredRequest | null> {
+  if (!isFeatureEnabled('AI_PROCESSING')) {
+    console.log('AI processing disabled via feature flag');
+    return null;
+  }
+  
+  // Multi-tiered approach with different temperatures
+  const temperatures = [0.2, 0.4, 0.7]; // Start conservative, get more creative if needed
+  let lastError: any = null;
+  
+  for (const temperature of temperatures) {
+    try {
+      console.log(`Attempting Gemini processing with temperature: ${temperature}`);
+      const result = await attemptGeminiProcessing(query, temperature);
+      if (result) return result;
+    } catch (error) {
+      console.warn(`Gemini processing failed with temperature ${temperature}:`, error);
+      lastError = error;
+      // Continue to next temperature
+    }
+  }
+  
+  // All attempts failed
+  console.error('All Gemini processing attempts failed:', lastError);
+  return null;
+}
+
+/**
+ * Single attempt at processing with Gemini at a specific temperature
+ */
+async function attemptGeminiProcessing(query: string, temperature: number): Promise<StructuredRequest | null> {
+  try {
+    const genAI = initializeGemini();
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-pro-latest",
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+      ],
+      generationConfig: {
+        temperature: temperature,
+        topK: 40,
+        topP: 0.95,
+      }
+    });
+
+    // System prompt with contextual understanding guidance
+    const systemPrompt = `
+You are a London travel planning expert who understands the nuances and context of travel requests. Your task is to interpret requests for London itineraries, extracting structured information while understanding implied intent and contextual clues.
+
+IMPORTANT: Rather than taking every word literally, understand the user's underlying intent. Use your knowledge of London to interpret requests contextually.
+
+Consider these interpretation guidelines:
+
+1. CONTEXTUAL LOCATION UNDERSTANDING:
+   - When a user mentions "in X", interpret X as a specific London neighborhood
+   - If they mention a specific venue, identify the neighborhood it's in
+   - Handle misspellings and colloquial names (e.g., "Westend" → "West End")
+   - Infer locations from activity types when appropriate (e.g., "financial district" → "City of London")
+
+2. ACTIVITY & TIME CONTEXTUAL ANALYSIS:
+   - Understand that "coffee" typically means a cafe, not just the beverage
+   - Interpret time references in context ("dinner at 7" means 7 PM, not 7 AM)
+   - Recognize implied activities (e.g., "romantic evening" implies dining or entertainment)
+   - Handle vague requests like "somewhere nice for lunch" with appropriate parameters
+
+3. FLEXIBLE INTERPRETATION EXAMPLES:
+   - "Coffee in Shoreditch" → Cafe in Shoreditch around current time
+   - "Dinner at 7 in Soho" → Restaurant in Soho at 19:00
+   - "Show me good Italian places in Mayfair" → Italian restaurants in Mayfair
+   - "Romantic evening in Covent Garden" → Upscale restaurant or entertainment in Covent Garden in evening
+   - "Something to do near London Bridge at 3" → Activity or attraction near London Bridge at 15:00
+
+Analyze this request: ${query}
+
+Based on your contextual understanding, return a JSON structure with:
+{
+  "activities": [
+    {
+      "description": string, // Original or clarified description of the activity
+      "location": string, // Specific London neighborhood or area
+      "time": string, // Time in 24-hour format (HH:MM)
+      "searchParameters": {
+        "searchTerm": string, // Optimized search term for Google Places API
+        "type": string, // Venue type (restaurant, cafe, museum, etc.)
+        "keywords": string[], // Additional search keywords
+        "minRating": number, // Minimum venue rating (1.0-5.0)
+        "requireOpenNow": boolean // Whether venue should be open at specified time
+      },
+      "requirements": string[], // Special requirements or preferences
+      "confidence": number // Your confidence in this interpretation (0.0-1.0)
+    }
+  ],
+  "startLocation": string | null, // Starting location if specified
+  "interpretationNotes": string // Optional explanation of how you interpreted ambiguous aspects
+}
+
+Return ONLY valid JSON without any additional explanation. Never use "London" when a more specific neighborhood is mentioned or could be inferred.
+`;
+
+    const result = await model.generateContent(systemPrompt);
+    const responseText = result.response.text();
+    
+    // Extract JSON from response
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("No JSON found in Gemini response:", responseText);
+      return null;
+    }
+    
+    const jsonResponse = jsonMatch[0];
+    let parsedResponse;
+    
+    try {
+      parsedResponse = JSON.parse(jsonResponse);
+    } catch (error) {
+      console.error("Failed to parse JSON from Gemini response:", error);
+      console.error("Raw response:", jsonResponse);
+      return null;
+    }
+    
+    // Validate response structure
+    const validationResult = GeminiResponseSchema.safeParse(parsedResponse);
+    if (!validationResult.success) {
+      console.error("Gemini response failed validation:", validationResult.error);
+      return null;
+    }
+    
+    // Process validated response
+    return processGeminiResponse(validationResult.data, query);
+  } catch (error) {
+    console.error("Error in Gemini processing:", error);
+    throw error;
+  }
+}
+
+/**
+ * Process the validated Gemini response into a StructuredRequest
+ */
+function processGeminiResponse(
+  geminiResponse: z.infer<typeof GeminiResponseSchema>,
+  originalQuery: string
+): StructuredRequest {
+  // Extract the structured data
+  const structuredData = {
+    startLocation: geminiResponse.startLocation,
+    destinations: [],
+    fixedTimes: [],
+    preferences: {
+      requirements: []
+    },
+    activities: geminiResponse.activities
+  };
+  
+  // Add destinations from activities
+  const locations = new Set<string>();
+  geminiResponse.activities.forEach(activity => {
+    if (activity.location && activity.location !== "London") {
+      locations.add(activity.location);
+    }
+  });
+  structuredData.destinations = Array.from(locations);
+  
+  // Extract requirements from activities
+  const allRequirements = new Set<string>();
+  geminiResponse.activities.forEach(activity => {
+    activity.requirements.forEach(req => allRequirements.add(req));
+  });
+  structuredData.preferences.requirements = Array.from(allRequirements);
+  
+  // Add type from first activity if available
+  if (geminiResponse.activities.length > 0) {
+    structuredData.preferences.type = geminiResponse.activities[0].searchParameters.type;
+  }
+  
+  // Create fixed times from activities
+  structuredData.fixedTimes = geminiResponse.activities.map(activity => ({
+    location: activity.location,
+    time: activity.time,
+    type: activity.searchParameters.type,
+    searchTerm: activity.searchParameters.searchTerm,
+    keywords: activity.searchParameters.keywords,
+    minRating: activity.searchParameters.minRating
+  }));
+  
+  return structuredData;
+}
+
+export default processWithGemini;

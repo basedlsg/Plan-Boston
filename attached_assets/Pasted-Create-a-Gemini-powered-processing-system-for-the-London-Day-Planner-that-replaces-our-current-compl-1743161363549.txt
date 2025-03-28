@@ -1,0 +1,77 @@
+Create a Gemini-powered processing system for the London Day Planner that replaces our current complex parsing logic with a more efficient approach. The system should:
+
+1. Use a well-crafted Gemini prompt to extract structured data from user queries
+2. Feed this structured data directly to Google Places API
+3. Present the results in our existing UI format
+
+## Implementation Steps
+
+1. Create a new file called `server/lib/geminiProcessor.ts` with:
+   - A robust function to send user queries to Gemini API
+   - Error handling with fallback to basic parsing when needed
+   - Proper typing for all returned data
+
+2. Design a comprehensive Gemini system prompt that:
+   - Extracts precise London neighborhoods (never generalizing to just "London")
+   - Identifies specific activity types (restaurant, cafe, bar, etc.)
+   - Accurately parses times in various formats (12h/24h, "at X", etc.)
+   - Detects special requirements or preferences
+   - Returns a JSON structure that maps directly to our application needs
+
+3. Modify the existing `parseItineraryRequest` function to:
+   - Use the new Gemini processor as the primary parsing mechanism
+   - Only fall back to our current parsing logic if Gemini processing fails
+   - Log the raw and processed data at each step for debugging
+
+## The Gemini System Prompt
+
+The heart of this system should be the following detailed prompt:
+
+"""
+You are a London travel planning expert AI assistant. Your task is to analyze travel requests for London and extract structured information.
+
+IMPORTANT: Pay special attention to precise London locations. Never generalize neighborhoods (like Hackney, Shoreditch, Canary Wharf, etc.) to just "London".
+
+Analyze this request carefully: {{USER_QUERY}}
+
+Extract the following information:
+
+1. SPECIFIC LOCATIONS:
+   - Identify all specific London neighborhoods, areas, or landmarks mentioned
+   - Map colloquial or misspelled locations to their proper names
+   - Note where activities are supposed to take place
+
+2. ACTIVITIES & VENUES:
+   - Determine the type of venue or activity requested (restaurant, cafe, museum, etc.)
+   - Identify specific requirements (quiet, romantic, family-friendly, etc.)
+   - Extract any venue qualities mentioned (cheap, upscale, traditional, etc.)
+
+3. TIMES:
+   - Extract all time references in various formats (9AM, 21:00, "around 6", etc.)
+   - Convert all times to 24-hour format
+   - For ambiguous times like "at 6", determine if AM or PM based on activity context
+   - Map period references (morning, afternoon, evening) to appropriate time ranges
+
+Return a JSON structure with this exact format:
+{
+  "startLocation": string | null,
+  "activities": [
+    {
+      "type": string, // "restaurant", "cafe", "bar", "museum", etc.
+      "location": string, // Specific London neighborhood/area
+      "time": string, // 24-hour format "HH:MM"
+      "searchParameters": {
+        "searchTerm": string, // The optimal search term for Google Places
+        "keywords": string[], // Additional keywords to refine search
+        "requireOpenNow": boolean,
+        "minRating": number // 1.0-5.0
+      },
+      "requirements": string[] // Special requirements or preferences
+    }
+  ]
+}
+
+Ensure every detail in your response is accurate - this will be used to query the Google Places API directly.
+"""
+
+This approach will significantly improve our location and time parsing accuracy while reducing the complexity of our custom parsing logic.

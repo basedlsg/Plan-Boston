@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { searchPlace } from "./lib/googlePlaces";
 import { calculateTravelTime } from "./lib/itinerary";
 import { parseItineraryRequest } from "./lib/nlp";
+import { StructuredRequest } from "@shared/types";
 import { insertPlaceSchema, insertItinerarySchema, Place, PlaceDetails } from "@shared/schema";
 import { z } from "zod";
 import { format } from 'date-fns';

@@ -1,0 +1,133 @@
+Implement a Gemini-powered natural language understanding system for the London Day Planner that addresses the current limitations in parsing user requests. This system should be flexible, contextual, and robust against various input styles.
+
+## Core Implementation Requirements
+
+1. Create a new file `server/lib/geminiProcessor.ts` that will:
+   - Handle all communication with the Gemini API with appropriate temperature and top_k settings
+   - Include a comprehensive context window with examples of different query styles
+   - Process the structured response with validation and correction mechanisms
+   - Include intelligent fallbacks for ambiguous inputs
+
+2. API Configuration for Optimal Results:
+   - Set temperature to 0.2 (lower than default) to reduce hallucination while maintaining flexibility
+   - Set top_k to 40 to allow for creative interpretations when needed
+   - Implement a retry mechanism with gradually increasing temperature if initial parsing fails
+   - Include context examples in the system prompt to guide interpretation
+
+## Enhanced Gemini System Prompt
+
+Use this enhanced prompt that guides Gemini toward flexible but accurate interpretation:
+
+"""
+You are a London travel planning expert who understands the nuances and context of travel requests. Your task is to interpret requests for London itineraries, extracting structured information while understanding implied intent and contextual clues.
+
+IMPORTANT: Rather than taking every word literally, understand the user's underlying intent. Use your knowledge of London to interpret requests contextually.
+
+Analyze this request: {{USER_QUERY}}
+
+Consider these interpretation guidelines:
+
+1. CONTEXTUAL LOCATION UNDERSTANDING:
+   - When a user mentions "in X", interpret X as a specific London neighborhood
+   - If they mention a specific venue, identify the neighborhood it's in
+   - Handle misspellings and colloquial names (e.g., "Westend" → "West End")
+   - Infer locations from activity types when appropriate (e.g., "financial district" → "City of London")
+
+2. ACTIVITY & TIME CONTEXTUAL ANALYSIS:
+   - Understand that "coffee" typically means a cafe, not just the beverage
+   - Interpret time references in context ("dinner at 7" means 7 PM, not 7 AM)
+   - Recognize implied activities (e.g., "romantic evening" implies dining or entertainment)
+   - Handle vague requests like "somewhere nice for lunch" with appropriate parameters
+
+3. FLEXIBLE INTERPRETATION EXAMPLES:
+   - "Coffee in Shoreditch" → Cafe in Shoreditch around current time
+   - "Dinner at 7 in Soho" → Restaurant in Soho at 19:00
+   - "Show me good Italian places in Mayfair" → Italian restaurants in Mayfair
+   - "Romantic evening in Covent Garden" → Upscale restaurant or entertainment in Covent Garden in evening
+   - "Something to do near London Bridge at 3" → Activity or attraction near London Bridge at 15:00
+
+Based on your contextual understanding, return a JSON structure with:
+{
+  "activities": [
+    {
+      "description": string, // Original or clarified description of the activity
+      "location": string, // Specific London neighborhood or area
+      "time": string, // Time in 24-hour format (HH:MM)
+      "searchParameters": {
+        "searchTerm": string, // Optimized search term for Google Places API
+        "type": string, // Venue type (restaurant, cafe, museum, etc.)
+        "keywords": string[], // Additional search keywords
+        "minRating": number, // Minimum venue rating (1.0-5.0)
+        "requireOpenNow": boolean // Whether venue should be open at specified time
+      },
+      "requirements": string[], // Special requirements or preferences
+      "confidence": number // Your confidence in this interpretation (0.0-1.0)
+    }
+  ],
+  "startLocation": string | null, // Starting location if specified
+  "interpretationNotes": string // Optional explanation of how you interpreted ambiguous aspects
+}
+"""
+
+## Implementation of Flexible Interpretation
+
+Add a post-processing function that handles Gemini's interpretation intelligently:
+
+```typescript
+function processGeminiResponse(
+  geminiResponse: any, 
+  originalQuery: string
+): StructuredRequest {
+  // Extract the structured data from Gemini's response
+  const structuredData = validateAndExtractGeminiData(geminiResponse);
+  
+  // Check confidence levels and handle low-confidence interpretations
+  const lowConfidenceElements = structuredData.activities
+    .filter(activity => activity.confidence < 0.7);
+  
+  if (lowConfidenceElements.length > 0) {
+    console.log("Low confidence interpretations detected:", 
+      lowConfidenceElements.map(a => a.description));
+      
+    // Attempt to improve low confidence elements with alternative approaches
+    // This could include more specific Gemini queries, regex fallbacks, etc.
+  }
+  
+  // Handle context-dependent defaults
+  structuredData.activities = structuredData.activities.map(activity => {
+    // If time is missing but activity type suggests a time, add default
+    if (!activity.time) {
+      activity.time = getDefaultTimeForActivity(activity.searchParameters.type);
+    }
+    
+    // If location is generic "London" but more specific is available in context
+    if (activity.location === "London" && structuredData.startLocation && 
+        structuredData.startLocation !== "London") {
+      // Consider using the more specific location as context
+      activity.location = structuredData.startLocation;
+    }
+    
+    return activity;
+  });
+  
+  return convertToStructuredRequest(structuredData);
+}
+
+// Helper function to get contextual default times based on activity type
+function getDefaultTimeForActivity(type: string): string {
+  const currentHour = new Date().getHours();
+  
+  switch (type) {
+    case "restaurant":
+      return currentHour < 15 ? "13:00" : "19:00"; // Lunch or dinner
+    case "cafe":
+      return currentHour < 12 ? "10:00" : "15:00"; // Morning or afternoon coffee
+    case "bar":
+      return "20:00"; // Evening drinks by default
+    case "museum":
+    case "attraction":
+      return "14:00"; // Afternoon visit
+    default:
+      return `${Math.max(currentHour, 9).toString().padStart(2, '0')}:00`; // Current hour or 9 AM minimum
+  }
+}
