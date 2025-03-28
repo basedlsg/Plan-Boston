@@ -51,18 +51,15 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
         </div>
         
         {/* Instruction Text */}
-        <p className="text-center mb-6 font-bold" 
+        <p className="text-center mb-6 font-bold tagline-text" 
            style={{ 
              color: '#17B9E6',
-             fontSize: 'clamp(0.875rem, 3vw, 1.125rem)',
+             fontSize: 'clamp(0.875rem, calc(0.8rem + 1vw), 1.125rem)',
              lineHeight: '1.4',
              maxWidth: 'min(90%, 600px)',
              marginLeft: 'auto',
              marginRight: 'auto',
-             display: '-webkit-box',
-             WebkitLineClamp: 2,
-             WebkitBoxOrient: 'vertical',
-             overflow: 'hidden'
+             /* Removed text truncation properties to ensure full text displays */
            }}>
           Enter your activities, locations and times below, we'll create a day plan for you.
         </p>

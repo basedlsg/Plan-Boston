@@ -1017,6 +1017,13 @@ h1, h2, h3 {
   }
 }
 
+/* Media query for tagline on very small screens */
+@media (max-width: 340px) {
+  .tagline-text {
+    font-size: 0.8rem !important;
+  }
+}
+
 /* High Contrast Mode */
 @media (prefers-contrast: high) {
   :root {
