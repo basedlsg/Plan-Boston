@@ -117,7 +117,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="whitespace-normal overflow-visible">{travelInfo[index].duration} to {travelInfo[index].destination}</span>
+                  <span className="whitespace-normal overflow-visible">{travelInfo[index].duration} minutes to {travelInfo[index].destination}</span>
                 </div>
               )}
             </React.Fragment>
