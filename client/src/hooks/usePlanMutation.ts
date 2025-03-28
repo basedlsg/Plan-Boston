@@ -31,7 +31,7 @@ export function usePlanMutation() {
         const venueDetails = place.details || {};
         return {
           name: place.name,
-          time: new Date(place.scheduledTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          time: new Date(place.scheduledTime).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'}),
           address: place.address,
           rating: venueDetails.rating || 0,
           categories: venueDetails.types || []

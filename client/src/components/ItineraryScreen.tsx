@@ -43,7 +43,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
       <div className="w-full max-w-md px-4 pb-12">
         {/* Header - only shown when we have venues */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-6 itinerary-title" style={{ 
+          <h1 className="text-3xl font-bold mb-8 itinerary-title" style={{ 
             fontFamily: "'Rozha One', serif", /* Keep this font for the title to match the app's branding */
             color: 'var(--color-text-black)',
             fontSize: '1.875rem' // text-3xl is 1.875rem, which is ~20% bigger than text-2xl (1.5rem)
@@ -76,7 +76,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                 
                 <div className="space-y-3 mb-5">
                   <p className="text-lg font-semibold venue-time" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.time}</p>
-                  <p className="text-gray-500 text-sm venue-address" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.address}</p>
+                  <p className="text-gray-500 text-sm venue-address" style={{ fontFamily: "'Inter', sans-serif", textTransform: 'none' }}>{venue.address}</p>
                   <p className="text-gray-500 text-sm venue-rating" style={{ fontFamily: "'Inter', sans-serif" }}>Rating: {venue.rating || 'N/A'}</p>
                 </div>
                 
