@@ -41,7 +41,7 @@ export function usePlanMutation() {
       // Process travel times into the format expected by the UI
       const travelInfo = responseData.travelTimes.map((time: any) => ({
         duration: time.duration,
-        destination: time.destination
+        destination: time.to // Use 'to' field from server response as the destination
       }));
       
       return {
