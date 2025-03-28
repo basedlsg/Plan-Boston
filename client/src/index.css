@@ -1017,6 +1017,30 @@ h1, h2, h3 {
   }
 }
 
+/* Tagline text styling to enforce exactly 2 lines */
+.tagline-text {
+  /* Set a fixed height for exactly 2 lines */
+  height: calc(1.4em * 2); /* 1.4 line-height * 2 lines */
+  
+  /* Control line wrapping and prevent overflow */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  
+  /* Ensure text is centered */
+  text-align: center;
+  
+  /* Responsive font sizing */
+  font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+  line-height: 1.4;
+  
+  /* Add proper container constraints */
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Media query for tagline on very small screens */
 @media (max-width: 340px) {
   .tagline-text {
