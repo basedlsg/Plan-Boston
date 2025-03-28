@@ -59,17 +59,18 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="w-full">
           {/* Date Field */}
-          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm"
+          <div className="mb-6 bg-white rounded-2xl py-6 px-5 shadow-sm"
             style={{
               border: '1px solid transparent',
               backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #E6DBEE, #BCC6E6)',
               backgroundOrigin: 'border-box',
-              backgroundClip: 'padding-box, border-box'
+              backgroundClip: 'padding-box, border-box',
+              minHeight: '80px' // Increased height
             }}
           >
             <label 
               htmlFor="date"
-              className="block mb-1 font-bold text-xl text-[#1C1C1C]"
+              className="block mb-2 font-bold text-xl text-[#1C1C1C]"
             >
               Date
             </label>
@@ -78,23 +79,24 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3 py-2"
               required
             />
           </div>
 
           {/* Time Field */}
-          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm"
+          <div className="mb-6 bg-white rounded-2xl py-6 px-5 shadow-sm"
             style={{
               border: '1px solid transparent',
               backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #E6DBEE, #BCC6E6)',
               backgroundOrigin: 'border-box',
-              backgroundClip: 'padding-box, border-box'
+              backgroundClip: 'padding-box, border-box',
+              minHeight: '80px' // Increased height
             }}
           >
             <label
               htmlFor="time"
-              className="block mb-1 font-bold text-xl text-[#1C1C1C]"
+              className="block mb-2 font-bold text-xl text-[#1C1C1C]"
             >
               Time
             </label>
@@ -103,13 +105,13 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3 py-2"
               required
             />
           </div>
 
           {/* Plans Field */}
-          <div className="mb-8 bg-white rounded-2xl p-4 shadow-sm"
+          <div className="mb-8 bg-white rounded-2xl py-6 px-5 shadow-sm"
             style={{
               border: '1px solid transparent',
               backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #E6DBEE, #BCC6E6)',
@@ -119,7 +121,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
           >
             <label
               htmlFor="plans"
-              className="block mb-1 font-bold text-xl text-[#1C1C1C]"
+              className="block mb-2 font-bold text-xl text-[#1C1C1C]"
             >
               Your Plans
             </label>
@@ -127,7 +129,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               id="plans"
               value={plans}
               onChange={(e) => setPlans(e.target.value)}
-              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg min-h-[100px] p-3"
+              className="w-full bg-transparent text-gray-700 focus:outline-none text-lg min-h-[135px] p-3"
               placeholder="e.g. 12pm lunch in Mayfair, then grab a coffee and have a walk"
               required
             />
