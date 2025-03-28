@@ -51,7 +51,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
         </div>
         
         {/* Instruction Text */}
-        <p className="text-center mb-6 text-lg" style={{ color: '#17B9E6' }}>
+        <p className="text-center mb-6 text-sm" style={{ color: '#17B9E6' }}>
           Enter your activities, locations and<br />
           times below, we'll create a day plan for you.
         </p>
@@ -62,7 +62,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
           <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <label 
               htmlFor="date"
-              className="block mb-1 font-semibold text-gray-700"
+              className="block mb-1 font-bold text-xl text-[#1C1C1C]"
             >
               Date
             </label>
@@ -80,7 +80,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
           <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <label
               htmlFor="time"
-              className="block mb-1 font-semibold text-gray-700"
+              className="block mb-1 font-bold text-xl text-[#1C1C1C]"
             >
               Time
             </label>
@@ -98,7 +98,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
           <div className="mb-8 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <label
               htmlFor="plans"
-              className="block mb-1 font-semibold text-gray-700"
+              className="block mb-1 font-bold text-xl text-[#1C1C1C]"
             >
               Your Plans
             </label>
