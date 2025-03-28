@@ -2,6 +2,7 @@ import { z } from "zod";
 import Fuse from 'fuse.js';
 import { londonAreas, LondonArea } from "../data/london-areas";
 import { ACTIVITY_TYPE_MAPPINGS } from "./locationNormalizer";
+import { parseAndNormalizeTime } from './timeUtils';
 
 // Types for location understanding
 export type LocationContext = {
@@ -259,105 +260,23 @@ export function parseActivity(description: string): ActivityContext {
   };
 }
 
-// Function to handle relative time periods with fuzzy matching
+/**
+ * Function to handle relative time periods with comprehensive parsing
+ * This uses our new timeUtils for consistent time handling across the application
+ * 
+ * @param timeString The time expression to parse (e.g., "morning", "6pm", "at 3")
+ * @returns Normalized 24-hour time string (HH:MM)
+ */
 export function expandRelativeTime(timeString: string): string {
   if (!timeString) return timeString;
   
-  // Enhanced map of relative times to reasonable hour ranges
-  // Including more variations and time-of-day terminology
-  const timeMap: Record<string, string> = {
-    // Time periods
-    'morning': '10:00',
-    'early morning': '08:00',
-    'late morning': '11:30',
-    'noon': '12:00',
-    'midday': '12:00',
-    'afternoon': '14:00',
-    'early afternoon': '13:00',
-    'late afternoon': '16:00',
-    'evening': '18:00',
-    'early evening': '17:30',
-    'late evening': '20:00',
-    'night': '20:00',
-    'late night': '22:00',
-    'midnight': '00:00',
-    
-    // Meal times
-    'breakfast': '08:30',
-    'early breakfast': '07:30',
-    'late breakfast': '10:00',
-    'brunch': '11:00',
-    'lunch': '12:30',
-    'early lunch': '12:00',
-    'late lunch': '14:00',
-    'tea time': '16:00',
-    'dinner': '19:00',
-    'early dinner': '18:00',
-    'late dinner': '20:30',
-    'supper': '19:30',
-    
-    // Other expressions
-    'first thing': '08:00',
-    'start of day': '09:00',
-    'end of day': '17:00',
-    'business hours': '10:00',
-    'opening time': '09:00',
-    'closing time': '18:00',
-    'rush hour': '17:30',
-    'happy hour': '17:00',
-    'after work': '18:00'
-  };
-  
-  // Normalize the input
-  const normalized = timeString.toLowerCase().trim();
-  
-  // Check for exact matches first
-  if (Object.prototype.hasOwnProperty.call(timeMap, normalized)) {
-    return timeMap[normalized];
+  // Use our comprehensive time parsing utility to handle all time formats consistently
+  try {
+    return parseAndNormalizeTime(timeString);
+  } catch (error) {
+    console.warn(`Error parsing time: ${timeString}`, error);
+    return timeString; // Return original if parsing fails
   }
-  
-  // For phrases like "in the morning" or "during the evening"
-  for (const [timePeriod, timeValue] of Object.entries(timeMap)) {
-    const pattern = new RegExp(`\\b${timePeriod}\\b`, 'i');
-    if (pattern.test(normalized)) {
-      return timeValue;
-    }
-    
-    // Check for possessive forms (e.g., "morning's")
-    if (normalized.includes(`${timePeriod}'s`)) {
-      return timeValue;
-    }
-    
-    // Fuzzy match for prepositions (in the morning, during afternoon, etc.)
-    const prepositions = ['in', 'during', 'at', 'around', 'about', 'by', 'before', 'after'];
-    for (const preposition of prepositions) {
-      if (normalized.includes(`${preposition} ${timePeriod}`)) {
-        return timeValue;
-      }
-    }
-  }
-  
-  // Special handling for hour-based expressions
-  if (normalized.includes('o\'clock')) {
-    // Extract the hour number
-    const match = normalized.match(/(\d+)\s*o'clock/i);
-    if (match && match[1]) {
-      const hour = parseInt(match[1]);
-      
-      // Handle ambiguous times (assume pm for 1-11, am for 12)
-      if (hour >= 1 && hour <= 11) {
-        // Default to PM for o'clock expressions (more common in conversation)
-        return `${(hour + 12).toString().padStart(2, '0')}:00`;
-      } else if (hour === 12) {
-        return '12:00';
-      } else if (hour >= 0 && hour <= 23) {
-        return `${hour.toString().padStart(2, '0')}:00`;
-      }
-    }
-  }
-  
-  // If no match found, return the original string for further processing
-  return timeString;
 }
 
 // Helper to parse natural time expressions

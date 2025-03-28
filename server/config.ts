@@ -49,17 +49,17 @@ export interface ApiConfig {
 // Feature definitions with metadata
 export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
   AI_PROCESSING: {
-    enabled: false,
+    enabled: true, // Enabling Gemini AI processing
     fallbackEnabled: true,
     required: false
   },
   PLACES_API: {
-    enabled: false,
+    enabled: true, // Enabling Google Places API
     fallbackEnabled: true,
     required: true
   },
   WEATHER_API: {
-    enabled: false,
+    enabled: true, // Enabling Weather API
     fallbackEnabled: false,
     required: false
   }

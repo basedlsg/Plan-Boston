@@ -10,57 +10,45 @@ import { format } from 'date-fns';
 import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, LondonArea, londonAreas } from "./data/london-areas";
 import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWeatherAwareVenue } from "./lib/weatherService";
 
-// Improved time parsing and validation
+// Import the timeUtils module
+import { parseAndNormalizeTime } from './lib/timeUtils';
+
+/**
+ * Parse a time string to a Date object
+ * Provides consistent time parsing throughout the application
+ * 
+ * @param timeStr Time string to parse (e.g., "3pm", "15:00", "evening", "at 6")
+ * @param baseDate Base date to use (defaults to current date)
+ * @returns Date object with the specified time
+ */
 function parseTimeString(timeStr: string, baseDate?: Date): Date {
-  // Use provided base date or current device time
-  const currentDate = baseDate || new Date();
-  const defaultStartTime = new Date(currentDate);
-  defaultStartTime.setHours(9, 0, 0, 0);  // Default to 9 AM if no time specified
-
-  // Try 24-hour format first (HH:MM)
-  const military = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-  if (military) {
-    const [_, hours, minutes] = military;
-    const date = new Date(currentDate);
-    date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-    return date;
-  }
-
-  // Try 12-hour format with colon (HH:MM AM/PM)
-  const standard = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-  if (standard) {
-    let [_, hours, minutes, period] = standard;
-    let hour = parseInt(hours);
-
-    if (period.toUpperCase() === 'PM' && hour !== 12) {
-      hour += 12;
-    } else if (period.toUpperCase() === 'AM' && hour === 12) {
-      hour = 0;
-    }
-
-    const date = new Date(currentDate);
-    date.setHours(hour, parseInt(minutes), 0, 0);
-    return date;
-  }
-  
-  // Try 12-hour format without colon (e.g., "9PM", "10AM")
-  const noColonFormat = timeStr.match(/^(\d{1,2})\s*(AM|PM)$/i);
-  if (noColonFormat) {
-    let [_, hours, period] = noColonFormat;
-    let hour = parseInt(hours);
+  try {
+    // Use provided base date or current date
+    const currentDate = baseDate || new Date();
     
-    if (period.toUpperCase() === 'PM' && hour !== 12) {
-      hour += 12;
-    } else if (period.toUpperCase() === 'AM' && hour === 12) {
-      hour = 0;
-    }
+    // Get the normalized time string in 24-hour format (HH:MM)
+    const normalizedTime = parseAndNormalizeTime(timeStr);
     
+    // Extract hours and minutes
+    const [hoursStr, minutesStr] = normalizedTime.split(':');
+    const hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10);
+    
+    // Create a new date with the specified time
     const date = new Date(currentDate);
-    date.setHours(hour, 0, 0, 0);
+    date.setHours(hours, minutes, 0, 0);
+    
+    console.log(`Parsed time "${timeStr}" as "${normalizedTime}" (${date.toLocaleTimeString()})`);
     return date;
+  } catch (error) {
+    console.error(`Error parsing time string "${timeStr}":`, error);
+    
+    // Provide a reasonable default (noon) instead of throwing an error
+    const fallbackDate = new Date(baseDate || new Date());
+    fallbackDate.setHours(12, 0, 0, 0);
+    
+    return fallbackDate;
   }
-
-  throw new Error(`Invalid time format: ${timeStr}. Please use "HH:MM" (24-hour), "HH:MM AM/PM", or "HAM/PM" (e.g., "9PM") format.`);
 }
 
 // Enhanced findInterestingActivities function with improved contextual awareness

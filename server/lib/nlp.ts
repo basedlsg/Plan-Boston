@@ -18,33 +18,50 @@ let genAI: GoogleGenerativeAI | null = null;
 let model: any = null;
 
 // Initialize AI only if API key is available
+// Check if AI processing is enabled
+console.log("AI_PROCESSING feature flag status:", isFeatureEnabled("AI_PROCESSING"));
+
 if (isFeatureEnabled("AI_PROCESSING")) {
   try {
-    // Initialize Google Generative AI with centralized config
-    genAI = new GoogleGenerativeAI(getApiKey("GEMINI_API_KEY"));
+    // Check if Gemini API key is valid
+    const geminiApiKey = getApiKey("GEMINI_API_KEY");
+    console.log("GEMINI_API_KEY validation:", validateApiKey("GEMINI_API_KEY"));
     
-    // Configure Gemini model with safety settings
-    model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-latest",
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-      ],
-    });
+    if (!geminiApiKey) {
+      console.error("Gemini API Key is missing or empty");
+    } else if (!validateApiKey("GEMINI_API_KEY")) {
+      console.error("Gemini API Key failed validation pattern");
+    } else {
+      console.log("Initializing Gemini API with valid API key");
+      
+      // Initialize Google Generative AI with centralized config
+      genAI = new GoogleGenerativeAI(geminiApiKey);
+      
+      // Configure Gemini model with safety settings
+      model = genAI.getGenerativeModel({
+        model: "gemini-1.5-pro-latest",
+        safetySettings: [
+          {
+            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+          },
+        ],
+      });
+      
+      console.log("Gemini API successfully initialized");
+    }
   } catch (err) {
     console.error("Failed to initialize Gemini API:", err);
     // Leave genAI and model as null to trigger fallback handling
@@ -185,6 +202,46 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
   // Skip Gemini processing if the feature is disabled or model initialization failed
   if (!isFeatureEnabled("AI_PROCESSING") || !model) {
     console.log("AI processing skipped - using basic fallback structure");
+    
+    // Even though we're using the fallback structure, let's improve it with Google Maps verification
+    // This will help improve the location data quality even without Gemini
+    try {
+      const { validateAndNormalizeLocation, processLocationWithAIAndMaps } = require('./mapGeocoding');
+      
+      // Process each destination
+      if (fallbackStructure.destinations.length > 0) {
+        const validatedDestinations = await Promise.all(
+          fallbackStructure.destinations.map(async (destination: string) => {
+            return await validateAndNormalizeLocation(destination);
+          })
+        );
+        
+        fallbackStructure.destinations = validatedDestinations.filter(Boolean);
+      }
+      
+      // Process each fixed time location
+      if (fallbackStructure.fixedTimes.length > 0) {
+        for (const fixedTime of fallbackStructure.fixedTimes) {
+          // Only process if location is explicitly set to "London" (generic) but searchTerm contains hints
+          if (fixedTime.location === "London" && fixedTime.searchTerm) {
+            const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
+            if (enhancedLocation && enhancedLocation !== "London") {
+              fixedTime.location = enhancedLocation;
+              console.log(`Enhanced fixed time location from "London" to "${enhancedLocation}"`);
+            }
+          } else if (fixedTime.location) {
+            const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
+            if (validatedLocation) {
+              fixedTime.location = validatedLocation;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error during location enhancement:", error);
+      // Continue with original fallback structure if enhancement fails
+    }
+    
     return fallbackStructure;
   }
 
