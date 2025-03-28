@@ -20,12 +20,6 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
     return `${year}-${month}-${day}`;
   }
 
-  // Format date for display (DD Month YYYY)
-  function formatDateForDisplay(dateStr: string): string {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-  }
-
   // Format time for time input (HH:MM)
   function formatTimeForInput(date: Date): string {
     const hours = String(date.getHours()).padStart(2, '0');
@@ -80,9 +74,6 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               className="w-full bg-transparent text-gray-700 focus:outline-none text-lg pl-3"
               required
             />
-            <div className="text-gray-500 pl-2">
-              {formatDateForDisplay(date)}
-            </div>
           </div>
 
           {/* Time Field */}
