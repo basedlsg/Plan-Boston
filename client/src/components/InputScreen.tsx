@@ -59,7 +59,14 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="w-full">
           {/* Date Field */}
-          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm"
+            style={{
+              border: '1px solid transparent',
+              backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #E6DBEE, #BCC6E6)',
+              backgroundOrigin: 'border-box',
+              backgroundClip: 'padding-box, border-box'
+            }}
+          >
             <label 
               htmlFor="date"
               className="block mb-1 font-bold text-xl text-[#1C1C1C]"
@@ -77,7 +84,14 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
           </div>
 
           {/* Time Field */}
-          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="mb-6 bg-white rounded-2xl p-4 shadow-sm"
+            style={{
+              border: '1px solid transparent',
+              backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #E6DBEE, #BCC6E6)',
+              backgroundOrigin: 'border-box',
+              backgroundClip: 'padding-box, border-box'
+            }}
+          >
             <label
               htmlFor="time"
               className="block mb-1 font-bold text-xl text-[#1C1C1C]"
@@ -95,7 +109,14 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
           </div>
 
           {/* Plans Field */}
-          <div className="mb-8 bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="mb-8 bg-white rounded-2xl p-4 shadow-sm"
+            style={{
+              border: '1px solid transparent',
+              backgroundImage: 'linear-gradient(white, white), linear-gradient(to right, #E6DBEE, #BCC6E6)',
+              backgroundOrigin: 'border-box',
+              backgroundClip: 'padding-box, border-box'
+            }}
+          >
             <label
               htmlFor="plans"
               className="block mb-1 font-bold text-xl text-[#1C1C1C]"
