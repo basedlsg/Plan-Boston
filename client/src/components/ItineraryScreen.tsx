@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 interface Venue {
   name: string;
@@ -24,11 +24,20 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
   travelInfo,
   onExport
 }) => {
+  // Add debug logging to track the data flow
+  useEffect(() => {
+    console.log("ItineraryScreen received venues:", venues);
+    console.log("ItineraryScreen received travelInfo:", travelInfo);
+  }, [venues, travelInfo]);
+
+  const hasVenues = venues && Array.isArray(venues) && venues.length > 0;
+  const hasTravelInfo = travelInfo && Array.isArray(travelInfo);
+
   return (
     <div className="itinerary-container glass-panel" style={{
       padding: '2rem',
       maxWidth: '800px',
-      margin: '2rem auto',
+      margin: '1rem auto', // Reduced from 2rem to 1rem to reduce gap
       position: 'relative',
       borderRadius: '12px',
       overflow: 'hidden',
@@ -41,7 +50,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
           fontSize: '2.5rem',
           letterSpacing: '0.08em',
           textAlign: 'center',
-          marginBottom: '2rem',
+          marginBottom: '1.5rem', // Reduced from 2rem
           color: 'var(--brand-black)',
           position: 'relative'
         }}>
@@ -54,12 +63,12 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
           style={{
             width: '100%',
             padding: '0.75rem',
-            marginBottom: '2rem',
+            marginBottom: '1.5rem', // Reduced from 2rem
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 600,
             borderRadius: '12px',
             transition: 'all 0.3s ease',
-            background: 'linear-gradient(135deg, var(--brand-blue), var(--brand-pink))',
+            background: 'var(--brand-blue)', // Changed to solid blue color
             color: 'white',
             border: 'none'
           }}
@@ -73,16 +82,16 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
         flexDirection: 'column',
         gap: '1.5rem'
       }}>
-        {venues && venues.length > 0 ? (
+        {hasVenues ? (
           venues.map((venue, index) => (
-            <React.Fragment key={venue.name}>
+            <React.Fragment key={`${venue.name}-${index}`}>
               <div className="venue-card glass-card" style={{
                 padding: '1.5rem',
                 borderRadius: '12px',
                 position: 'relative',
                 transition: 'all 0.3s ease',
                 border: '1px solid rgba(28, 28, 28, 0.1)',
-                background: 'linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08))',
+                background: 'rgba(255, 255, 255, 0.7)', // Changed to white background
                 backdropFilter: 'blur(15px)',
                 WebkitBackdropFilter: 'blur(15px)'
               }}>
@@ -118,7 +127,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                     fontFamily: "'Poppins', sans-serif",
                     fontSize: '0.9rem',
                     color: 'var(--brand-black-70)'
-                  }}>Rating: {venue.rating}</p>
+                  }}>Rating: {venue.rating || 'N/A'}</p>
                 </div>
                 
                 <div className="venue-tags" style={{
@@ -126,9 +135,9 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                   flexWrap: 'wrap',
                   gap: '0.5rem'
                 }}>
-                  {venue.categories && venue.categories.map(category => (
-                    <span key={category} className="tag" style={{
-                      background: 'linear-gradient(135deg, rgba(23, 185, 230, 0.1), rgba(252, 148, 197, 0.1))',
+                  {venue.categories && Array.isArray(venue.categories) && venue.categories.map((category, catIndex) => (
+                    <span key={`${category}-${catIndex}`} className="tag" style={{
+                      background: 'rgba(23, 185, 230, 0.1)', // Changed to blue
                       padding: '0.25rem 0.75rem',
                       borderRadius: '50px',
                       fontSize: '0.8rem',
@@ -141,7 +150,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                 </div>
               </div>
               
-              {index < venues.length - 1 && travelInfo && travelInfo[index] && (
+              {index < venues.length - 1 && hasTravelInfo && travelInfo[index] && (
                 <div className="travel-info" style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -182,9 +191,10 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
             padding: '2rem',
             textAlign: 'center',
             color: 'var(--brand-black-70)',
-            borderRadius: '12px'
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.7)' // Changed to white background
           }}>
-            <p>No itinerary data available yet.</p>
+            <p>Create a plan using the form above to generate your itinerary.</p>
           </div>
         )}
       </div>
@@ -192,4 +202,4 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
   );
 };
 
-export default ItineraryScreen; 
+export default ItineraryScreen;

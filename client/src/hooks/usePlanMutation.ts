@@ -20,8 +20,34 @@ export function usePlanMutation() {
         query: data.plans
       };
       
+      console.log("Sending API request:", apiData);
       const response = await apiRequest('POST', '/api/plan', apiData);
-      return response.json();
+      const responseData = await response.json();
+      console.log("API response:", responseData);
+      
+      // Transform API response to match the expected ItineraryData structure
+      const venues = responseData.places.map((place: any) => {
+        // Convert API response format to Venue format expected by the UI
+        const venueDetails = place.details || {};
+        return {
+          name: place.name,
+          time: new Date(place.scheduledTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          address: place.address,
+          rating: venueDetails.rating || 0,
+          categories: venueDetails.types || []
+        };
+      });
+      
+      // Process travel times into the format expected by the UI
+      const travelInfo = responseData.travelTimes.map((time: any) => ({
+        duration: time.duration,
+        destination: time.destination
+      }));
+      
+      return {
+        venues,
+        travelInfo
+      };
     },
     onSuccess: () => {
       toast({
