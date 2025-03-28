@@ -482,9 +482,9 @@
     opacity: 0.65 !important;
   }
   
-  /* Create Plan button - solid blue as per design requirements */
+  /* Create Plan button - solid blue (#17B9E6) as per design requirements */
   .create-plan-btn {
-    background: var(--brand-blue);
+    background: #17B9E6;
     color: white;
     border: none;
     border-radius: var(--radius-md);
@@ -727,7 +727,7 @@
 
 /* Buttons */
 .create-plan-btn {
-  background: var(--brand-blue);
+  background: #17B9E6;
   color: white;
   border: none;
   border-radius: var(--radius-md);

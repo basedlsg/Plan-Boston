@@ -186,7 +186,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               padding: '1rem',
               borderRadius: '12px',
               border: 'none',
-              background: 'linear-gradient(135deg, var(--brand-blue), var(--brand-pink))',
+              background: '#17B9E6',
               color: 'white',
               fontFamily: "'Poppins', sans-serif",
               fontWeight: 600,

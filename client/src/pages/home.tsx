@@ -180,7 +180,8 @@ export default function Home() {
 
                   <Button
                     type="submit"
-                    className="w-full create-plan-btn text-brand-blue"
+                    className="w-full create-plan-btn"
+                    style={{ background: '#17B9E6', color: 'white' }}
                     disabled={isFormSubmitting}
                   >
                     {isFormSubmitting ? (

@@ -68,7 +68,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
             fontWeight: 600,
             borderRadius: '12px',
             transition: 'all 0.3s ease',
-            background: 'var(--brand-blue)', // Changed to solid blue color
+            background: '#17B9E6', // Specific blue color #17B9E6
             color: 'white',
             border: 'none'
           }}

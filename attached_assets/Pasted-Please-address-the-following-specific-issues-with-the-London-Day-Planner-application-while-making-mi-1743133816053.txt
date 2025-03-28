@@ -1,0 +1,43 @@
+Please address the following specific issues with the London Day Planner application while making minimal changes to the existing codebase:
+1. Fix Location Parsing
+
+The system is incorrectly parsing specific neighborhoods (e.g., "Nine Elms") as generic "London"
+Update the location extraction logic in the NLP module to properly recognize London neighborhoods
+Add a verification step to ensure extracted locations match the user's input
+Add specific handling for phrases like "in [neighborhood]" to capture location context
+
+2. Fix Time Display Discrepancy
+
+There's a mismatch between the scheduled time (12:00 PM) and displayed time (01:00 PM)
+Check for timezone conversion issues in the time formatting logic
+Ensure consistent time format between backend processing and frontend display
+Verify the formatTime utility is correctly handling 12/24 hour formats
+
+3. Reduce UI Whitespace
+
+Significantly reduce the excessive whitespace between the input form and itinerary results
+Add a CSS rule to limit the maximum gap to approximately 40-60px
+Ensure the itinerary section appears closer to the input form after submission
+Improve the scrolling behavior to show both sections with minimal scrolling
+
+4. Display Date Information
+
+Add the date to the itinerary display along with the time
+Format date consistently with the application style
+Use the date selected in the input form
+
+5. Debug AI Processing Fallback
+
+Investigate why "AI processing skipped - using basic fallback structure" is occurring
+Check if all required environment variables are properly set
+Verify the AI service connection is working correctly
+Add better error handling for AI service failures
+
+Implementation Approach:
+
+Focus on identifying and fixing the specific bugs rather than rewriting components
+Add targeted console logging to trace the data flow issues
+Preserve the existing UI design while adjusting spacing
+Test with specific neighborhood inputs to verify location parsing fixes
+
+The goal is to make surgical fixes to these specific issues while maintaining the overall structure and design of the application.
