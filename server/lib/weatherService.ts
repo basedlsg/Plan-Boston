@@ -1,7 +1,7 @@
 import { PlaceDetails } from '@shared/schema';
+import { getApiKey, isFeatureEnabled } from '../config';
 
 // API configuration
-const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/forecast';
 
 // Set up a cache to avoid redundant API calls
@@ -45,8 +45,9 @@ export async function getWeatherForecast(latitude: number, longitude: number): P
   // No valid cache entry, fetch from API
   console.log(`Fetching weather data for ${cacheKey}`);
   
-  if (!WEATHER_API_KEY) {
-    throw new Error('No WEATHER_API_KEY found in environment variables');
+  // Check if weather feature is enabled
+  if (!isFeatureEnabled("WEATHER_AWARENESS")) {
+    throw new Error('Weather API feature is disabled - missing API key');
   }
   
   // Construct API URL with params
@@ -55,7 +56,7 @@ export async function getWeatherForecast(latitude: number, longitude: number): P
   url.searchParams.append('lon', longitude.toString());
   url.searchParams.append('units', 'metric'); // Use Celsius
   url.searchParams.append('cnt', '24'); // 24 forecasts (3-hour intervals for 3 days)
-  url.searchParams.append('appid', WEATHER_API_KEY);
+  url.searchParams.append('appid', getApiKey("WEATHER", true)); // Will throw if key missing
   
   try {
     const response = await fetch(url.toString());
@@ -183,9 +184,9 @@ export async function getWeatherAwareVenue(
   let isWeatherSuitable = true;
   
   try {
-    // Skip weather check if there are no alternatives or no API key
-    if (!alternatives || alternatives.length === 0 || !process.env.WEATHER_API_KEY) {
-      console.log("Skipping weather check - no alternatives or API key missing");
+    // Skip weather check if there are no alternatives or weather feature is disabled
+    if (!alternatives || alternatives.length === 0 || !isFeatureEnabled("WEATHER_AWARENESS")) {
+      console.log("Skipping weather check - no alternatives or weather feature disabled");
       return { venue: place, weatherSuitable: true };
     }
     

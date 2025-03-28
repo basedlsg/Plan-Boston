@@ -11,32 +11,45 @@ import {
   LocationContext,
   ActivityContext 
 } from "./languageProcessing";
-
-// Initialize Google Generative AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import { getApiKey, isFeatureEnabled, validateApiKey } from "../config";
 
 // Configure Gemini model with safety settings
-const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-pro-latest",
-  safetySettings: [
-    {
-      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-  ],
-});
+let genAI: GoogleGenerativeAI | null = null;
+let model: any = null;
+
+// Initialize AI only if API key is available
+if (isFeatureEnabled("AI_PROCESSING")) {
+  try {
+    // Initialize Google Generative AI with centralized config
+    genAI = new GoogleGenerativeAI(getApiKey("GEMINI_API_KEY"));
+    
+    // Configure Gemini model with safety settings
+    model = genAI.getGenerativeModel({
+      model: "gemini-1.5-pro-latest",
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("Failed to initialize Gemini API:", err);
+    // Leave genAI and model as null to trigger fallback handling
+  }
+}
 
 export type StructuredRequest = {
   startLocation: string | null;
@@ -111,12 +124,51 @@ function extractActivities(text: string): ActivityContext[] {
   return activities;
 }
 
+/**
+ * Parse a natural language itinerary request into structured data
+ * 
+ * @param query User's natural language request
+ * @returns StructuredRequest object with parsed locations, activities and preferences
+ */
 export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
-  try {
-    // First use our direct extraction methods
-    const extractedLocations = extractLocations(query);
-    const extractedActivities = extractActivities(query);
+  // Initialize basic fallback structure with direct extraction methods
+  const extractedLocations = extractLocations(query);
+  const extractedActivities = extractActivities(query);
+  
+  // Create fallback structure that will be used if AI processing fails
+  const fallbackStructure: StructuredRequest = {
+    startLocation: null,
+    destinations: extractedLocations.map(loc => loc.name),
+    fixedTimes: extractedActivities.length > 0 ? 
+      extractedActivities.map(activity => {
+        const location = extractedLocations[0]?.name || "London";
+        const time = activity.timeContext?.preferredTime || 
+              (activity.type === 'breakfast' ? '09:00' : 
+               activity.type === 'lunch' ? '13:00' : 
+               activity.type === 'dinner' ? '19:00' : '12:00');
+        
+        return {
+          location,
+          time,
+          type: activity.venueType || activity.type,
+          searchTerm: activity.naturalDescription
+        };
+      }) : 
+      [],
+    preferences: {
+      requirements: extractedActivities
+        .filter(a => a.requirements)
+        .flatMap(a => a.requirements || [])
+    }
+  };
 
+  // Skip Gemini processing if the feature is disabled or model initialization failed
+  if (!isFeatureEnabled("AI_PROCESSING") || !model) {
+    console.log("AI processing skipped - using basic fallback structure");
+    return fallbackStructure;
+  }
+
+  try {
     // Then use our comprehensive Gemini prompt for enhanced understanding
     const prompt = `
 You are a London travel planning expert with deep knowledge of London's geography, neighborhoods, and venues. Analyze this request carefully:
@@ -176,29 +228,21 @@ RETURN ONLY this JSON structure:
     try {
       const result = await model.generateContent(prompt);
       const responseText = result.response.text();
-
-      // Add detailed logging to debug the response structure
-      console.log("Raw Gemini API response:", responseText);
       
       if (!responseText || responseText.trim() === '') {
-        console.error("Empty text content received");
         throw new Error("Empty response received from language model");
       }
     
-      // Clean the text content by removing markdown code block syntax
+      // Clean and parse the response
       let cleanedContent = responseText.trim();
       
-      // Remove markdown code block markers if present
+      // Remove markdown code block syntax if present
       if (cleanedContent.startsWith('```json') || cleanedContent.startsWith('```')) {
-        // Find the position of the first and last backtick sections
         const firstBlockEnd = cleanedContent.indexOf('\n');
         const lastBlockStart = cleanedContent.lastIndexOf('```');
         
         if (firstBlockEnd !== -1) {
-          // Remove the opening code block marker
           cleanedContent = cleanedContent.substring(firstBlockEnd + 1);
-          
-          // Remove the closing code block marker if present
           if (lastBlockStart !== -1 && lastBlockStart > firstBlockEnd) {
             cleanedContent = cleanedContent.substring(0, lastBlockStart).trim();
           }
@@ -211,41 +255,31 @@ RETURN ONLY this JSON structure:
         cleanedContent = cleanedContent.substring(0, lastBrace + 1);
       }
       
-      // Remove any comments in the JSON which are causing parsing errors
+      // Remove comments from JSON
       cleanedContent = cleanedContent
-        .replace(/\/\/.*$/gm, '') // Remove single-line comments
-        .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
       
-      console.log("Cleaned JSON content:", cleanedContent);
-      
-      // Parse the JSON response
+      // Parse the JSON response with validation
       let parsedResponse;
       try {
         parsedResponse = JSON.parse(cleanedContent);
-        console.log("Successfully parsed Gemini response:", parsedResponse);
-      } catch (error: unknown) {
-        console.error("JSON parse error:", error);
-        console.error("Problematic text content:", cleanedContent);
-        console.log("Original text response:", responseText);
+      } catch (error) {
+        // Try to extract JSON by looking for { and }
+        const jsonStart = cleanedContent.indexOf('{');
+        const jsonEnd = cleanedContent.lastIndexOf('}');
         
-        // Advanced error recovery - try to extract JSON by looking for { and }
-        try {
-          const jsonStart = cleanedContent.indexOf('{');
-          const jsonEnd = cleanedContent.lastIndexOf('}');
-          
-          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-            const extractedJson = cleanedContent.substring(jsonStart, jsonEnd + 1);
-            console.log("Attempting to parse extracted JSON:", extractedJson);
-            parsedResponse = JSON.parse(extractedJson);
-            console.log("Successfully parsed extracted JSON:", parsedResponse);
-          } else {
-            throw new Error("Could not find valid JSON object markers");
-          }
-        } catch (extractError) {
-          // Handle unknown error type safely
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          throw new Error(`Failed to parse JSON response: ${errorMessage}`);
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          const extractedJson = cleanedContent.substring(jsonStart, jsonEnd + 1);
+          parsedResponse = JSON.parse(extractedJson);
+        } else {
+          throw new Error("Could not find valid JSON object markers");
         }
+      }
+
+      // Validate response structure
+      if (!parsedResponse || typeof parsedResponse !== 'object') {
+        throw new Error("Invalid response structure from language model");
       }
 
       // Define the expected type for our fixed times entries
@@ -397,7 +431,7 @@ type FixedTimeEntry = {
               });
 
               parsed.fixedTimes.push({
-                location: location.name,
+                location: ft.location, // Use the original location directly without normalization
                 time: timeValue,
                 // Preserve the original activity type from the response
                 type: ft.type ? String(ft.type) : undefined,
@@ -663,26 +697,32 @@ type FixedTimeEntry = {
         return a.time.localeCompare(b.time);
       });
       
-      // Debug logging
-      console.log("Final parsed request:", JSON.stringify(parsed, null, 2));
+      // Sort fixed times chronologically
+      parsed.fixedTimes.sort((a, b) => {
+        if (!a.time) return -1;
+        if (!b.time) return 1;
+        return a.time.localeCompare(b.time);
+      });
 
       return parsed;
 
-    } catch (error: any) {
-      console.error("Error calling Gemini API:", error);
+    } catch (error) {
+      // Log error details without excessive output
+      console.error("Error during Gemini API processing:", {
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        query: query.substring(0, 100) + (query.length > 100 ? '...' : '')
+      });
       
-      // Return a basic structure from our direct extraction methods as a fallback
-      return {
-        startLocation: null,
-        destinations: extractedLocations.map(loc => loc.name),
-        fixedTimes: [],
-        preferences: {
-          requirements: []
-        }
-      };
+      return fallbackStructure;
     }
-  } catch (error: any) {
-    console.error("Fatal error in parseItineraryRequest:", error);
-    throw new Error(`Failed to parse itinerary request: ${error.message}`);
+  } catch (error) {
+    // Log error details while avoiding excessive console output
+    console.error("Fatal error in parseItineraryRequest:", {
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+      message: error instanceof Error ? error.message : String(error),
+      query: query.substring(0, 100) + (query.length > 100 ? '...' : '')
+    });
+
+    return fallbackStructure;
   }
 }

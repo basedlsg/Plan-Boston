@@ -1,8 +1,297 @@
+/* Font imports - Must come first */
+@import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+/* Then Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables and Design System */
+:root {
+  --brand-pink: #FC94C5;
+  --brand-black: #1C1C1C;
+  --brand-blue: #17B9E6;
+  --brand-neutral: #737373;
+  --brand-box-bg: #E3E9F2;
+  --brand-tag-bg: #BFD4ED;
+}
+
+/* Utility classes for font families */
+.font-rozha {
+  font-family: 'Rozha One', serif;
+}
+
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}
+
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Gradient border for input fields */
+.border-gradient {
+  position: relative;
+  background: linear-gradient(to right, #E6DBEE, #BCC6E6);
+  padding: 1px;
+}
+
+.border-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  background: white;
+  border-radius: inherit;
+  z-index: -1;
+}
+
+/* Glass card styling */
+.glass-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  border: 1px solid rgba(230, 219, 238, 0.5);
+}
+
+.venue-card {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.venue-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Form container styling */
+.form-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(230, 219, 238, 0.5);
+}
+
+/* Button styling */
+button[type="submit"] {
+  transition: all 0.3s ease;
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  transform: scale(1.02);
+}
+
+button[type="submit"]:disabled {
+  opacity: 0.7;
+}
+
+/* Base styles */
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--brand-black);
+  background-color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Accessibility */
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Class-based reduced motion */
+.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Font Size Multiplier */
+:root {
+  --font-size-multiplier: 1;
+}
+
+html {
+  font-size: calc(16px * var(--font-size-multiplier));
+}
+
+/* Contrast Modes */
+body.contrast-normal {
+  /* Default colors are already set */
+}
+
+body.contrast-high {
+  --brand-blue: #006CB0; /* Darker blue for better contrast */
+  --brand-pink: #D9387C; /* Darker pink for better contrast */
+  --brand-black: #000000; /* Pure black text */
+  --brand-box-bg: #D9E3F0; /* Slightly darker box backgrounds */
+  --brand-tag-bg: #A4C1E6; /* Darker tag backgrounds */
+  
+  /* Increase border contrast */
+  .glass-card, .glass-panel, .form-container, .venue-card, .border-gradient {
+    border-color: rgba(0, 0, 0, 0.3) !important; /* Darker borders */
+  }
+  
+  /* Increased text contrast */
+  p, span, button, input, textarea, label, .text-brand-black {
+    color: black !important; /* Force black text */
+  }
+  
+  /* Increase button contrast */
+  button[type="submit"], .bg-brand-blue {
+    background-color: #006CB0 !important; /* Darker blue */
+    color: white !important; /* White text */
+  }
+  
+  /* Remove subtle effects that might reduce contrast */
+  .glass-effect::after, .glass-effect::before,
+  .glass-card::after, .glass-card::before,
+  .glass-panel::after, .glass-panel::before {
+    opacity: 0.1; /* Reduce transparency effects */
+  }
+}
+
+body.contrast-highest {
+  --brand-blue: #004080; /* Much darker blue */
+  --brand-pink: #B00051; /* Much darker pink */
+  --brand-black: #000000; /* Pure black */
+  --brand-box-bg: #FFFFFF; /* White backgrounds */
+  --brand-tag-bg: #CCCCCC; /* Light gray tags */
+  
+  /* Force high contrast mode */
+  * {
+    background-color: white !important;
+    color: black !important;
+    border-color: black !important;
+    box-shadow: none !important;
+  }
+  
+  /* Add visible outlines to interactive elements */
+  a, button, input, select, textarea {
+    outline: 2px solid black !important;
+  }
+  
+  /* Stronger borders for cards and containers */
+  .glass-card, .glass-panel, .form-container, .venue-card, input, textarea, select {
+    border: 2px solid black !important;
+    background: white !important;
+  }
+  
+  /* Remove all gradients and background effects */
+  .glass-effect::after, .glass-effect::before,
+  .glass-card::after, .glass-card::before,
+  .glass-panel::after, .glass-panel::before,
+  .logo::after {
+    display: none !important;
+  }
+  
+  /* High contrast buttons */
+  button[type="submit"], .bg-brand-blue {
+    background-color: black !important;
+    color: white !important;
+    text-decoration: underline !important;
+  }
+}
+
+/* Visual Impairment Simulations */
+/* Protanopia - Red-Green colorblindness (missing red receptors) */
+body.vision-protanopia {
+  filter: url('data:image/svg+xml,\
+    <svg xmlns="http://www.w3.org/2000/svg">\
+      <filter id="protanopia">\
+        <feColorMatrix type="matrix" values="0.567, 0.433, 0, 0, 0  0.558, 0.442, 0, 0, 0  0, 0.242, 0.758, 0, 0  0, 0, 0, 1, 0"/>\
+      </filter>\
+    </svg>#protanopia');
+}
+
+/* Deuteranopia - Red-Green colorblindness (missing green receptors) */
+body.vision-deuteranopia {
+  filter: url('data:image/svg+xml,\
+    <svg xmlns="http://www.w3.org/2000/svg">\
+      <filter id="deuteranopia">\
+        <feColorMatrix type="matrix" values="0.625, 0.375, 0, 0, 0  0.7, 0.3, 0, 0, 0  0, 0.3, 0.7, 0, 0  0, 0, 0, 1, 0"/>\
+      </filter>\
+    </svg>#deuteranopia');
+}
+
+/* Tritanopia - Blue-Yellow colorblindness */
+body.vision-tritanopia {
+  filter: url('data:image/svg+xml,\
+    <svg xmlns="http://www.w3.org/2000/svg">\
+      <filter id="tritanopia">\
+        <feColorMatrix type="matrix" values="0.95, 0.05, 0, 0, 0  0, 0.433, 0.567, 0, 0  0, 0.475, 0.525, 0, 0  0, 0, 0, 1, 0"/>\
+      </filter>\
+    </svg>#tritanopia');
+}
+
+/* Achromatopsia - Complete color blindness */
+body.vision-achromatopsia {
+  filter: grayscale(100%);
+}
+
+/* Blurred Vision simulation */
+body.vision-blurredVision {
+  filter: blur(1px);
+}
+
+/* Cataracts simulation */
+body.vision-cataracts {
+  filter: brightness(0.8) contrast(0.8) sepia(0.3) blur(0.5px);
+}
+
 @layer base {
+  /* Root CSS Variables */
+  :root {
+    /* Brand Colors */
+    --brand-pink: #FC94C5;
+    --brand-black: #1C1C1C;
+    --brand-blue: #17B9E6;
+    
+    /* Opacity Variants */
+    --brand-pink-10: rgba(252, 148, 197, 0.1);
+    --brand-blue-10: rgba(23, 185, 230, 0.1);
+    --brand-blue-20: rgba(23, 185, 230, 0.2);
+    --brand-black-10: rgba(28, 28, 28, 0.1);
+    --brand-black-70: rgba(28, 28, 28, 0.7);
+    --brand-black-80: rgba(28, 28, 28, 0.8);
+    --white-20: rgba(255, 255, 255, 0.2);
+    --white-30: rgba(255, 255, 255, 0.3);
+    --white-50: rgba(255, 255, 255, 0.5);
+    --white-80: rgba(255, 255, 255, 0.8);
+    --white-85: rgba(255, 255, 255, 0.85);
+    --white-95: rgba(255, 255, 255, 0.95);
+    
+    /* Shadows */
+    --shadow-sm: 0 5px 20px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.2);
+    
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    
+    /* Spacing */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+  }
+
   * {
     @apply border-border;
   }
@@ -16,10 +305,10 @@
     @apply antialiased text-foreground;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
-    background-color: #FFFFFF; /* Clean white background */
+    background-color: #FFFFFF;
     color: var(--brand-black);
     background-image: 
-      linear-gradient(135deg, rgba(23, 185, 230, 0.03) 0%, rgba(252, 148, 197, 0.05) 100%),
+      linear-gradient(135deg, var(--brand-blue-10) 0%, var(--brand-pink-10) 100%),
       url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='rgba(23, 185, 230, 0.02)' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
     position: relative;
     overflow-x: hidden;
@@ -148,13 +437,13 @@
   
   /* Premium glass effect containers with subtle blue-to-pink gradient */
   .glass-effect {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
+    background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04); /* Deeper shadows for better separation */
-    border: 1px solid rgba(28, 28, 28, 0.1); /* Darker border with 10% opacity */
-    padding: 1.725rem; /* Increased by 15% for more luxurious spacing */
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--brand-black-10);
+    padding: var(--spacing-md);
     position: relative;
     transition: all 0.3s ease;
     z-index: 1;
@@ -189,12 +478,12 @@
   }
   
   .glass-card {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
+    background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04); /* Deeper shadows for better separation */
-    border: 1px solid rgba(28, 28, 28, 0.1); /* Darker border with 10% opacity */
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--brand-black-10);
     position: relative;
     z-index: 1;
     transition: all 0.3s ease;
@@ -240,17 +529,17 @@
   
   /* Form container - with blue-to-pink gradient - enhanced with more contrast */
   .form-container {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
+    background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04); /* Deeper shadows for better separation */
-    border: 1px solid rgba(28, 28, 28, 0.1); /* Darker border with 10% opacity */
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--brand-black-10);
     overflow: hidden;
     position: relative;
     z-index: 1;
     transform: translateZ(0);
-    padding: 1.725rem; /* 15% more padding */
+    padding: var(--spacing-md);
     transition: all 0.3s ease;
   }
   
@@ -284,15 +573,11 @@
   
   /* Date/time card glass effect with blue-to-pink gradient */
   .datetime-card {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04); /* Deeper shadows for better separation */
-    border: 1px solid rgba(28, 28, 28, 0.1); /* Darker border with 10% opacity */
-    overflow: hidden;
-    position: relative;
-    z-index: 1;
+    background: var(--white-80);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--brand-blue-10);
     transition: all 0.3s ease;
   }
   
@@ -367,12 +652,11 @@
   
   /* Venue swiper glass effect with blue-to-pink gradient */
   .venue-glass {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.05), rgba(252, 148, 197, 0.08));
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04); /* Deeper shadows for better separation */
-    border: 1px solid rgba(28, 28, 28, 0.1); /* Darker border with 10% opacity */
+    background: var(--white-80);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--brand-blue-10);
     transition: all 0.3s ease;
     position: relative;
     z-index: 1;
@@ -442,55 +726,25 @@
   
   /* Create Plan button - glass effect with blue and pink gradient border */
   .create-plan-btn {
-    background: rgba(255, 255, 255, 0.8) !important;
-    border: 1.5px solid transparent !important; 
-    border-image: linear-gradient(135deg, var(--brand-blue), var(--brand-pink)) 1 !important;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04) !important; /* Deeper shadows for better separation */
-    backdrop-filter: blur(15px) !important;
-    -webkit-backdrop-filter: blur(15px) !important;
-    transition: all 0.3s ease !important;
-    border-radius: 12px !important;
-    font-family: 'Poppins', sans-serif !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.02em !important;
-    position: relative !important;
-    overflow: hidden !important;
-    color: var(--brand-blue) !important;
-  }
-  
-  /* Button light reflection along top edge */
-  .create-plan-btn::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    height: 1px !important;
-    background: linear-gradient(
-      to right,
-      rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0.8),
-      rgba(255, 255, 255, 0)
-    ) !important;
-    pointer-events: none !important;
-  }
-  
-  /* Inner glow for button */
-  .create-plan-btn::after {
-    content: "" !important;
-    position: absolute !important;
-    inset: 0 !important;
-    border-radius: 11px !important; /* 1px smaller than container */
-    box-shadow: inset 0 0 5px rgba(23, 185, 230, 0.05) !important; /* Subtle inner glow */
-    pointer-events: none !important;
-    z-index: 0 !important;
+    background: linear-gradient(135deg, var(--brand-blue), var(--brand-pink));
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
   }
   
   .create-plan-btn:hover {
-    background: rgba(255, 255, 255, 0.9) !important;
-    transform: scale(1.02) !important; /* Exact 1.02x scale as specified */
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06) !important; /* Enhanced shadow on hover */
-    border-image: linear-gradient(135deg, var(--brand-pink), var(--brand-blue)) 1 !important; /* Reversed gradient on hover */
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .create-plan-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
   
   /* Navigation arrow buttons - premium look for white background */
@@ -620,7 +874,7 @@
     }
     
     .glass-effect, .glass-card, .glass-panel {
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
     }
     
     .glass-effect::after, .glass-card::after, .glass-panel::after {
@@ -628,7 +882,7 @@
     }
     
     .venue-glass, .datetime-card, .form-container {
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
     }
     
     .venue-glass::after, .datetime-card::after, .form-container::after {
@@ -641,7 +895,7 @@
     
     /* Reduce padding for mobile */
     .form-container, .glass-effect {
-      padding: 1.25rem;
+      padding: var(--spacing-sm);
     }
     
     /* Adjust font sizes for mobile */
@@ -650,7 +904,370 @@
     }
     
     h1, .heading-primary {
-      font-size: 22px;
+      font-size: 20px;
     }
+  }
+}
+
+/* Glass Effect Components */
+.glass-effect {
+  background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--brand-black-10);
+  padding: var(--spacing-md);
+  position: relative;
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.glass-card {
+  background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--brand-black-10);
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+/* Form Elements */
+.form-container {
+  background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--brand-black-10);
+  overflow: hidden;
+  position: relative;
+}
+
+.datetime-card {
+  background: var(--white-80);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-blue-10);
+  transition: all 0.3s ease;
+}
+
+/* Venue Cards */
+.venue-glass {
+  background: var(--white-80);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-blue-10);
+  transition: all 0.3s ease;
+}
+
+/* Buttons */
+.create-plan-btn {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-pink));
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.create-plan-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.create-plan-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Loading States */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .glass-effect, .glass-card {
+    border-radius: var(--radius-sm);
+  }
+  
+  .venue-glass, .datetime-card, .form-container {
+    border-radius: var(--radius-sm);
+  }
+  
+  input, textarea, select, .create-plan-btn {
+    font-size: 16px; /* Prevent zoom on mobile */
+  }
+  
+  .form-container, .glass-effect {
+    padding: var(--spacing-sm);
+  }
+  
+  .logo {
+    font-size: 28px;
+  }
+  
+  h1, .heading-primary {
+    font-size: 20px;
+  }
+}
+
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+/* CSS Variables - Design System */
+:root {
+  /* Colors */
+  --color-primary: #17B9E6;
+  --color-text-black: #1C1C1C;
+  --color-text-neutral: #737373;
+  --color-box-bg: #E3E9F2;
+  --color-tag-bg: #BFD4ED;
+  --color-gradient-start: #E6DBEE;
+  --color-gradient-end: #BCC6E6;
+  --color-white: #FFFFFF;
+  --color-brand-pink: #FC94C5;
+
+  /* Typography */
+  --font-heading: 'Rozha One', serif;
+  --font-button: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-xxl: 3rem;
+
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+
+  /* Box Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-black);
+  background-color: var(--color-white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography */
+h1, h2, h3 {
+  font-family: var(--font-heading);
+  color: var(--color-text-black);
+}
+
+/* Logo Styles */
+.logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.logo-container h1 {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  color: var(--color-text-black);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+}
+
+/* Logo Animation */
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.logo-container:hover {
+  animation: logoFloat 2s ease-in-out infinite;
+}
+
+/* Button Styles */
+.button {
+  font-family: var(--font-button);
+  font-weight: 500;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.button-primary {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+/* Input Styles */
+.input-box {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  background: var(--color-box-bg);
+  background-image: linear-gradient(var(--color-box-bg), var(--color-box-bg)),
+    linear-gradient(to right, var(--color-gradient-start), var(--color-gradient-end));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* Tag Styles */
+.tag {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background-color: var(--color-tag-bg);
+  border-radius: var(--radius-full);
+  color: var(--color-text-black);
+  display: inline-block;
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: var(--spacing-lg);
+}
+
+.loading-indicator {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-box-bg);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Logo Styles */
+.logo {
+  width: 60px;
+  height: auto;
+  margin-bottom: var(--spacing-lg);
+}
+
+/* Venue Card Styles */
+.venue-card {
+  background-color: var(--color-box-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.venue-name {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 1.25rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.venue-details {
+  color: var(--color-text-neutral);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-sm);
+}
+
+.venue-tags {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+  margin-top: var(--spacing-sm);
+}
+
+/* Travel Time Indicator */
+.travel-time {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-text-neutral);
+  font-size: 0.875rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-tag-bg);
+  border-radius: var(--radius-full);
+  margin: var(--spacing-md) 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  :root {
+    --spacing-xl: 1.5rem;
+    --spacing-xxl: 2rem;
+  }
+
+  .venue-card {
+    padding: var(--spacing-md);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .loading-indicator {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --color-text-neutral: #595959;
+    --color-tag-bg: #A6B8D4;
   }
 }

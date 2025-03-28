@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin, Clock, Calendar } from "lucide-react";
+import { MapPin, Clock, Calendar, Loader2 } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,6 @@ import { format } from "date-fns";
 import { TimeInput } from "@/components/TimeInput";
 import { formatDateTime, formatTime, getLocalTimeNow } from "@/lib/dateUtils";
 import { Link } from "wouter";
-import VenueSwiper from "@/components/VenueSwiper";
 
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
@@ -32,8 +31,7 @@ export default function Home() {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const { toast } = useToast();
   const [currentTime, setCurrentTime] = useState<string>("");
-  // State to track if user has seen the swipe hint
-  const [shownSwipeHint, setShownSwipeHint] = useState<boolean>(false);
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
 
   useState(() => {
     fetch("/api/time")
@@ -56,26 +54,20 @@ export default function Home() {
 
   const planMutation = useMutation({
     mutationFn: async (data: FormValues) => {
+      setIsFormSubmitting(true);
       const res = await apiRequest("POST", "/api/plan", data);
       return res.json();
     },
     onSuccess: (data: Itinerary) => {
       setItinerary(data);
-      // Show the swipe hint when first creating an itinerary
-      if (!shownSwipeHint) {
-        toast({
-          title: "Itinerary created!",
-          description: "For each venue, you can swipe to see alternatives.",
-        });
-        setShownSwipeHint(true);
-      } else {
-        toast({
-          title: "Itinerary created!",
-          description: "Your day plan is ready.",
-        });
-      }
+      setIsFormSubmitting(false);
+      toast({
+        title: "Itinerary created!",
+        description: "Your day plan is ready.",
+      });
     },
     onError: (error: Error) => {
+      setIsFormSubmitting(false);
       toast({
         title: "Error creating itinerary",
         description: error.message || "Please ensure you've specified a starting location and any fixed appointments.",
@@ -83,38 +75,6 @@ export default function Home() {
       });
     },
   });
-  
-  // Handler for when a user selects a different venue from the VenueSwiper
-  const handleVenueSelection = (index: number, selectedVenue: PlaceDetails) => {
-    if (!itinerary) return;
-    
-    // Make a copy of the places array
-    const updatedPlaces = [...itinerary.places as Place[]];
-    
-    // Create a new place object with the selected venue data
-    const updatedPlace: Place = {
-      ...updatedPlaces[index],
-      placeId: selectedVenue.place_id,
-      name: selectedVenue.name,
-      address: selectedVenue.formatted_address,
-      location: selectedVenue.geometry.location,
-      details: selectedVenue
-    };
-    
-    // Replace the place at the specified index
-    updatedPlaces[index] = updatedPlace;
-    
-    // Update the itinerary state
-    setItinerary({
-      ...itinerary,
-      places: updatedPlaces
-    });
-    
-    toast({
-      title: "Venue updated",
-      description: `Changed to ${selectedVenue.name}`,
-    });
-  };
 
   return (
     <div className="min-h-screen py-4 sm:py-8 px-3 sm:px-4 relative">
@@ -151,6 +111,7 @@ export default function Home() {
                 <form
                   onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
                   className="space-y-6"
+                  disabled={isFormSubmitting}
                 >
                   <div className="grid sm:grid-cols-2 gap-6">
                     <div className="datetime-card p-3">
@@ -165,6 +126,7 @@ export default function Home() {
                                 type="date"
                                 {...field}
                                 className="placeholder-opacity-50"
+                                disabled={isFormSubmitting}
                               />
                             </FormControl>
                           </FormItem>
@@ -184,6 +146,7 @@ export default function Home() {
                                 value={field.value || ""}
                                 onChange={field.onChange}
                                 className="w-full placeholder-opacity-50"
+                                disabled={isFormSubmitting}
                               />
                             </FormControl>
                           </FormItem>
@@ -207,6 +170,7 @@ export default function Home() {
                               }
                               className="min-h-[100px] resize-y"
                               {...field}
+                              disabled={isFormSubmitting}
                             />
                           </FormControl>
                         </FormItem>
@@ -217,9 +181,16 @@ export default function Home() {
                   <Button
                     type="submit"
                     className="w-full create-plan-btn text-brand-blue"
-                    disabled={planMutation.isPending}
+                    disabled={isFormSubmitting}
                   >
-                    {planMutation.isPending ? "Creating plan..." : "Create Plan"}
+                    {isFormSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating plan...
+                      </>
+                    ) : (
+                      "Create Plan"
+                    )}
                   </Button>
                 </form>
               </Form>
@@ -269,27 +240,6 @@ export default function Home() {
                             </p>
                           </div>
                         </div>
-                        
-                        {/* VenueSwiper - only show for places with alternatives */}
-                        {(() => {
-                          // Ensure proper type handling inside this isolated IIFE
-                          if (place.alternatives && 
-                              Array.isArray(place.alternatives) && 
-                              place.details && 
-                              (place.alternatives as PlaceDetails[]).length > 0) {
-                            return (
-                              <div className="mt-3 venue-container">
-                                <VenueSwiper 
-                                  primary={place.details as PlaceDetails}
-                                  alternatives={place.alternatives as PlaceDetails[]}
-                                  onSelect={(venue) => handleVenueSelection(index, venue)}
-                                  className="w-full"
-                                />
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
                       </div>
 
                       {/* Travel time indicator */}
