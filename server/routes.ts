@@ -26,7 +26,7 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
     return date;
   }
 
-  // Try 12-hour format (HH:MM AM/PM)
+  // Try 12-hour format with colon (HH:MM AM/PM)
   const standard = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (standard) {
     let [_, hours, minutes, period] = standard;
@@ -42,8 +42,25 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
     date.setHours(hour, parseInt(minutes), 0, 0);
     return date;
   }
+  
+  // Try 12-hour format without colon (e.g., "9PM", "10AM")
+  const noColonFormat = timeStr.match(/^(\d{1,2})\s*(AM|PM)$/i);
+  if (noColonFormat) {
+    let [_, hours, period] = noColonFormat;
+    let hour = parseInt(hours);
+    
+    if (period.toUpperCase() === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (period.toUpperCase() === 'AM' && hour === 12) {
+      hour = 0;
+    }
+    
+    const date = new Date(currentDate);
+    date.setHours(hour, 0, 0, 0);
+    return date;
+  }
 
-  throw new Error(`Invalid time format: ${timeStr}. Please use either "HH:MM" (24-hour) or "HH:MM AM/PM" (12-hour) format.`);
+  throw new Error(`Invalid time format: ${timeStr}. Please use "HH:MM" (24-hour), "HH:MM AM/PM", or "HAM/PM" (e.g., "9PM") format.`);
 }
 
 // Enhanced findInterestingActivities function with improved contextual awareness
