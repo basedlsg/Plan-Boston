@@ -582,8 +582,17 @@ export async function registerRoutes(app: Express) {
               format(new Date(current.time.getTime() + 90 * 60 * 1000), 'HH:mm'),
               parsed.preferences
             );
+            
+            // Limit to maximum 2 activities per gap to prevent overcrowding
+            const maxActivitiesPerGap = Math.min(2, suggestedActivities.length);
+            // Calculate time increment for each activity to space them out evenly
+            const timeSpacing = gap / (maxActivitiesPerGap + 1);
+            
+            // Store existing times to check for duplicates
+            const existingTimes: number[] = itineraryPlaces.map(p => p.time.getTime());
 
-            for (const activity of suggestedActivities) {
+            for (let i = 0; i < maxActivitiesPerGap; i++) {
+              const activity = suggestedActivities[i];
               try {
                 // Enhanced search options for gap filling
                 const searchOptions: any = {
@@ -690,8 +699,28 @@ export async function registerRoutes(app: Express) {
                 let suggestedPlace = venueResult.primary;
 
                 if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
-                // Explicitly define the activity time
-                const activityTime: Date = new Date(current.time.getTime() + 90 * 60 * 1000);
+                // Calculate evenly spaced time for this activity
+                // First activity starts after 90 mins, subsequent activities are spaced evenly
+                const activityOffset = 90 * 60 * 1000 + (i + 1) * timeSpacing;
+                const proposedTime = current.time.getTime() + activityOffset;
+                
+                // Ensure this time doesn't conflict with existing times
+                // We'll consider anything within 60 minutes to be a conflict
+                const timeConflict = existingTimes.some(
+                  existingTime => Math.abs(existingTime - proposedTime) < 60 * 60 * 1000
+                );
+                
+                if (timeConflict) {
+                  console.log(`Time conflict detected at ${new Date(proposedTime).toLocaleTimeString()}, skipping activity`);
+                  continue;
+                }
+                
+                // Set activity time and add to existing times list to check for future conflicts
+                const activityTime = new Date(proposedTime);
+                existingTimes.push(activityTime.getTime());
+                
+                // Log the scheduled time clearly
+                console.log(`Scheduling gap activity "${activity}" at ${activityTime.toLocaleTimeString()} (${format(activityTime, 'h:mm a')})`);
                 
                 try {
                   // Check if we should use a weather-aware venue recommendation
@@ -765,12 +794,110 @@ export async function registerRoutes(app: Express) {
       }
 
       // Handle cases where preferences exist but no fixed times
-      if (itineraryPlaces.length === 0 && (parsed.preferences?.type || (parsed.preferences?.requirements && parsed.preferences.requirements.length > 0))) {
-        console.log(`No fixed times but found preference for ${parsed.preferences.type || 'activities with requirements'}`);
+      if (itineraryPlaces.length === 0 && (
+          parsed.preferences?.type || 
+          (parsed.preferences?.requirements && parsed.preferences.requirements.length > 0) ||
+          (parsed.activities && parsed.activities.length > 0)
+        )) {
+        console.log(`No fixed times but found preference for ${parsed.preferences?.type || 'activities with requirements'} or activities`);
         
         try {
-          // Use current time as default
-          const currentTime = new Date();
+          // Use current time as default starting point
+          let currentTime = new Date();
+          
+          // Check if we have multiple activities from Gemini parsing
+          if (parsed.activities && Array.isArray(parsed.activities) && parsed.activities.length > 0) {
+            console.log(`Found ${parsed.activities.length} activities from Gemini with no fixed times`);
+            
+            // Store existing times to check for duplicates
+            const existingTimes: number[] = [];
+            
+            // Process up to 3 activities maximum to avoid overcrowding
+            const maxActivities = Math.min(3, parsed.activities.length);
+            
+            for (let i = 0; i < maxActivities; i++) {
+              const activity = parsed.activities[i];
+              if (!activity || !activity.description) continue;
+              
+              // Schedule activities 90 minutes apart
+              const activityTime = new Date(currentTime.getTime() + (i * 90 * 60 * 1000));
+              console.log(`Scheduling activity "${activity.description}" at ${activityTime.toLocaleTimeString()}`);
+              
+              // Create search options from activity parameters
+              const searchOptions: any = {
+                keywords: [],
+                requireOpenNow: true,
+                minRating: 4.0
+              };
+              
+              // Use rich parameters if available
+              if (activity.searchParameters) {
+                searchOptions.type = activity.searchParameters.type;
+                searchOptions.searchTerm = activity.searchParameters.searchTerm || activity.description;
+                searchOptions.keywords = Array.isArray(activity.searchParameters.keywords) ? 
+                                      [...activity.searchParameters.keywords] : [];
+                searchOptions.minRating = activity.searchParameters.minRating || 4.0;
+              } else {
+                // Use activity description as search term
+                searchOptions.searchTerm = activity.description;
+              }
+              
+              // Add requirements as keywords
+              if (Array.isArray(activity.requirements) && activity.requirements.length > 0) {
+                searchOptions.keywords = [
+                  ...searchOptions.keywords,
+                  ...activity.requirements
+                ];
+              }
+              
+              try {
+                const venueResult = await searchPlace(activity.description, searchOptions);
+                
+                if (venueResult && venueResult.primary) {
+                  console.log(`Found venue for activity "${activity.description}": ${venueResult.primary.name}`);
+                  
+                  const newPlace = await storage.createPlace({
+                    placeId: venueResult.primary.place_id,
+                    name: venueResult.primary.name,
+                    address: venueResult.primary.formatted_address,
+                    location: venueResult.primary.geometry.location,
+                    details: venueResult.primary,
+                    scheduledTime: activityTime.toISOString(),
+                    alternatives: venueResult.alternatives || []
+                  });
+                  
+                  // Add to itinerary
+                  itineraryPlaces.push({
+                    place: newPlace,
+                    time: activityTime,
+                    isFixed: false
+                  });
+                  
+                  // Mark this place as scheduled
+                  scheduledPlaces.add(venueResult.primary.place_id);
+                  existingTimes.push(activityTime.getTime());
+                }
+              } catch (error) {
+                console.error(`Error finding venue for activity "${activity.description}":`, error);
+              }
+            }
+            
+            // If we successfully added activities, skip the fallback single venue logic
+            if (itineraryPlaces.length > 0) {
+              console.log(`Successfully added ${itineraryPlaces.length} activities from Gemini parsing`);
+              // Skip the fallback logic
+              return res.json(await storage.createItinerary({
+                query,
+                places: itineraryPlaces.map(sp => sp.place),
+                travelTimes: [], // No travel times for now
+              }));
+            }
+          }
+          
+          // Fallback to a single venue if no activities were added
+          console.log("Falling back to single venue recommendation based on preferences");
+          // Reset current time to now for the fallback option
+          currentTime.setTime(new Date().getTime());
           
           // First check if we have direct activity search parameters from Gemini
           let searchOptions: any = { keywords: [], requireOpenNow: true, minRating: 4.0 };
