@@ -43,9 +43,10 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
       <div className="w-full max-w-md px-4 pb-12">
         {/* Header - only shown when we have venues */}
         <div className="mb-5 text-center">
-          <h1 className="text-2xl font-bold mb-4" style={{ 
+          <h1 className="text-3xl font-bold mb-4" style={{ 
             fontFamily: "'Rozha One', serif",
-            color: 'var(--color-text-black)'
+            color: 'var(--color-text-black)',
+            fontSize: '1.875rem' // text-3xl is 1.875rem, which is ~20% bigger than text-2xl (1.5rem)
           }}>
             Your London Itinerary
           </h1>
