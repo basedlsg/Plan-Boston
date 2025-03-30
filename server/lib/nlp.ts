@@ -13,7 +13,7 @@ import {
   ActivityContext 
 } from "./languageProcessing";
 import { getApiKey, isFeatureEnabled, validateApiKey } from "../config";
-import processWithGemini from './geminiProcessor';
+import { processWithGemini, StructuredRequest as GeminiStructuredRequest } from './geminiProcessor';
 
 // Configure Gemini model with safety settings
 let genAI: GoogleGenerativeAI | null = null;
@@ -82,6 +82,36 @@ type FixedTimeEntry = {
   keywords?: string[];
   minRating?: number;
 };
+
+/**
+ * Convert Gemini structured request to the application's expected format
+ */
+function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null): StructuredRequest | null {
+  if (!geminiResult) {
+    return null;
+  }
+  
+  // Create the application-format structured request 
+  const appFormatRequest: StructuredRequest = {
+    startLocation: geminiResult.startLocation || "London",
+    destinations: [],
+    fixedTimes: (geminiResult.fixedTimeEntries || []).map(entry => ({
+      location: entry.location || "London",
+      time: entry.time,
+      type: entry.searchParameters?.venueType || "activity",
+      searchTerm: entry.activity,
+      // Add other relevant parameters
+      keywords: entry.searchParameters?.specificRequirements || undefined,
+      minRating: 4.0 // Default to high quality
+    })),
+    preferences: {
+      type: geminiResult.preferences?.budget || undefined,
+      requirements: geminiResult.specialRequests || []
+    }
+  };
+  
+  return appFormatRequest;
+}
 
 // Extract locations with confidence scores
 function extractLocations(text: string): LocationContext[] {
@@ -187,58 +217,73 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
   try {
     // First attempt: Use the new Gemini processor
     console.log("Attempting to process query with new Gemini processor");
-    const geminiResult = await processWithGemini(query);
+    const rawGeminiResult = await processWithGemini(query);
     
-    if (geminiResult) {
+    if (rawGeminiResult) {
       console.log("Successfully processed query with new Gemini processor");
       
-      // Sort fixed times chronologically if they exist
-      if (geminiResult.fixedTimes) {
-        geminiResult.fixedTimes.sort((a: {time?: string}, b: {time?: string}) => {
-          if (!a.time) return -1;
-          if (!b.time) return 1;
-          return a.time.localeCompare(b.time);
-        });
-      }
+      // Convert from Gemini processor format to application format
+      const geminiResult = convertGeminiToAppFormat(rawGeminiResult);
       
-      // Apply location validation and normalization when possible
-      try {
-        const { validateAndNormalizeLocation, processLocationWithAIAndMaps } = require('./mapGeocoding');
-        
-        // Process each destination
-        if (geminiResult.destinations && geminiResult.destinations.length > 0) {
-          const validatedDestinations = await Promise.all(
-            geminiResult.destinations.map(async (destination: string) => {
-              return await validateAndNormalizeLocation(destination);
-            })
-          );
-          
-          geminiResult.destinations = validatedDestinations.filter(Boolean);
+      if (geminiResult) {
+        // Sort fixed times chronologically if they exist
+        if (geminiResult.fixedTimes) {
+          geminiResult.fixedTimes.sort((a, b) => {
+            if (!a.time) return -1;
+            if (!b.time) return 1;
+            return a.time.localeCompare(b.time);
+          });
         }
         
-        // Process each fixed time location
-        if (geminiResult.fixedTimes && geminiResult.fixedTimes.length > 0) {
-          for (const fixedTime of geminiResult.fixedTimes) {
-            // Only process if location is generic but searchTerm contains hints
-            if (fixedTime.location === "London" && fixedTime.searchTerm) {
-              const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
-              if (enhancedLocation && enhancedLocation !== "London") {
-                fixedTime.location = enhancedLocation;
-                console.log(`Enhanced fixed time location from "London" to "${enhancedLocation}"`);
-              }
-            } else if (fixedTime.location) {
-              const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
-              if (validatedLocation) {
-                fixedTime.location = validatedLocation;
+        // Apply location validation and normalization when possible
+        try {
+          const { validateAndNormalizeLocation, processLocationWithAIAndMaps } = require('./mapGeocoding');
+          
+          // Create destinations array from fixed time locations
+          const uniqueLocations = new Set<string>();
+          geminiResult.fixedTimes.forEach(entry => {
+            if (entry.location && entry.location !== "London") {
+              uniqueLocations.add(entry.location);
+            }
+          });
+          
+          geminiResult.destinations = Array.from(uniqueLocations);
+          
+          // Process each destination
+          if (geminiResult.destinations.length > 0) {
+            const validatedDestinations = await Promise.all(
+              geminiResult.destinations.map(async (destination: string) => {
+                return await validateAndNormalizeLocation(destination);
+              })
+            );
+            
+            geminiResult.destinations = validatedDestinations.filter(Boolean);
+          }
+          
+          // Process each fixed time location
+          if (geminiResult.fixedTimes.length > 0) {
+            for (const fixedTime of geminiResult.fixedTimes) {
+              // Only process if location is generic but searchTerm contains hints
+              if (fixedTime.location === "London" && fixedTime.searchTerm) {
+                const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
+                if (enhancedLocation && enhancedLocation !== "London") {
+                  fixedTime.location = enhancedLocation;
+                  console.log(`Enhanced fixed time location from "London" to "${enhancedLocation}"`);
+                }
+              } else if (fixedTime.location) {
+                const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
+                if (validatedLocation) {
+                  fixedTime.location = validatedLocation;
+                }
               }
             }
           }
+        } catch (error) {
+          console.warn("Location enhancement skipped due to error:", error);
         }
-      } catch (error) {
-        console.warn("Location enhancement skipped due to error:", error);
+        
+        return geminiResult;
       }
-      
-      return geminiResult;
     }
     
     // If the new Gemini processor isn't available or fails, fall back to the original method

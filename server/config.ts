@@ -29,6 +29,12 @@ const featureFlags = {
     fallback: false,
     description: "Use AI for natural language understanding"
   },
+  USE_GEMINI: {
+    enabled: true,
+    required: ["GEMINI_API_KEY"],
+    fallback: false,
+    description: "Use Gemini 1.5 Pro AI for enhanced request understanding"
+  },
   WEATHER_AWARE: {
     enabled: true,
     required: ["WEATHER_API_KEY"],
@@ -82,6 +88,11 @@ export const FEATURE_CONFIG: Record<string, FeatureConfig> = {
     required: true
   },
   WEATHER_API: {
+    enabled: true,
+    fallbackEnabled: false,
+    required: false
+  },
+  USE_GEMINI: {
     enabled: true,
     fallbackEnabled: false,
     required: false

@@ -1,190 +1,238 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
-import { z } from "zod";
-import { config, getApiKey, isFeatureEnabled } from "../config";
-import { StructuredRequest } from "@shared/types";
+/**
+ * Gemini Natural Language Processing
+ * 
+ * This module implements a robust, error-tolerant processing system using
+ * Google's Gemini AI models to understand and structure itinerary requests.
+ */
 
-// Schema for validating Gemini's response
-const ActivitySchema = z.object({
-  description: z.string(),
-  location: z.string(),
-  // For time, if null or undefined, we'll use a default value in transform
-  time: z.string().nullish().transform(val => val || "12:00"),
+import { z } from 'zod';
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+import { logAiInteraction, generateSessionId } from './aiLogging';
+import { getApiKey, isFeatureEnabled } from '../config';
+
+// Define the structured data schema that Gemini should return
+const FixedTimeEntrySchema = z.object({
+  time: z.string().describe("The time for this activity (e.g., '9:00', '15:30')"),
+  activity: z.string().describe("The activity description"),
+  location: z.string().optional().describe("The specific location or area in London"),
+  venue: z.string().optional().describe("A specific venue name if mentioned"),
   searchParameters: z.object({
-    searchTerm: z.string(),
-    type: z.string(),
-    keywords: z.array(z.string()).nullish().default([]),
-    minRating: z.number().min(1).max(5).nullish().default(4.0),
-    requireOpenNow: z.boolean().nullish().default(false)
-  }),
-  requirements: z.array(z.string()).nullish().default([]),
-  confidence: z.number().optional().default(0.8)
+    cuisine: z.string().optional().describe("Type of cuisine if food-related"),
+    priceLevel: z.enum(["budget", "moderate", "expensive"]).optional().describe("Price level preference"),
+    ambience: z.string().optional().describe("Preferred ambience/vibe"),
+    venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
+    specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
+  }).optional()
 });
 
-const GeminiResponseSchema = z.object({
-  activities: z.array(ActivitySchema),
-  startLocation: z.string().nullable(),
-  interpretationNotes: z.string().nullish().default("") // Allow null/undefined with default empty string
+const StructuredRequestSchema = z.object({
+  date: z.string().optional().describe("The date for the itinerary"),
+  startLocation: z.string().optional().describe("Where the day starts"),
+  endLocation: z.string().optional().describe("Where the day ends"),
+  fixedTimeEntries: z.array(FixedTimeEntrySchema).describe("Activities with specific times"),
+  preferences: z.object({
+    cuisine: z.array(z.string()).optional().describe("Preferred cuisines"),
+    budget: z.enum(["budget", "moderate", "expensive"]).optional().describe("Overall budget level"),
+    pace: z.enum(["relaxed", "moderate", "busy"]).optional().describe("Preferred pace of the day"),
+    interests: z.array(z.string()).optional().describe("General interests"),
+    accessibility: z.array(z.string()).optional().describe("Accessibility requirements"),
+    transportMode: z.array(z.enum(["walking", "tube", "bus", "taxi"])).optional().describe("Preferred transport modes"),
+  }).optional(),
+  travelGroup: z.object({
+    adults: z.number().optional().describe("Number of adults"),
+    children: z.number().optional().describe("Number of children"),
+    seniors: z.number().optional().describe("Number of seniors"),
+  }).optional(),
+  specialRequests: z.array(z.string()).optional().describe("Any special requests or considerations"),
 });
 
-// Initialize Gemini API
-const initializeGemini = () => {
-  const apiKey = getApiKey('GEMINI_API_KEY');
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is required but not provided');
-  }
-  
-  return new GoogleGenerativeAI(apiKey);
-};
+export type FixedTimeEntry = z.infer<typeof FixedTimeEntrySchema>;
+export type StructuredRequest = z.infer<typeof StructuredRequestSchema>;
 
 /**
  * Process a user query using Gemini's natural language understanding
  */
 export async function processWithGemini(query: string): Promise<StructuredRequest | null> {
-  if (!isFeatureEnabled('AI_PROCESSING')) {
-    console.log('AI processing disabled via feature flag');
+  // Generate session ID for tracking all attempts in this processing chain
+  const sessionId = generateSessionId();
+  
+  // Check if Gemini feature is enabled
+  if (!isFeatureEnabled('USE_GEMINI')) {
+    await logAiInteraction({
+      sessionId,
+      userQuery: query,
+      modelName: 'gemini-1.5-pro',
+      status: 'warning',
+      errorDetails: 'Gemini processing disabled by feature flag'
+    });
     return null;
   }
   
-  // Multi-tiered approach with different temperatures
-  const temperatures = [0.2, 0.4, 0.7]; // Start conservative, get more creative if needed
-  let lastError: any = null;
+  // Check API key
+  const apiKey = getApiKey('GEMINI_API_KEY');
+  if (!apiKey) {
+    await logAiInteraction({
+      sessionId,
+      userQuery: query,
+      modelName: 'gemini-1.5-pro',
+      status: 'error',
+      errorDetails: 'Missing Gemini API key'
+    });
+    throw new Error('Missing Gemini API key');
+  }
+  
+  // Try multiple attempts with increasing temperatures for more flexibility
+  const temperatures = [0.2, 0.4, 0.7];
+  let lastError = null;
   
   for (const temperature of temperatures) {
     try {
-      console.log(`Attempting Gemini processing with temperature: ${temperature}`);
-      const result = await attemptGeminiProcessing(query, temperature);
+      const result = await attemptGeminiProcessing(query, temperature, sessionId);
       if (result) return result;
     } catch (error) {
-      console.warn(`Gemini processing failed with temperature ${temperature}:`, error);
       lastError = error;
+      console.error(`Gemini processing attempt failed at temperature ${temperature}:`, error);
       // Continue to next temperature
     }
   }
   
   // All attempts failed
-  console.error('All Gemini processing attempts failed:', lastError);
+  await logAiInteraction({
+    sessionId,
+    userQuery: query,
+    modelName: 'gemini-1.5-pro',
+    status: 'error',
+    errorDetails: lastError ? String(lastError) : 'All processing attempts failed'
+  });
+  
   return null;
 }
 
 /**
  * Single attempt at processing with Gemini at a specific temperature
  */
-async function attemptGeminiProcessing(query: string, temperature: number): Promise<StructuredRequest | null> {
+async function attemptGeminiProcessing(query: string, temperature: number, sessionId?: string): Promise<StructuredRequest | null> {
+  const startTime = Date.now();
+  const apiKey = getApiKey('GEMINI_API_KEY');
+  
+  if (!apiKey) {
+    throw new Error('Missing Gemini API key');
+  }
+  
+  const sessionIdForLogging = sessionId || generateSessionId();
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  
   try {
-    const genAI = initializeGemini();
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-pro-latest",
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        },
-      ],
+    // Prepare the prompt with schema details and examples
+    const prompt = `
+    You are a travel planning assistant for London. Extract structured information from this itinerary request. 
+    
+    IMPORTANT RULES:
+    1. Return ONLY valid JSON that matches the schema - no extra text or markdown
+    2. For time values, use 24-hour format (e.g., "09:00", "15:30") when possible
+    3. If a time is mentioned without AM/PM (e.g., "at 6"), default to PM for evening activities like dinner
+    4. Include all explicitly mentioned fixed times in fixedTimeEntries
+    5. Keep location names authentic to London (don't change neighborhood names)
+    6. If the user mentions specific venue requirements, include them in searchParameters
+    7. If the user doesn't specify a budget level, default to "moderate"
+    8. Extract as much detail as possible while staying true to the user's request
+    9. For incomplete information, make reasonable assumptions based on context
+    10. Keep activity descriptions concise but clear
+    
+    Here's the request to analyze:
+    ${query}
+    `;
+    
+    // Send to Gemini
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: temperature,
-        topK: 40,
-        topP: 0.95,
-      }
-    });
-
-    // System prompt with contextual understanding guidance
-    const systemPrompt = `
-You are a London travel planning expert who understands the nuances and context of travel requests. Your task is to interpret requests for London itineraries, extracting structured information while understanding implied intent and contextual clues.
-
-IMPORTANT: Rather than taking every word literally, understand the user's underlying intent. Use your knowledge of London to interpret requests contextually.
-
-Consider these interpretation guidelines:
-
-1. CONTEXTUAL LOCATION UNDERSTANDING:
-   - When a user mentions "in X", interpret X as a specific London neighborhood
-   - If they mention a specific venue, identify the neighborhood it's in
-   - Handle misspellings and colloquial names (e.g., "Westend" → "West End")
-   - Infer locations from activity types when appropriate (e.g., "financial district" → "City of London")
-
-2. ACTIVITY & TIME CONTEXTUAL ANALYSIS:
-   - Understand that "coffee" typically means a cafe, not just the beverage
-   - Interpret time references in context ("dinner at 7" means 7 PM, not 7 AM)
-   - Recognize implied activities (e.g., "romantic evening" implies dining or entertainment)
-   - Handle vague requests like "somewhere nice for lunch" with appropriate parameters
-
-3. FLEXIBLE INTERPRETATION EXAMPLES:
-   - "Coffee in Shoreditch" → Cafe in Shoreditch around current time
-   - "Dinner at 7 in Soho" → Restaurant in Soho at 19:00
-   - "Show me good Italian places in Mayfair" → Italian restaurants in Mayfair
-   - "Romantic evening in Covent Garden" → Upscale restaurant or entertainment in Covent Garden in evening
-   - "Something to do near London Bridge at 3" → Activity or attraction near London Bridge at 15:00
-
-Analyze this request: ${query}
-
-Based on your contextual understanding, return a JSON structure with:
-{
-  "activities": [
-    {
-      "description": string, // Original or clarified description of the activity
-      "location": string, // Specific London neighborhood or area
-      "time": string, // Time in 24-hour format (HH:MM) - ALWAYS include this field, using defaults like "12:00" if uncertain
-      "searchParameters": {
-        "searchTerm": string, // Optimized search term for Google Places API
-        "type": string, // Venue type (restaurant, cafe, museum, etc.)
-        "keywords": string[], // Additional search keywords
-        "minRating": number, // Minimum venue rating (1.0-5.0)
-        "requireOpenNow": boolean // Whether venue should be open at specified time
+        maxOutputTokens: 1024,
       },
-      "requirements": string[], // Special requirements or preferences
-      "confidence": number // Your confidence in this interpretation (0.0-1.0)
-    }
-  ],
-  "startLocation": string | null, // Starting location if specified
-  "interpretationNotes": string // Optional explanation of how you interpreted ambiguous aspects
-}
-
-Return ONLY valid JSON without any additional explanation. Never use "London" when a more specific neighborhood is mentioned or could be inferred. ALWAYS include ALL fields in the JSON structure, using sensible defaults if necessary (e.g., empty arrays for requirements, 4.0 for minRating if unsure).
-`;
-
-    const result = await model.generateContent(systemPrompt);
-    const responseText = result.response.text();
+    });
     
-    // Extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error("No JSON found in Gemini response:", responseText);
-      return null;
-    }
+    const response = result.response;
+    const responseText = response.text();
     
-    const jsonResponse = jsonMatch[0];
-    let parsedResponse;
+    // Extract the JSON from the response
+    let jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || 
+                   responseText.match(/```\n([\s\S]*?)\n```/) ||
+                   responseText.match(/\{[\s\S]*\}/);
+                   
+    let jsonText = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText;
+    
+    // Clean up any trailing commas which can break JSON parsing
+    jsonText = jsonText.replace(/,\s*([}\]])/g, '$1');
     
     try {
-      parsedResponse = JSON.parse(jsonResponse);
-    } catch (error) {
-      console.error("Failed to parse JSON from Gemini response:", error);
-      console.error("Raw response:", jsonResponse);
-      return null;
+      const parsedData = JSON.parse(jsonText);
+      
+      // Validate against our schema
+      const validationResult = StructuredRequestSchema.safeParse(parsedData);
+      
+      if (validationResult.success) {
+        // Successfully validated
+        const structuredData = validationResult.data;
+        
+        // Log the successful interaction
+        await logAiInteraction({
+          sessionId: sessionIdForLogging,
+          userQuery: query,
+          modelName: 'gemini-1.5-pro',
+          rawRequest: { prompt, temperature },
+          rawResponse: responseText,
+          parsedResponse: structuredData,
+          processingTimeMs: Date.now() - startTime,
+          status: 'success'
+        });
+        
+        // Apply additional processing and return the structured data
+        return processGeminiResponse(query, structuredData, responseText);
+      } else {
+        // Validation failed
+        await logAiInteraction({
+          sessionId: sessionIdForLogging,
+          userQuery: query,
+          modelName: 'gemini-1.5-pro',
+          rawRequest: { prompt, temperature },
+          rawResponse: responseText,
+          status: 'error',
+          processingTimeMs: Date.now() - startTime,
+          errorDetails: `Schema validation error: ${JSON.stringify(validationResult.error)}`,
+          parsedResponse: parsedData  // Include the invalid parsed data for debugging
+        });
+        
+        throw new Error(`Schema validation error: ${validationResult.error.message}`);
+      }
+    } catch (parseError) {
+      // JSON parsing failed
+      await logAiInteraction({
+        sessionId: sessionIdForLogging,
+        userQuery: query,
+        modelName: 'gemini-1.5-pro',
+        rawRequest: { prompt, temperature },
+        rawResponse: responseText,
+        status: 'error',
+        processingTimeMs: Date.now() - startTime,
+        errorDetails: `JSON parsing error: ${parseError}`
+      });
+      
+      throw new Error(`Failed to parse Gemini response as JSON: ${parseError}`);
     }
-    
-    // Validate response structure
-    const validationResult = GeminiResponseSchema.safeParse(parsedResponse);
-    if (!validationResult.success) {
-      console.error("Gemini response failed validation:", validationResult.error);
-      return null;
-    }
-    
-    // Process validated response
-    return processGeminiResponse(validationResult.data, query);
   } catch (error) {
-    console.error("Error in Gemini processing:", error);
+    // API or processing error
+    await logAiInteraction({
+      sessionId: sessionIdForLogging,
+      userQuery: query,
+      modelName: 'gemini-1.5-pro',
+      rawRequest: { temperature },
+      status: 'error',
+      processingTimeMs: Date.now() - startTime,
+      errorDetails: `API or processing error: ${error}`
+    });
+    
     throw error;
   }
 }
@@ -193,81 +241,141 @@ Return ONLY valid JSON without any additional explanation. Never use "London" wh
  * Process the validated Gemini response into a StructuredRequest
  */
 function processGeminiResponse(
-  geminiResponse: z.infer<typeof GeminiResponseSchema>,
-  originalQuery: string
+  query: string,
+  validatedData: StructuredRequest,
+  rawResponse: string
 ): StructuredRequest {
-  // Extract the structured data with explicit typing to avoid type issues
+  // Make a copy to avoid modifying the original
   const structuredData: StructuredRequest = {
-    startLocation: geminiResponse.startLocation,
-    destinations: [],
-    fixedTimes: [],
-    preferences: {
-      type: undefined,
-      requirements: []
-    },
-    // Process activities to ensure type compatibility
-    activities: geminiResponse.activities.map(activity => ({
-      ...activity,
-      // Ensure requirements is always an array
-      requirements: activity.requirements ?? [],
-      searchParameters: {
-        ...activity.searchParameters,
-        // Ensure keywords is always an array
-        keywords: activity.searchParameters.keywords ?? [],
-        // Ensure minRating is always a number, default to 4.0 if null
-        minRating: activity.searchParameters.minRating === null ? 4.0 : activity.searchParameters.minRating,
-        // Ensure requireOpenNow is always a boolean, default to false if null
-        requireOpenNow: activity.searchParameters.requireOpenNow === null ? false : activity.searchParameters.requireOpenNow
-      }
-    }))
+    ...validatedData,
+    fixedTimeEntries: [...(validatedData.fixedTimeEntries || [])],
+    preferences: validatedData.preferences ? { ...validatedData.preferences } : undefined,
+    travelGroup: validatedData.travelGroup ? { ...validatedData.travelGroup } : undefined,
+    specialRequests: validatedData.specialRequests ? [...validatedData.specialRequests] : undefined
   };
-  
-  // Add destinations from activities
-  const locations = new Set<string>();
-  geminiResponse.activities.forEach(activity => {
-    if (activity.location && activity.location !== "London") {
-      locations.add(activity.location);
-    }
-  });
-  structuredData.destinations = Array.from(locations);
-  
-  // Extract requirements from activities
-  const allRequirements = new Set<string>();
-  geminiResponse.activities.forEach(activity => {
-    // Safe access to requirements with null check
-    (activity.requirements || []).forEach(req => allRequirements.add(req));
-  });
-  structuredData.preferences.requirements = Array.from(allRequirements);
-  
-  // Add type from first activity if available
-  if (geminiResponse.activities.length > 0) {
-    structuredData.preferences.type = geminiResponse.activities[0].searchParameters.type;
+
+  // Set default start location if not provided
+  if (!structuredData.startLocation) {
+    structuredData.startLocation = "Central London";
   }
   
-  // Create fixed times from activities with correct type handling
-  // Use an explicit loop to handle the typing correctly
-  structuredData.fixedTimes = [];
-  for (const activity of geminiResponse.activities) {
-    const fixedTimeEntry = {
-      location: activity.location,
-      time: activity.time,
-      type: activity.searchParameters.type,
-      searchTerm: activity.searchParameters.searchTerm
-    };
-    
-    // Only add optional fields if they are not null
-    if (activity.searchParameters.keywords !== null) {
-      fixedTimeEntry['keywords'] = activity.searchParameters.keywords;
-    }
-    
-    if (activity.searchParameters.minRating !== null) {
-      fixedTimeEntry['minRating'] = activity.searchParameters.minRating;
-    }
-    
-    structuredData.fixedTimes.push(fixedTimeEntry);
+  // Sort fixed time entries chronologically
+  if (structuredData.fixedTimeEntries && structuredData.fixedTimeEntries.length > 0) {
+    structuredData.fixedTimeEntries.sort((a, b) => {
+      // Convert times to 24-hour format for comparison
+      const timeA = convertTo24Hour(a.time);
+      const timeB = convertTo24Hour(b.time);
+      return timeA.localeCompare(timeB);
+    });
   }
+  
+  // Ensure each fixed time entry has search parameters
+  structuredData.fixedTimeEntries = structuredData.fixedTimeEntries.map(entry => {
+    if (!entry.searchParameters) {
+      entry.searchParameters = {};
+    }
+    
+    // Apply global preferences to individual entries when appropriate
+    if (structuredData.preferences) {
+      if (structuredData.preferences.budget && !entry.searchParameters.priceLevel) {
+        entry.searchParameters.priceLevel = structuredData.preferences.budget;
+      }
+      
+      // Apply cuisine preferences for food-related activities
+      const foodKeywords = ['lunch', 'dinner', 'breakfast', 'brunch', 'coffee', 'eat', 'dining', 'restaurant', 'cafe', 'food'];
+      const hasCuisinePreferences = structuredData.preferences.cuisine && 
+                                  Array.isArray(structuredData.preferences.cuisine) && 
+                                  structuredData.preferences.cuisine.length > 0;
+      
+      if (
+        hasCuisinePreferences && 
+        foodKeywords.some(keyword => entry.activity.toLowerCase().includes(keyword)) &&
+        !entry.searchParameters.cuisine
+      ) {
+        // Safe to access at index 0 since we've checked array length above
+        entry.searchParameters.cuisine = structuredData.preferences.cuisine![0];
+      }
+    }
+    
+    return entry;
+  });
   
   return structuredData;
 }
 
-export default processWithGemini;
+/**
+ * Convert time strings to 24-hour format for consistent comparison
+ */
+function convertTo24Hour(timeStr: string): string {
+  // If already in 24-hour format (e.g., "14:30"), return as is
+  if (/^\d{1,2}:\d{2}$/.test(timeStr) && !timeStr.includes('am') && !timeStr.includes('pm')) {
+    // Add leading zero if needed
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+  }
+  
+  // Handle "3pm", "3 pm", "3PM", etc.
+  const pmMatch = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(?:pm|PM|p\.m\.|P\.M\.)/);
+  if (pmMatch) {
+    const hours = parseInt(pmMatch[1]);
+    const minutes = pmMatch[2] ? parseInt(pmMatch[2]) : 0;
+    const adjustedHours = hours === 12 ? 12 : hours + 12;
+    return `${adjustedHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
+  
+  // Handle "3am", "3 am", "3AM", etc.
+  const amMatch = timeStr.match(/(\d{1,2})(?::(\d{2}))?\s*(?:am|AM|a\.m\.|A\.M\.)/);
+  if (amMatch) {
+    const hours = parseInt(amMatch[1]);
+    const minutes = amMatch[2] ? parseInt(amMatch[2]) : 0;
+    const adjustedHours = hours === 12 ? 0 : hours;
+    return `${adjustedHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
+  
+  // For vague times like "morning", "afternoon", etc., assign reasonable defaults
+  const timeMapping: Record<string, string> = {
+    'morning': '09:00',
+    'early morning': '07:00',
+    'late morning': '11:00',
+    'noon': '12:00',
+    'midday': '12:00',
+    'afternoon': '14:00',
+    'early afternoon': '13:00',
+    'late afternoon': '16:00',
+    'evening': '18:00',
+    'early evening': '17:00',
+    'late evening': '21:00',
+    'night': '20:00',
+    'midnight': '00:00'
+  };
+  
+  const lowerTimeStr = timeStr.toLowerCase();
+  for (const [key, value] of Object.entries(timeMapping)) {
+    if (lowerTimeStr.includes(key)) {
+      return value;
+    }
+  }
+  
+  // For numeric times without am/pm, make educated guesses
+  const numericMatch = timeStr.match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if (numericMatch) {
+    const hours = parseInt(numericMatch[1]);
+    const minutes = numericMatch[2] ? parseInt(numericMatch[2]) : 0;
+    
+    // Assume times 0-6 are early morning (in 24h format)
+    // Assume times 7-11 are morning (in 12h format, so 7AM-11AM)
+    // Assume times 12 is noon (12PM)
+    // Assume times 1-6 are afternoon/evening (in 12h format, so 1PM-6PM)
+    let adjustedHours = hours;
+    if (hours >= 1 && hours <= 6) {
+      adjustedHours = hours + 12; // Convert to PM
+    }
+    
+    return `${adjustedHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  }
+  
+  // If all else fails, return a default time
+  return '12:00';
+}
