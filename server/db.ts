@@ -6,15 +6,24 @@ import { runMigrations } from './migrations/aiLogging';
 
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  console.error("DATABASE_URL not found. Please create a database in the Database tab.");
+  process.exit(1);
 }
 
-// Initialize pool and db instances
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+try {
+  // Initialize pool and db instances
+  export const pool = new Pool({ 
+    connectionString: databaseUrl,
+    max: 20,
+    ssl: process.env.NODE_ENV === 'production'
+  });
+  export const db = drizzle({ client: pool, schema });
+} catch (error) {
+  console.error("Failed to initialize database connection:", error);
+  process.exit(1);
+}
 
 // Run migrations in an async IIFE
 (async () => {
