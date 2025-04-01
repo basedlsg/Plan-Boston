@@ -1,0 +1,237 @@
+// --- server/lib/googlePlaces.ts ---
+// Adding debug logs to identify issues with the search functionality
+
+/**
+ * Search for places based on query and options
+ */
+export async function searchPlace(
+  query: string, 
+  options: SearchOptions = {}
+): Promise<VenueSearchResult> {
+  try {
+    // Add debugging for incoming parameters
+    console.log(`searchPlace called with query: "${query}" and options:`, JSON.stringify(options));
+    
+    // Check if we have a valid API key
+    if (!GOOGLE_PLACES_API_KEY) {
+      console.error("No Google Places API key found in environment variables");
+      throw new Error("Google Places API key is missing. Please check your environment configuration.");
+    }
+
+    // Add better search term extraction from complex activity types
+    let searchType = options.type;
+    let searchKeyword = '';
+    let keywordsList: string[] = [];
+    
+    // Use enhanced search parameters if available
+    if (options.searchTerm) {
+      searchKeyword = options.searchTerm;
+      console.log(`Using provided searchTerm: "${searchKeyword}"`);
+    }
+    
+    if (options.keywords && Array.isArray(options.keywords)) {
+      keywordsList = options.keywords;
+      console.log(`Using provided keywords: ${keywordsList.join(', ')}`);
+    }
+
+    // Extract better search terms from complex activity types
+    if (typeof options.type === 'string') {
+      // Map complex activity types to better search terms
+      if (options.type.includes('coffee shop') || options.type.includes('cafe')) {
+        searchType = 'cafe';
+        if (!searchKeyword) searchKeyword = 'coffee shop';
+      } else if (options.type.includes('dinner') || options.type.includes('restaurant')) {
+        searchType = 'restaurant';
+        if (!searchKeyword) searchKeyword = options.type;
+      } else if (options.type.includes('library')) {
+        searchType = 'library';
+      } else if (options.type.includes('bar') || options.type.includes('pub')) {
+        searchType = 'bar';
+      }
+      console.log(`Mapped activity type "${options.type}" to search type "${searchType}"`);
+    }
+    
+    // First check if this matches any of our known areas
+    const matchingArea = londonAreas.find(area => 
+      area.name.toLowerCase() === query.toLowerCase() ||
+      area.neighbors.some(n => n.toLowerCase() === query.toLowerCase())
+    );
+
+    // Normalize the location name
+    const normalizedLocation = normalizeLocationName(query);
+    console.log(`Normalized location: ${query} -> ${normalizedLocation}`);
+
+    // Build search query with appropriate context
+    let searchQuery = normalizedLocation;
+    if (!normalizedLocation.toLowerCase().includes('london')) {
+      // Add more specific context for stations and streets
+      if (normalizedLocation.toLowerCase().includes('station')) {
+        searchQuery = `${normalizedLocation}, Underground Station, London`;
+      } else if (matchingArea) {
+        searchQuery = `${normalizedLocation}, ${matchingArea.borough || 'London'}, UK`;
+      } else {
+        searchQuery = `${normalizedLocation}, London`;
+      }
+    }
+    console.log(`Enhanced search query: "${searchQuery}"`);
+
+    // When searching for an activity type near a landmark, use a two-step approach
+    if (options.type && options.type !== "landmark") {
+      console.log(`Searching for ${options.type} near ${searchQuery} (using searchType: ${searchType}, searchKeyword: ${searchKeyword})`);
+
+      // First find the landmark
+      const landmarkParams = new URLSearchParams({
+        query: searchQuery,
+        region: "uk",
+        key: GOOGLE_PLACES_API_KEY || "",
+        language: "en",
+        radius: "5000"
+      });
+
+      console.log(`Landmark search URL params: ${landmarkParams.toString()}`);
+      const landmarkUrl = `${PLACES_API_BASE}/textsearch/json?${landmarkParams.toString()}`;
+      
+      try {
+        const landmarkRes = await fetch(landmarkUrl);
+        const landmarkData = await landmarkRes.json();
+        
+        console.log(`Landmark search status: ${landmarkData.status}, results: ${landmarkData.results?.length || 0}`);
+        
+        if (landmarkData.status !== "OK" || !landmarkData.results?.length) {
+          const suggestions = suggestSimilarLocations(query);
+          throw new Error(
+            `Could not find "${query}"${suggestions.length ? `. Did you mean: ${suggestions.join(", ")}?` : ""}. ` +
+            "Try being more specific or using the full name."
+          );
+        }
+
+        // Get the landmark's location
+        const landmark = landmarkData.results[0];
+        const { lat, lng } = landmark.geometry.location;
+        console.log(`Found landmark at coordinates: ${lat},${lng}`);
+
+        // Now search for the activity type near this landmark
+        const nearbyParams = new URLSearchParams({
+          location: `${lat},${lng}`,
+          radius: "2000", // 2km radius
+          key: GOOGLE_PLACES_API_KEY || "",
+          language: "en"
+        });
+
+        // Add proper search parameters
+        if (searchType && searchType !== "landmark") {
+          nearbyParams.append("type", searchType);
+        } else if (options.type && options.type !== "landmark") {
+          // Fallback to original type if no improved searchType was extracted
+          nearbyParams.append("type", options.type);
+        }
+        
+        // Add keyword for better results
+        if (searchKeyword) {
+          nearbyParams.append("keyword", searchKeyword);
+        }
+        
+        // Use the enhanced keywords list if available
+        if (keywordsList.length > 0) {
+          const combinedKeywords = keywordsList.join(' ');
+          // If we already have a keyword, add the additional keywords with a space
+          if (searchKeyword) {
+            nearbyParams.set("keyword", `${searchKeyword} ${combinedKeywords}`);
+          } else {
+            nearbyParams.append("keyword", combinedKeywords);
+          }
+        }
+
+        // Handle OpenNow parameter - prefer the enhanced requireOpenNow if available
+        if (options.requireOpenNow || options.openNow) {
+          nearbyParams.append("opennow", "true");
+        }
+        
+        // Use the enhanced minRating parameter if available
+        if (options.minRating) {
+          nearbyParams.append("minRating", options.minRating.toString());
+        }
+
+        console.log(`Nearby search URL params: ${nearbyParams.toString()}`);
+        const nearbyUrl = `${PLACES_API_BASE}/nearbysearch/json?${nearbyParams.toString()}`;
+        
+        const nearbyRes = await fetch(nearbyUrl);
+        const nearbyData = await nearbyRes.json();
+        
+        console.log(`Nearby search status: ${nearbyData.status}, results: ${nearbyData.results?.length || 0}`);
+
+        if (nearbyData.status !== "OK" || !nearbyData.results?.length) {
+          throw new Error(`No ${options.type} found near ${normalizedLocation}. Try a different location or activity type.`);
+        }
+
+        // Filter results by rating if specified
+        let results = [...nearbyData.results];
+        if (options.minRating !== undefined) {
+          const minRating = options.minRating; // Store in a constant to avoid the "possibly undefined" error
+          const qualifiedResults = results.filter(
+            (r: any) => r.rating >= minRating
+          );
+          if (qualifiedResults.length > 0) {
+            results = qualifiedResults;
+            console.log(`Filtered results by rating >= ${minRating}, got ${results.length} results`);
+          } else {
+            console.log(`No results met rating criteria ${minRating}, keeping all ${results.length} results`);
+          }
+        }
+        
+        // Enhanced type filtering to exclude inappropriate venues
+        if (options.type) {
+          if (options.type === 'cafe' || options.type === 'coffee') {
+            // For cafes/coffee, exclude inappropriate places and prioritize dedicated cafes
+            const filteredResults = results.filter(place => 
+              // Exclude inappropriate venues
+              !place.types.includes('gas_station') && 
+              !place.types.includes('lodging') &&
+              !place.types.includes('hospital') &&
+              !place.types.includes('car_dealer') &&
+              !place.types.includes('car_rental') &&
+              // Prioritize venues that are actually cafes or restaurants
+              (place.types.includes('cafe') || 
+               place.types.includes('restaurant') || 
+               place.types.includes('bakery') ||
+               place.types.includes('food'))
+            );
+            
+            // Only use filtered results if we didn't filter everything out
+            if (filteredResults.length > 0) {
+              results = filteredResults;
+              console.log(`Filtered cafe results, got ${results.length} results`);
+            }
+          } else if (options.type === 'restaurant' || options.type === 'lunch' || options.type === 'dinner' || options.type === 'breakfast') {
+            // For food activities, exclude inappropriate venues and prioritize restaurants
+            const filteredResults = results.filter(place => 
+              // Exclude inappropriate venues
+              !place.types.includes('gas_station') && 
+              !place.types.includes('lodging') &&
+              !place.types.includes('hospital') &&
+              !place.types.includes('car_dealer') &&
+              !place.types.includes('car_rental') &&
+              // At least one of these types should be present
+              (place.types.includes('restaurant') || 
+               place.types.includes('meal_takeaway') || 
+               place.types.includes('meal_delivery') ||
+               place.types.includes('food'))
+            );
+            
+            if (filteredResults.length > 0) {
+              results = filteredResults;
+              console.log(`Filtered restaurant results, got ${results.length} results`);
+            }
+          }
+        }
+        
+        // If we still don't have good results, try a more generic search
+        if (results.length === 0) {
+          console.log("All results filtered out, trying generic search");
+          
+          // First try with our enhanced keywords if available
+          if (searchKeyword || keywordsList.length > 0) {
+            let finalKeyword = searchKeyword;
+            
+            // If we have additional keywords, use them too
+            if (

@@ -1,0 +1,492 @@
+// --- server/lib/nlp.ts ---
+// Fix the import issue by ensuring all imports use ESM syntax
+import { z } from "zod";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import type { PlaceDetails, EnhancedRequest } from "@shared/schema";
+import { londonAreas } from "../data/london-areas";
+import { 
+  findLocation, 
+  parseActivity, 
+  parseTimeExpression, 
+  getDefaultTime,
+  expandRelativeTime,
+  LocationContext,
+  ActivityContext 
+} from "./languageProcessing";
+
+// Initialize Google Generative AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+// Configure Gemini model with safety settings
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-pro-latest",
+  safetySettings: [
+    {
+      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+    {
+      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+    },
+  ],
+});
+
+export type StructuredRequest = {
+  startLocation: string | null;
+  destinations: string[];
+  fixedTimes: Array<{
+    location: string;
+    time: string;  // Format: "HH:MM" (24-hour)
+    type?: string; // e.g., "restaurant", "cafe"
+    // Additional parameters for enhanced search
+    searchTerm?: string;
+    keywords?: string[];
+    minRating?: number;
+  }>;
+  preferences: {
+    type?: string;
+    requirements?: string[];
+  };
+  // Enhanced response from Gemini with detailed activity information
+  activities?: Array<{
+    description: string;
+    location: string;
+    time: string;
+    searchParameters: {
+      searchTerm: string;
+      type: string;
+      keywords: string[];
+      minRating: number;
+      requireOpenNow: boolean;
+    };
+    requirements: string[];
+  }>;
+};
+
+// Extract locations with confidence scores
+function extractLocations(text: string): LocationContext[] {
+  const locations: LocationContext[] = [];
+
+  // Split text into potential location phrases
+  const phrases = text.split(/[,.]|\s+(?:then|and|to|at)\s+/);
+
+  for (const phrase of phrases) {
+    // Look for location indicators
+    const locationMatch = phrase.match(/(?:in|at|near|from)\s+([A-Z][a-zA-Z\s]+)/);
+    if (locationMatch?.[1]) {
+      const location = findLocation(locationMatch[1]);
+      if (location) {
+        locations.push(location);
+      }
+    }
+  }
+
+  return locations;
+}
+
+// Extract activities with their context
+function extractActivities(text: string): ActivityContext[] {
+  const activities: ActivityContext[] = [];
+
+  // Split text into activity segments - expanded to catch more transition words
+  const segments = text.split(/[,.]|\s+(?:then|and|afterwards|later|after that|following that|next)\s+/);
+
+  for (const segment of segments) {
+    // Expanded regex to capture more vague activity indicators
+    if (segment.match(/(?:want|like|need|do|have|get|see|visit|explore|enjoy|experience|something|activity)\s+(.+)/) ||
+        segment.match(/(?:around|at|by|from|until|before|after)\s+\d{1,2}(?::\d{2})?(?:\s*[ap]m)?/) || // Time indicators
+        segment.match(/(?:in the|during the|for)\s+(?:morning|afternoon|evening|night)/)) { // Period indicators
+      const activity = parseActivity(segment);
+      activities.push(activity);
+    }
+  }
+
+  return activities;
+}
+
+export async function parseItineraryRequest(query: string): Promise<StructuredRequest> {
+  try {
+    // First use our direct extraction methods
+    const extractedLocations = extractLocations(query);
+    const extractedActivities = extractActivities(query);
+
+    // Then use our comprehensive Gemini prompt for enhanced understanding
+    const prompt = `
+You are a London travel planning expert with deep knowledge of London's geography, neighborhoods, and venues. Analyze this request carefully:
+
+"${query}"
+
+TASK: Provide a complete interpretation for creating a London itinerary with Google Places API integration.
+
+Step 1: Identify all London locations with full context:
+- Distinguish between neighborhoods (Soho, Mayfair), landmarks (British Museum), and transport hubs (King's Cross)
+- For ambiguous references, clarify which specific London location is meant
+- Recognize colloquial area names and local terminology (The City, West End, etc.)
+
+Step 2: Understand all activities with venue-specific details:
+- Extract explicit activities (coffee, lunch, museum visit)
+- Infer implied activities based on context ("something nice" → what specifically?)
+- Capture qualitative requirements (quiet, fancy, historic, family-friendly)
+- Note when activities are vague and need appropriate venue suggestions
+
+Step 3: Interpret time references carefully:
+- Convert all time formats to 24-hour format
+- Handle time ranges correctly (e.g., "between 2-4pm" → 14:00-16:00)
+- Interpret relative times (morning, afternoon, evening) 
+- Avoid creating duplicate activities for similar times
+
+Step 4: Create optimal Google Places search parameters:
+- Provide the exact search term to use (e.g., "specialty coffee shop" rather than just "coffee")
+- Specify the correct Google Places 'type' parameter (cafe, restaurant, museum, etc.)
+- Suggest additional keywords that will improve search relevance
+- Recommend minimum rating thresholds based on quality expectations
+
+RETURN ONLY this JSON structure:
+{
+  "startLocation": string | null,
+  "destinations": string[],
+  "activities": [
+    {
+      "description": string, // Original activity description from request
+      "location": string, // Where this should happen
+      "time": string, // Time in 24h format or period name like "afternoon"
+      "searchParameters": { // CRITICAL - Parameters for Google Places API
+        "searchTerm": string, // Optimized search term (e.g., "quiet cafe with workspace")
+        "type": string, // Google Places API type parameter (e.g., "cafe", "restaurant")
+        "keywords": string[], // Additional keywords to improve search
+        "minRating": number, // Recommended minimum rating (1.0-5.0)
+        "requireOpenNow": boolean // Whether time constraints require the venue to be open now
+      },
+      "requirements": string[] // Special requirements like "quiet", "outdoor seating"
+    }
+  ],
+  "preferences": {
+    "venueQualities": string[], // Qualities applying to all venues (upscale, budget, etc.)
+    "restrictions": string[] // Restrictions applying to all venues (no chains, etc.)
+  }
+}`;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+
+      // Add detailed logging to debug the response structure
+      console.log("Raw Gemini API response:", responseText);
+      
+      if (!responseText || responseText.trim() === '') {
+        console.error("Empty text content received");
+        throw new Error("Empty response received from language model");
+      }
+    
+      // Clean the text content by removing markdown code block syntax
+      let cleanedContent = responseText.trim();
+      
+      // Remove markdown code block markers if present
+      if (cleanedContent.startsWith('```json') || cleanedContent.startsWith('```')) {
+        // Find the position of the first and last backtick sections
+        const firstBlockEnd = cleanedContent.indexOf('\n');
+        const lastBlockStart = cleanedContent.lastIndexOf('```');
+        
+        if (firstBlockEnd !== -1) {
+          // Remove the opening code block marker
+          cleanedContent = cleanedContent.substring(firstBlockEnd + 1);
+          
+          // Remove the closing code block marker if present
+          if (lastBlockStart !== -1 && lastBlockStart > firstBlockEnd) {
+            cleanedContent = cleanedContent.substring(0, lastBlockStart).trim();
+          }
+        }
+      }
+      
+      // Remove any extra characters after the last closing brace
+      const lastBrace = cleanedContent.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        cleanedContent = cleanedContent.substring(0, lastBrace + 1);
+      }
+      
+      // Remove any comments in the JSON which are causing parsing errors
+      cleanedContent = cleanedContent
+        .replace(/\/\/.*$/gm, '') // Remove single-line comments
+        .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+      
+      console.log("Cleaned JSON content:", cleanedContent);
+      
+      // Parse the JSON response
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(cleanedContent);
+        console.log("Successfully parsed Gemini response:", parsedResponse);
+      } catch (error: unknown) {
+        console.error("JSON parse error:", error);
+        console.error("Problematic text content:", cleanedContent);
+        console.log("Original text response:", responseText);
+        
+        // Advanced error recovery - try to extract JSON by looking for { and }
+        try {
+          const jsonStart = cleanedContent.indexOf('{');
+          const jsonEnd = cleanedContent.lastIndexOf('}');
+          
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            const extractedJson = cleanedContent.substring(jsonStart, jsonEnd + 1);
+            console.log("Attempting to parse extracted JSON:", extractedJson);
+            parsedResponse = JSON.parse(extractedJson);
+            console.log("Successfully parsed extracted JSON:", parsedResponse);
+          } else {
+            throw new Error("Could not find valid JSON object markers");
+          }
+        } catch (extractError) {
+          // Handle unknown error type safely
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          throw new Error(`Failed to parse JSON response: ${errorMessage}`);
+        }
+      }
+
+      // Define the expected type for our fixed times entries
+      // This should match the fixedTimes structure in the StructuredRequest interface
+      type FixedTimeEntry = {
+        location: string;
+        time: string;
+        type?: string;
+        // Additional search parameters for richer venue search
+        searchTerm?: string;
+        keywords?: string[];
+        minRating?: number;
+      };
+
+      // Convert Gemini's parsed output to StructuredRequest
+      const parsed: StructuredRequest = {
+        startLocation: parsedResponse.startLocation,
+        destinations: parsedResponse.destinations || [],
+        fixedTimes: [],
+        preferences: {
+          type: undefined, // Will extract from activities or searchParameters
+          requirements: []
+        },
+        // Include the activities array directly from Gemini's output
+        activities: parsedResponse.activities && Array.isArray(parsedResponse.activities) ? 
+                   parsedResponse.activities : []
+      };
+      
+      // Extract activity type from the first activity's searchParameters if available
+      if (parsedResponse.activities && 
+          Array.isArray(parsedResponse.activities) && 
+          parsedResponse.activities.length > 0 &&
+          parsedResponse.activities[0].searchParameters &&
+          parsedResponse.activities[0].searchParameters.type) {
+        parsed.preferences.type = parsedResponse.activities[0].searchParameters.type;
+      }
+      
+      // Process enhanced preferences structure
+      if (parsedResponse.preferences) {
+        // Ensure preferences.requirements is initialized as an array
+        parsed.preferences.requirements = parsed.preferences.requirements || [];
+        
+        // Create a new array for collecting all requirements
+        const requirementsList: string[] = [];
+        
+        // Handle venue qualities as requirements
+        if (parsedResponse.preferences.venueQualities && Array.isArray(parsedResponse.preferences.venueQualities)) {
+          for (const quality of parsedResponse.preferences.venueQualities) {
+            requirementsList.push(quality);
+          }
+        }
+        
+        // Handle restrictions as requirements
+        if (parsedResponse.preferences.restrictions && Array.isArray(parsedResponse.preferences.restrictions)) {
+          for (const restriction of parsedResponse.preferences.restrictions) {
+            requirementsList.push(restriction);
+          }
+        }
+        
+        // Still handle legacy format
+        if (parsedResponse.preferences.requirements && Array.isArray(parsedResponse.preferences.requirements)) {
+          for (const req of parsedResponse.preferences.requirements) {
+            requirementsList.push(req);
+          }
+        }
+        
+        parsed.preferences.requirements = requirementsList;
+      }
+
+      // Process activities from the enhanced Gemini response
+      if (parsedResponse.activities && Array.isArray(parsedResponse.activities)) {
+        for (const activity of parsedResponse.activities) {
+          if (activity && typeof activity === 'object' && 'location' in activity && 'time' in activity) {
+            // Validate and normalize the location
+            const location = findLocation(String(activity.location));
+            if (location) {
+              // Parse time correctly to maintain 24-hour format
+              let timeValue = String(activity.time);
+              
+              // Handle time ranges (15:00-17:00)
+              if (timeValue.includes('-')) {
+                timeValue = timeValue.split('-')[0]; // Take the start time
+              }
+              
+              if (timeValue.includes(':')) {
+                // Properly preserve 24-hour format (don't convert 15:00 to 03:00)
+                const [hours, minutes] = timeValue.split(':').map(Number);
+                timeValue = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+              } else {
+                // Handle relative times
+                timeValue = expandRelativeTime(timeValue);
+              }
+              
+              // Get the activity type from searchParameters or use a default
+              const activityType = activity.searchParameters?.type || 
+                                  (activity.description ? activity.description.split(' ')[0] : undefined);
+              
+              // Debug log to track search parameters before adding to fixedTimes
+              console.log(`Adding activity with search parameters:`, {
+                location: activity.location, // Use original location from activity
+                activityDescription: activity.description,
+                searchTerm: activity.searchParameters?.searchTerm,
+                type: activityType,
+                keywords: activity.searchParameters?.keywords,
+                minRating: activity.searchParameters?.minRating
+              });
+              
+              // IMPORTANT: Add this activity to fixedTimes - this is the main fix
+              parsed.fixedTimes.push({
+                location: activity.location, // Use original location from activity
+                time: timeValue,
+                // Use the venue type from searchParameters as the activity type
+                type: activityType,
+                // Store the rich search parameters - ensure they're copied correctly
+                searchTerm: activity.searchParameters?.searchTerm,
+                keywords: Array.isArray(activity.searchParameters?.keywords) ? 
+                         [...activity.searchParameters.keywords] : // Make a copy of the array
+                         undefined,
+                minRating: typeof activity.searchParameters?.minRating === 'number' ? 
+                         activity.searchParameters.minRating : 
+                         undefined
+              });
+            }
+          }
+        }
+      }
+      
+      // Fallback to legacy format if activities array isn't present
+      if (parsed.fixedTimes.length === 0 && parsedResponse.fixedTimes && Array.isArray(parsedResponse.fixedTimes)) {
+        for (const ft of parsedResponse.fixedTimes) {
+          if (ft && typeof ft === 'object' && 'location' in ft && 'time' in ft) {
+            const location = findLocation(String(ft.location));
+            if (location) {
+              // Parse time but preserve original activity type
+              let timeValue = String(ft.time);
+              // Handle time ranges (15:00-17:00)
+              if (timeValue.includes('-')) {
+                timeValue = timeValue.split('-')[0]; // Take the start time
+              }
+              // Handle relative times
+              if (!timeValue.includes(':')) {
+                timeValue = expandRelativeTime(timeValue);
+              }
+              
+              // Add a debug log for the legacy format too
+              console.log(`Adding legacy format activity:`, {
+                location: location.name,
+                time: timeValue,
+                type: ft.type
+              });
+
+              parsed.fixedTimes.push({
+                location: location.name,
+                time: timeValue,
+                // Preserve the original activity type from the response
+                type: ft.type ? String(ft.type) : undefined,
+                // Include any search parameters if available
+                searchTerm: ft.searchTerm ? String(ft.searchTerm) : undefined,
+                keywords: Array.isArray(ft.keywords) ? [...ft.keywords] : undefined,
+                minRating: typeof ft.minRating === 'number' ? ft.minRating : undefined
+              });
+            }
+          }
+        }
+      }
+
+      // Critical fix: If no startLocation but we have activities, use the first activity's location
+      if (!parsed.startLocation && parsed.activities && parsed.activities.length > 0) {
+        parsed.startLocation = parsed.activities[0].location;
+        console.log(`No startLocation provided, using first activity location: ${parsed.startLocation}`);
+      }
+      
+      // Backup: If we have destinations but no startLocation, use first destination
+      if (!parsed.startLocation && parsed.destinations.length > 0) {
+        const firstDestination = parsed.destinations.shift();
+        if (firstDestination) {
+          parsed.startLocation = firstDestination;
+          console.log(`Using first destination as startLocation: ${parsed.startLocation}`);
+        }
+      }
+      
+      // Final check to ensure we have a startLocation
+      if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
+        parsed.startLocation = parsed.fixedTimes[0].location;
+        console.log(`Using first fixed time location as startLocation: ${parsed.startLocation}`);
+      }
+
+      // Normalize time formats first (ensure HH:MM 24-hour format)
+      parsed.fixedTimes.forEach((item: FixedTimeEntry) => {
+        if (item.time && item.time.includes(':')) {
+          const parts = item.time.split(':');
+          if (parts.length === 2) {
+            const hour = parseInt(parts[0]);
+            const minute = parseInt(parts[1]);
+            // Create normalized 24-hour format
+            item.time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          }
+        }
+      });
+      
+      // Remove duplicates without using Set which causes TypeScript issues
+      const stringified = parsed.fixedTimes.map((item: FixedTimeEntry) => JSON.stringify(item));
+      const uniqueStringified: string[] = [];
+      stringified.forEach((str: string) => {
+        if (!uniqueStringified.includes(str)) {
+          uniqueStringified.push(str);
+        }
+      });
+      const uniqueFixedTimes = uniqueStringified.map(item => JSON.parse(item) as FixedTimeEntry);
+      
+      parsed.fixedTimes = uniqueFixedTimes;
+      
+      // Sort fixed times chronologically
+      parsed.fixedTimes.sort((a, b) => {
+        if (!a.time) return -1;
+        if (!b.time) return 1;
+        return a.time.localeCompare(b.time);
+      });
+      
+      // Debug logging
+      console.log("Final parsed request:", JSON.stringify(parsed, null, 2));
+
+      return parsed;
+
+    } catch (error: any) {
+      console.error("Error calling Gemini API:", error);
+      
+      // Return a basic structure from our direct extraction methods as a fallback
+      return {
+        startLocation: null,
+        destinations: extractedLocations.map(loc => loc.name),
+        fixedTimes: [],
+        preferences: {
+          requirements: []
+        }
+      };
+    }
+  } catch (error: any) {
+    console.error("Fatal error in parseItineraryRequest:", error);
+    throw new Error(`Failed to parse itinerary request: ${error.message}`);
+  }
+}

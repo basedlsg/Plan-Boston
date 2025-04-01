@@ -14,6 +14,7 @@ import {
 } from "./languageProcessing";
 import { getApiKey, isFeatureEnabled, validateApiKey } from "../config";
 import { processWithGemini, StructuredRequest as GeminiStructuredRequest } from './geminiProcessor';
+import { validateAndNormalizeLocation, processLocationWithAIAndMaps } from './mapGeocoding';
 
 // Configure Gemini model with safety settings
 let genAI: GoogleGenerativeAI | null = null;
@@ -87,6 +88,8 @@ type FixedTimeEntry = {
  * Convert Gemini structured request to the application's expected format
  */
 function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null): StructuredRequest | null {
+  console.log("Converting Gemini result to app format:", JSON.stringify(geminiResult, null, 2));
+  
   if (!geminiResult) {
     return null;
   }
@@ -95,7 +98,16 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   const appFormatRequest: StructuredRequest = {
     startLocation: geminiResult.startLocation || "London",
     destinations: [],
-    fixedTimes: (geminiResult.fixedTimeEntries || []).map(entry => ({
+    fixedTimes: [],
+    preferences: {
+      type: geminiResult.preferences?.budget || undefined,
+      requirements: geminiResult.specialRequests || []
+    }
+  };
+  
+  // Add fixed time entries if available
+  if (geminiResult.fixedTimeEntries && geminiResult.fixedTimeEntries.length > 0) {
+    appFormatRequest.fixedTimes = geminiResult.fixedTimeEntries.map(entry => ({
       location: entry.location || "London",
       time: entry.time,
       type: entry.searchParameters?.venueType || "activity",
@@ -103,13 +115,55 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
       // Add other relevant parameters
       keywords: entry.searchParameters?.specificRequirements || undefined,
       minRating: 4.0 // Default to high quality
-    })),
-    preferences: {
-      type: geminiResult.preferences?.budget || undefined,
-      requirements: geminiResult.specialRequests || []
-    }
-  };
+    }));
+  }
   
+  // Handle flexible time entries - this is critical for the British Museum/Soho case
+  if (geminiResult.flexibleTimeEntries && geminiResult.flexibleTimeEntries.length > 0) {
+    // Convert flexible time entries to fixed times with appropriate time values
+    const flexibleEntries = geminiResult.flexibleTimeEntries.map(entry => {
+      // Convert time period names to specific times
+      let timeValue = entry.time || "12:00";
+      
+      // Process period-based times
+      if (typeof timeValue === 'string') {
+        if (timeValue.toLowerCase().includes('morning')) {
+          timeValue = '09:00';
+        } else if (timeValue.toLowerCase().includes('afternoon')) {
+          timeValue = '14:00';
+        } else if (timeValue.toLowerCase().includes('evening')) {
+          timeValue = '19:00';
+        } else if (timeValue.toLowerCase().includes('night')) {
+          timeValue = '21:00';
+        }
+      }
+      
+      // Try to determine a reasonable type based on the activity
+      let activityType = "attraction";
+      const activityLower = entry.activity?.toLowerCase() || '';
+      
+      if (activityLower.includes('museum') || activityLower.includes('gallery')) {
+        activityType = "museum";
+      } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || activityLower.includes('eat')) {
+        activityType = "restaurant";
+      } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
+        activityType = "cafe";
+      }
+      
+      return {
+        location: entry.location || "London",
+        time: timeValue,
+        type: activityType,
+        searchTerm: entry.activity,
+        minRating: 4.0 // Default to high quality
+      };
+    });
+    
+    // Add flexible entries to fixed times array
+    appFormatRequest.fixedTimes = [...appFormatRequest.fixedTimes, ...flexibleEntries];
+  }
+  
+  console.log("Converted app format request:", JSON.stringify(appFormatRequest, null, 2));
   return appFormatRequest;
 }
 
@@ -237,7 +291,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         
         // Apply location validation and normalization when possible
         try {
-          const { validateAndNormalizeLocation, processLocationWithAIAndMaps } = require('./mapGeocoding');
+          // Using imported functions directly
           
           // Create destinations array from fixed time locations
           const uniqueLocations = new Set<string>();
@@ -296,7 +350,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       // Even though we're using the fallback structure, let's improve it with Google Maps verification
       // This will help improve the location data quality even without Gemini
       try {
-        const { validateAndNormalizeLocation, processLocationWithAIAndMaps } = require('./mapGeocoding');
+        // Using imported functions directly
         
         // Process each destination
         if (fallbackStructure.destinations.length > 0) {
