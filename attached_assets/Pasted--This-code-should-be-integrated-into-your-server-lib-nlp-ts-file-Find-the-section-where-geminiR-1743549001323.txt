@@ -1,0 +1,162 @@
+// This code should be integrated into your server/lib/nlp.ts file
+// Find the section where geminiResponse is being processed and replace it
+
+// Existing code section to replace:
+/*
+Converting Gemini result to app format: {
+  "fixedTimeEntries": [],
+  "startLocation": "Central London"
+}
+Converted app format request: {
+  "startLocation": "Central London",
+  "destinations": [],
+  "fixedTimes": [],
+  "preferences": {
+    "requirements": []
+  }
+}
+*/
+
+// Replace with this implementation:
+
+try {
+  const result = await model.generateContent(prompt);
+  const responseText = result.response.text();
+  
+  // Log the raw response for debugging
+  console.log("Raw Gemini API response:", responseText);
+  
+  if (!responseText || responseText.trim() === '') {
+    console.error("Empty text content received");
+    throw new Error("Empty response received from language model");
+  }
+  
+  // Clean the response to extract JSON
+  let cleanedContent = responseText.trim();
+  
+  // Remove markdown code block markers if present
+  if (cleanedContent.startsWith('```json') || cleanedContent.startsWith('```')) {
+    const firstBlockEnd = cleanedContent.indexOf('\n');
+    const lastBlockStart = cleanedContent.lastIndexOf('```');
+    
+    if (firstBlockEnd !== -1) {
+      cleanedContent = cleanedContent.substring(firstBlockEnd + 1);
+      
+      if (lastBlockStart !== -1 && lastBlockStart > firstBlockEnd) {
+        cleanedContent = cleanedContent.substring(0, lastBlockStart).trim();
+      }
+    }
+  }
+  
+  // Parse the JSON response
+  let parsedResponse;
+  try {
+    parsedResponse = JSON.parse(cleanedContent);
+    console.log("Successfully parsed Gemini response:", parsedResponse);
+  } catch (error) {
+    console.error("JSON parse error:", error);
+    
+    // Advanced error recovery
+    try {
+      const jsonStart = cleanedContent.indexOf('{');
+      const jsonEnd = cleanedContent.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const extractedJson = cleanedContent.substring(jsonStart, jsonEnd + 1);
+        parsedResponse = JSON.parse(extractedJson);
+        console.log("Successfully parsed extracted JSON:", parsedResponse);
+      } else {
+        throw new Error("Could not find valid JSON object markers");
+      }
+    } catch (extractError) {
+      throw new Error(`Failed to parse JSON response: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  // Use proper conversion of Gemini response format
+  const parsed: StructuredRequest = {
+    startLocation: parsedResponse.startLocation || null,
+    destinations: parsedResponse.destinations || [],
+    fixedTimes: [],
+    preferences: {
+      type: undefined,
+      requirements: []
+    }
+  };
+  
+  // Convert flexible time entries to fixed times
+  if (parsedResponse.flexibleTimeEntries && Array.isArray(parsedResponse.flexibleTimeEntries)) {
+    console.log("Found flexibleTimeEntries in Gemini response:", parsedResponse.flexibleTimeEntries);
+    
+    for (const entry of parsedResponse.flexibleTimeEntries) {
+      if (entry && typeof entry === 'object' && entry.location) {
+        // Convert time formats
+        let timeValue = entry.time;
+        
+        // Handle time periods (morning, afternoon, evening)
+        if (timeValue === 'morning') {
+          timeValue = '10:00';
+        } else if (timeValue === 'afternoon') {
+          timeValue = '14:00';
+        } else if (timeValue === 'evening') {
+          timeValue = '18:00';
+        }
+        
+        // Add to fixed times
+        parsed.fixedTimes.push({
+          location: entry.location,
+          time: timeValue,
+          type: entry.activity || undefined
+        });
+        
+        console.log(`Added flexible time entry to fixedTimes: ${entry.location} at ${timeValue}`);
+      }
+    }
+  }
+  
+  // Also process fixed time entries if present
+  if (parsedResponse.fixedTimeEntries && Array.isArray(parsedResponse.fixedTimeEntries)) {
+    for (const entry of parsedResponse.fixedTimeEntries) {
+      if (entry && typeof entry === 'object' && entry.location && entry.time) {
+        parsed.fixedTimes.push({
+          location: entry.location,
+          time: entry.time,
+          type: entry.activity || undefined
+        });
+      }
+    }
+  }
+  
+  // If we have no start location but have activities, use the first activity location
+  if (!parsed.startLocation && parsed.fixedTimes.length > 0) {
+    parsed.startLocation = parsed.fixedTimes[0].location;
+    console.log(`No startLocation provided, using first activity location: ${parsed.startLocation}`);
+  }
+  
+  // Process search parameters if available
+  if (parsedResponse.searchParameters) {
+    // Extract any preferences
+    if (parsedResponse.budgetLevel) {
+      if (!parsed.preferences.requirements) {
+        parsed.preferences.requirements = [];
+      }
+      parsed.preferences.requirements.push(parsedResponse.budgetLevel);
+    }
+  }
+  
+  // Ensure all fixedTimes have valid entries
+  parsed.fixedTimes = parsed.fixedTimes.filter(ft => ft.location && ft.time);
+  
+  // Sort fixed times chronologically
+  parsed.fixedTimes.sort((a, b) => {
+    if (!a.time) return -1;
+    if (!b.time) return 1;
+    return a.time.localeCompare(b.time);
+  });
+  
+  console.log("Final parsed request:", JSON.stringify(parsed, null, 2));
+  return parsed;
+} catch (error) {
+  console.error("Error processing Gemini response:", error);
+  throw error;
+}

@@ -25,11 +25,27 @@ const FixedTimeEntrySchema = z.object({
   }).optional()
 });
 
+// Define flexible time entry schema - this is for less specific time periods
+const FlexibleTimeEntrySchema = z.object({
+  time: z.string().describe("The time period for this activity (e.g., 'morning', 'afternoon')"),
+  activity: z.string().describe("The activity description"),
+  location: z.string().optional().describe("The specific location or area in London"),
+  venue: z.string().optional().describe("A specific venue name if mentioned"),
+  day: z.string().optional().describe("The day for this activity if different from the main date"),
+  searchParameters: z.object({
+    cuisine: z.string().optional().describe("Type of cuisine if food-related"),
+    priceLevel: z.enum(["budget", "moderate", "expensive"]).optional().describe("Price level preference"),
+    venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
+    specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
+  }).optional()
+});
+
 const StructuredRequestSchema = z.object({
   date: z.string().optional().describe("The date for the itinerary"),
   startLocation: z.string().optional().describe("Where the day starts"),
   endLocation: z.string().optional().describe("Where the day ends"),
   fixedTimeEntries: z.array(FixedTimeEntrySchema).describe("Activities with specific times"),
+  flexibleTimeEntries: z.array(FlexibleTimeEntrySchema).optional().describe("Activities with flexible time periods"),
   preferences: z.object({
     cuisine: z.array(z.string()).optional().describe("Preferred cuisines"),
     budget: z.enum(["budget", "moderate", "expensive"]).optional().describe("Overall budget level"),
@@ -47,6 +63,7 @@ const StructuredRequestSchema = z.object({
 });
 
 export type FixedTimeEntry = z.infer<typeof FixedTimeEntrySchema>;
+export type FlexibleTimeEntry = z.infer<typeof FlexibleTimeEntrySchema>;
 export type StructuredRequest = z.infer<typeof StructuredRequestSchema>;
 
 /**
@@ -133,13 +150,19 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     2. For time values, use 24-hour format (e.g., "09:00", "15:30") when possible
     3. If a time is mentioned without AM/PM (e.g., "at 6"), default to PM for evening activities like dinner
     4. Include all explicitly mentioned fixed times in fixedTimeEntries
-    5. Keep location names authentic to London (don't change neighborhood names)
-    6. If the user mentions specific venue requirements, include them in searchParameters
-    7. If the user doesn't specify a budget level, default to "moderate"
-    8. Extract as much detail as possible while staying true to the user's request
-    9. For incomplete information, make reasonable assumptions based on context
-    10. Keep activity descriptions concise but clear
+    5. Put activities with vague times (morning, afternoon, evening) in flexibleTimeEntries
+    6. Keep location names authentic to London (don't change neighborhood names)
+    7. If the user mentions specific venue requirements, include them in searchParameters
+    8. If the user doesn't specify a budget level, default to "moderate"
+    9. Extract as much detail as possible while staying true to the user's request
+    10. For incomplete information, make reasonable assumptions based on context
+    11. Keep activity descriptions concise but clear
     
+    SCHEMA GUIDANCE:
+    - Use fixedTimeEntries for activities with specific clock times (9:00, 14:30, etc.)
+    - Use flexibleTimeEntries for activities with time periods (morning, afternoon, etc.)
+    - Both entry types should include: time, activity, location
+
     Here's the request to analyze:
     ${query}
     `;
@@ -249,14 +272,38 @@ function processGeminiResponse(
   const structuredData: StructuredRequest = {
     ...validatedData,
     fixedTimeEntries: [...(validatedData.fixedTimeEntries || [])],
+    flexibleTimeEntries: [...(validatedData.flexibleTimeEntries || [])],
     preferences: validatedData.preferences ? { ...validatedData.preferences } : undefined,
     travelGroup: validatedData.travelGroup ? { ...validatedData.travelGroup } : undefined,
     specialRequests: validatedData.specialRequests ? [...validatedData.specialRequests] : undefined
   };
 
+  console.log("Processing Gemini response with raw data:", JSON.stringify(validatedData, null, 2));
+
   // Set default start location if not provided
   if (!structuredData.startLocation) {
     structuredData.startLocation = "Central London";
+  }
+  
+  // Process flexible time entries and convert them to fixed time entries
+  if (structuredData.flexibleTimeEntries && structuredData.flexibleTimeEntries.length > 0) {
+    console.log(`Found ${structuredData.flexibleTimeEntries.length} flexible time entries to process`);
+    
+    // Convert flexible time entries to fixed times with appropriate time values
+    const convertedFlexibleEntries = structuredData.flexibleTimeEntries.map(entry => {
+      // Convert time period names to specific times
+      const convertedTime = convertTo24Hour(entry.time);
+      
+      // Use the flexible time entry data but with the converted time
+      return {
+        ...entry,
+        time: convertedTime
+      };
+    });
+    
+    // Add the converted flexible entries to the fixed time entries array
+    structuredData.fixedTimeEntries = [...structuredData.fixedTimeEntries, ...convertedFlexibleEntries];
+    console.log(`Added ${convertedFlexibleEntries.length} converted flexible entries to fixed time entries`);
   }
   
   // Sort fixed time entries chronologically
@@ -300,6 +347,7 @@ function processGeminiResponse(
     return entry;
   });
   
+  console.log("Final processed result:", JSON.stringify(structuredData, null, 2));
   return structuredData;
 }
 

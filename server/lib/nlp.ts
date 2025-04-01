@@ -94,74 +94,117 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
     return null;
   }
   
-  // Create the application-format structured request 
+  // Initialize the result structure
   const appFormatRequest: StructuredRequest = {
-    startLocation: geminiResult.startLocation || "London",
+    startLocation: geminiResult.startLocation || "Central London", // Default to Central London
     destinations: [],
     fixedTimes: [],
     preferences: {
-      type: geminiResult.preferences?.budget || undefined,
-      requirements: geminiResult.specialRequests || []
+      type: undefined,
+      requirements: []
     }
   };
   
-  // Add fixed time entries if available
-  if (geminiResult.fixedTimeEntries && geminiResult.fixedTimeEntries.length > 0) {
-    appFormatRequest.fixedTimes = geminiResult.fixedTimeEntries.map(entry => ({
-      location: entry.location || "London",
-      time: entry.time,
-      type: entry.searchParameters?.venueType || "activity",
-      searchTerm: entry.activity,
-      // Add other relevant parameters
-      keywords: entry.searchParameters?.specificRequirements || undefined,
-      minRating: 4.0 // Default to high quality
-    }));
+  // Process fixed time entries if present
+  if (geminiResult.fixedTimeEntries && Array.isArray(geminiResult.fixedTimeEntries)) {
+    for (const entry of geminiResult.fixedTimeEntries) {
+      if (entry && typeof entry === 'object' && entry.location && entry.time) {
+        appFormatRequest.fixedTimes.push({
+          location: entry.location,
+          time: entry.time,
+          type: entry.searchParameters?.venueType || "activity",
+          searchTerm: entry.activity,
+          keywords: entry.searchParameters?.specificRequirements || undefined,
+          minRating: 4.0 // Default to high quality
+        });
+        console.log(`Added fixed time entry: ${entry.activity} at ${entry.location}, ${entry.time}`);
+      }
+    }
   }
   
-  // Handle flexible time entries - this is critical for the British Museum/Soho case
-  if (geminiResult.flexibleTimeEntries && geminiResult.flexibleTimeEntries.length > 0) {
-    // Convert flexible time entries to fixed times with appropriate time values
-    const flexibleEntries = geminiResult.flexibleTimeEntries.map(entry => {
-      // Convert time period names to specific times
-      let timeValue = entry.time || "12:00";
-      
-      // Process period-based times
-      if (typeof timeValue === 'string') {
-        if (timeValue.toLowerCase().includes('morning')) {
-          timeValue = '09:00';
-        } else if (timeValue.toLowerCase().includes('afternoon')) {
-          timeValue = '14:00';
-        } else if (timeValue.toLowerCase().includes('evening')) {
-          timeValue = '19:00';
-        } else if (timeValue.toLowerCase().includes('night')) {
-          timeValue = '21:00';
-        }
-      }
-      
-      // Try to determine a reasonable type based on the activity
-      let activityType = "attraction";
-      const activityLower = entry.activity?.toLowerCase() || '';
-      
-      if (activityLower.includes('museum') || activityLower.includes('gallery')) {
-        activityType = "museum";
-      } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || activityLower.includes('eat')) {
-        activityType = "restaurant";
-      } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
-        activityType = "cafe";
-      }
-      
-      return {
-        location: entry.location || "London",
-        time: timeValue,
-        type: activityType,
-        searchTerm: entry.activity,
-        minRating: 4.0 // Default to high quality
-      };
-    });
+  // Process flexible time entries - THIS IS THE KEY FIX for the British Museum/Soho case
+  if (geminiResult.flexibleTimeEntries && Array.isArray(geminiResult.flexibleTimeEntries)) {
+    console.log("Found flexibleTimeEntries in Gemini response:", geminiResult.flexibleTimeEntries);
     
-    // Add flexible entries to fixed times array
-    appFormatRequest.fixedTimes = [...appFormatRequest.fixedTimes, ...flexibleEntries];
+    for (const entry of geminiResult.flexibleTimeEntries) {
+      if (entry && typeof entry === 'object' && entry.location) {
+        // Convert time formats
+        let timeValue = entry.time || "12:00";
+        
+        // Handle time periods (morning, afternoon, evening)
+        if (typeof timeValue === 'string') {
+          if (timeValue.toLowerCase() === 'morning') {
+            timeValue = '10:00';
+          } else if (timeValue.toLowerCase() === 'afternoon') {
+            timeValue = '14:00';
+          } else if (timeValue.toLowerCase() === 'evening') {
+            timeValue = '18:00';
+          } else if (timeValue.toLowerCase() === 'night') {
+            timeValue = '20:00';
+          }
+        }
+        
+        // Try to determine a reasonable type based on the activity
+        let activityType = "attraction";
+        const activityLower = entry.activity?.toLowerCase() || '';
+        
+        if (activityLower.includes('museum') || activityLower.includes('gallery')) {
+          activityType = "museum";
+        } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || activityLower.includes('eat')) {
+          activityType = "restaurant";
+        } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
+          activityType = "cafe";
+        }
+        
+        // Add to fixed times
+        appFormatRequest.fixedTimes.push({
+          location: entry.location,
+          time: timeValue,
+          type: activityType,
+          searchTerm: entry.activity,
+          minRating: 4.0 // Default to high quality
+        });
+        
+        console.log(`Added flexible time entry to fixedTimes: ${entry.location} at ${timeValue}, activity: ${entry.activity}`);
+      }
+    }
   }
+  
+  // If we have no start location but have activities, use the first activity location
+  if (!appFormatRequest.startLocation && appFormatRequest.fixedTimes.length > 0) {
+    appFormatRequest.startLocation = appFormatRequest.fixedTimes[0].location;
+    console.log(`No startLocation provided, using first activity location: ${appFormatRequest.startLocation}`);
+  }
+  
+  // Process other preferences if available
+  if (geminiResult.preferences) {
+    // Extract budget preferences if available
+    if (geminiResult.preferences.budget) {
+      appFormatRequest.preferences.type = geminiResult.preferences.budget;
+    }
+    
+    // Extract requirements/restrictions if available
+    if (Array.isArray(geminiResult.specialRequests)) {
+      appFormatRequest.preferences.requirements = geminiResult.specialRequests;
+    }
+  }
+  
+  // Sort fixed times chronologically
+  appFormatRequest.fixedTimes.sort((a, b) => {
+    if (!a.time) return -1;
+    if (!b.time) return 1;
+    return a.time.localeCompare(b.time);
+  });
+  
+  // Create destinations array from fixed time locations
+  const uniqueLocations = new Set<string>();
+  appFormatRequest.fixedTimes.forEach(entry => {
+    if (entry.location && entry.location !== "London" && entry.location !== "Central London") {
+      uniqueLocations.add(entry.location);
+    }
+  });
+  
+  appFormatRequest.destinations = Array.from(uniqueLocations);
   
   console.log("Converted app format request:", JSON.stringify(appFormatRequest, null, 2));
   return appFormatRequest;
