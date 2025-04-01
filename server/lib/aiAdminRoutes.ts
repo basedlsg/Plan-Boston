@@ -15,9 +15,22 @@ import path from 'path';
 /**
  * Register admin routes for AI analytics and debugging 
  */
+function isAdmin(req: Request): boolean {
+  // Check if user has admin role from Replit headers
+  const roles = req.headers['x-replit-user-roles'];
+  return roles?.includes('admin') || false;
+}
+
+function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!isAdmin(req)) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 export function registerAiAdminRoutes(app: Express): void {
   // Get all AI logs (paginated, most recent first)
-  app.get('/api/admin/ai-logs', async (req: Request, res: Response) => {
+  app.get('/api/admin/ai-logs', requireAdmin, async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 0;
       const limit = parseInt(req.query.limit as string) || 10;
