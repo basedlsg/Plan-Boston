@@ -2,13 +2,47 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { registerAiAdminRoutes } from "./lib/aiAdminRoutes";
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+import { pool } from './db';
+import authRoutes from './routes/auth';
+import { attachCurrentUser } from './middleware/requireAuth';
 
 // Import config module
 import './config';
 
+// Set up session store
+const PgSession = connectPgSimple(session);
+
+// Check for session secret
+if (!process.env.SESSION_SECRET) {
+  console.warn('Warning: SESSION_SECRET not set in environment. Using a default secret. This is not secure for production.');
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Configure session middleware
+app.use(session({
+  store: new PgSession({
+    pool,
+    tableName: 'sessions' // Must match the table name in your schema
+  }),
+  secret: process.env.SESSION_SECRET || 'london-day-planner-dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+  }
+}));
+
+// Attach current user to all requests for easy access
+app.use(attachCurrentUser);
+
+// Register authentication routes
+app.use('/api/auth', authRoutes);
 
 app.use((req, res, next) => {
   const start = Date.now();

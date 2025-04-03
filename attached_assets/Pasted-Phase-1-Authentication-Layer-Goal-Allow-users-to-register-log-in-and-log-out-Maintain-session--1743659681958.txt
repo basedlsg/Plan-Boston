@@ -1,0 +1,55 @@
+Phase 1: Authentication Layer
+
+Goal: Allow users to register, log in, and log out. Maintain session state.
+
+Backend (Node/Express):
+
+Database Schema (Drizzle):
+
+Create a users table: id (PK, UUID/serial), email (unique), password_hash (string), name (optional string), created_at.
+
+Create a sessions table (compatible with connect-pg-simple): Standard session table schema (sid, sess, expire).
+
+Dependencies:
+
+npm install bcrypt @types/bcrypt express-session connect-pg-simple pg
+
+Password Hashing: Use bcrypt to hash passwords during registration and compare during login.
+
+Session Management:
+
+Use express-session.
+
+Configure connect-pg-simple as the session store, pointing to your existing Drizzle database pool (pg). This ensures sessions persist across server restarts in Replit.
+
+Set up session middleware in server/index.ts. Use Replit Secrets for the SESSION_SECRET.
+
+API Routes (server/routes/auth.ts):
+
+POST /api/auth/register: Validate input, check if email exists, hash password, create user in DB. Log the user in immediately by setting req.session.userId.
+
+POST /api/auth/login: Validate input, find user by email, compare password hash using bcrypt.compare(). If valid, set req.session.userId.
+
+POST /api/auth/logout: Destroy the session using req.session.destroy().
+
+GET /api/auth/status: Check req.session.userId. If it exists, return user info (e.g., { loggedIn: true, user: { id: ..., email: ..., name: ... } }). Otherwise, return { loggedIn: false }.
+
+Middleware (server/middleware/requireAuth.ts):
+
+Create a middleware function that checks if req.session.userId exists. If not, return a 401 Unauthorized error. Use this to protect user-specific routes.
+
+Frontend (React):
+
+Auth Context: Create a React Context (AuthContext) to manage the user's authentication state (isLoading, isAuthenticated, user). Fetch the status from /api/auth/status when the app loads. Provide login, register, logout functions that call the backend API and update the context state.
+
+UI Components:
+
+Create Login and Register forms/modals (using shadcn/ui if available).
+
+Conditionally render Login/Register or Logout/Profile buttons in the header based on AuthContext.isAuthenticated.
+
+Routing (client/src/App.tsx):
+
+Wrap the app in the AuthProvider.
+
+Potentially create protected route components that check AuthContext.isAuthenticated before rendering user-specific pages (like Settings).

@@ -318,11 +318,66 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     
     if (rawGeminiResult) {
       console.log("Successfully processed query with new Gemini processor");
+      console.log("Raw Gemini API response:", JSON.stringify(rawGeminiResult, null, 2));
       
       // Convert from Gemini processor format to application format
       const geminiResult = convertGeminiToAppFormat(rawGeminiResult);
       
       if (geminiResult) {
+        // Process flexible time entries - KEY FIX for activities without specific times
+        if (rawGeminiResult.flexibleTimeEntries && Array.isArray(rawGeminiResult.flexibleTimeEntries)) {
+          console.log("Found flexibleTimeEntries in Gemini response:", rawGeminiResult.flexibleTimeEntries);
+          
+          for (const entry of rawGeminiResult.flexibleTimeEntries) {
+            if (entry && typeof entry === 'object' && entry.location) {
+              // Convert time formats
+              let timeValue = entry.time;
+              
+              // Handle time periods (morning, afternoon, evening)
+              if (typeof timeValue === 'string') {
+                if (timeValue.toLowerCase() === 'morning') {
+                  timeValue = '10:00';
+                } else if (timeValue.toLowerCase() === 'afternoon') {
+                  timeValue = '14:00';
+                } else if (timeValue.toLowerCase() === 'evening') {
+                  timeValue = '18:00';
+                } else if (timeValue.toLowerCase() === 'night') {
+                  timeValue = '20:00';
+                }
+              }
+              
+              // Try to determine a reasonable type based on the activity
+              let activityType = "attraction";
+              const activityLower = entry.activity?.toLowerCase() || '';
+              
+              if (activityLower.includes('museum') || activityLower.includes('gallery')) {
+                activityType = "museum";
+              } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || activityLower.includes('eat')) {
+                activityType = "restaurant";
+              } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
+                activityType = "cafe";
+              }
+              
+              // Add to fixed times if not already there
+              const existingTimeEntry = geminiResult.fixedTimes.find(ft => 
+                ft.location === entry.location && ft.type === activityType
+              );
+              
+              if (!existingTimeEntry) {
+                geminiResult.fixedTimes.push({
+                  location: entry.location,
+                  time: timeValue,
+                  type: activityType,
+                  searchTerm: entry.activity,
+                  minRating: 4.0 // Default to high quality
+                });
+                
+                console.log(`Added flexible time entry to fixedTimes: ${entry.location} at ${timeValue}, activity: ${entry.activity}`);
+              }
+            }
+          }
+        }
+        
         // Sort fixed times chronologically if they exist
         if (geminiResult.fixedTimes) {
           geminiResult.fixedTimes.sort((a, b) => {
@@ -339,7 +394,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
           // Create destinations array from fixed time locations
           const uniqueLocations = new Set<string>();
           geminiResult.fixedTimes.forEach(entry => {
-            if (entry.location && entry.location !== "London") {
+            if (entry.location && entry.location !== "London" && entry.location !== "Central London") {
               uniqueLocations.add(entry.location);
             }
           });
@@ -361,11 +416,11 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
           if (geminiResult.fixedTimes.length > 0) {
             for (const fixedTime of geminiResult.fixedTimes) {
               // Only process if location is generic but searchTerm contains hints
-              if (fixedTime.location === "London" && fixedTime.searchTerm) {
+              if ((fixedTime.location === "London" || fixedTime.location === "Central London") && fixedTime.searchTerm) {
                 const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
-                if (enhancedLocation && enhancedLocation !== "London") {
+                if (enhancedLocation && enhancedLocation !== "London" && enhancedLocation !== "Central London") {
                   fixedTime.location = enhancedLocation;
-                  console.log(`Enhanced fixed time location from "London" to "${enhancedLocation}"`);
+                  console.log(`Enhanced fixed time location from generic to "${enhancedLocation}"`);
                 }
               } else if (fixedTime.location) {
                 const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
@@ -379,6 +434,8 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
           console.warn("Location enhancement skipped due to error:", error);
         }
         
+        // Debug the final processed output
+        console.log("Final processed Gemini result:", JSON.stringify(geminiResult, null, 2));
         return geminiResult;
       }
     }
