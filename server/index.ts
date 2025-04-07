@@ -44,6 +44,8 @@ app.use(attachCurrentUser);
 // Register authentication routes
 app.use('/api/auth', authRoutes);
 
+app.use('/London', express.static('dist/public')); // Added static file serving for /London
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -76,7 +78,7 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-  
+
   // Register AI admin routes
   registerAiAdminRoutes(app);
 
