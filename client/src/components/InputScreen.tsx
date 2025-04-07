@@ -51,8 +51,8 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
         </div>
         
         {/* Instruction Text */}
-        <p className="mb-6 font-bold text-center tagline-text" style={{ color: '#17B9E6' }}>
-          Plan your perfect day in London with AI-powered recommendations
+        <p className="mb-6 font-bold tagline-text" style={{ color: '#17B9E6' }}>
+          Enter your activities, locations and times below, we'll create a day plan for you.
         </p>
 
         {/* Form */}
@@ -129,7 +129,7 @@ const InputScreen: React.FC<InputScreenProps> = ({ onSubmit, isLoading }) => {
               value={plans}
               onChange={(e) => setPlans(e.target.value)}
               className="w-full bg-transparent text-gray-700 focus:outline-none text-lg min-h-[135px] p-3"
-              placeholder="e.g. Morning at British Museum, lunch near Covent Garden, afternoon tea, then evening show in West End"
+              placeholder="e.g. 12pm lunch in Mayfair, then grab a coffee and have a walk"
               required
             />
           </div>

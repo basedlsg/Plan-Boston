@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import InputScreen from './components/InputScreen';
 import ItineraryScreen from './components/ItineraryScreen';
-import Header from './components/Header';
 import { usePlanMutation } from './hooks/usePlanMutation';
 import { exportToCalendar } from './lib/calendar';
-import { AuthProvider } from './contexts/AuthContext';
 
 interface PlanFormData {
   date: string;
@@ -60,47 +58,42 @@ function App() {
   };
 
   return (
-    <AuthProvider>
-      <div className="bg-white text-foreground" style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        display: 'flex',
+    <div className="bg-white text-foreground" style={{ 
+      maxWidth: '1200px', 
+      margin: '0 auto',
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%',
+      padding: '1rem'
+    }}>
+      {/* Main Container with optimized spacing */}
+      <div style={{ 
+        display: 'flex', 
         flexDirection: 'column',
-        width: '100%',
-        padding: '1rem'
+        gap: '2rem', // 2rem spacing between sections
+        height: 'auto',
+        overflow: 'visible'
       }}>
-        {/* Header with Authentication */}
-        <Header />
-        
-        {/* Main Container with optimized spacing */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          gap: '2rem', // 2rem spacing between sections
-          height: 'auto',
-          overflow: 'visible'
-        }}>
-          {/* Input Section */}
-          <section className="py-4">
-            <InputScreen 
-              onSubmit={handlePlanSubmit}
-              isLoading={planMutation.isPending}
-            />
-          </section>
+        {/* Input Section */}
+        <section className="py-4">
+          <InputScreen 
+            onSubmit={handlePlanSubmit}
+            isLoading={planMutation.isPending}
+          />
+        </section>
 
-          {/* Itinerary Section - always render but conditionally show content */}
-          <section id="itinerary-section" className="py-4">
-            <ItineraryScreen
-              venues={itineraryData?.venues || []}
-              travelInfo={itineraryData?.travelInfo || []}
-              onExport={() => {
-                exportToCalendar(itineraryData?.venues || []);
-              }}
-            />
-          </section>
-        </div>
+        {/* Itinerary Section - always render but conditionally show content */}
+        <section id="itinerary-section" className="py-4">
+          <ItineraryScreen
+            venues={itineraryData?.venues || []}
+            travelInfo={itineraryData?.travelInfo || []}
+            onExport={() => {
+              exportToCalendar(itineraryData?.venues || []);
+            }}
+          />
+        </section>
       </div>
-    </AuthProvider>
+    </div>
   );
 }
 
