@@ -4,7 +4,6 @@ import ItineraryScreen from './components/ItineraryScreen';
 import { usePlanMutation } from './hooks/usePlanMutation';
 import { exportToCalendar } from './lib/calendar';
 import { BrowserRouter } from "react-router-dom";
-const BASE_PATH = import.meta.env.PROD ? "/London" : "";
 
 interface PlanFormData {
   date: string;
@@ -60,7 +59,7 @@ function App() {
   };
 
   return (
-    <BrowserRouter basename={BASE_PATH}>
+    <BrowserRouter>
       <div className="bg-white text-foreground" style={{ 
         maxWidth: '1200px', 
         margin: '0 auto',
