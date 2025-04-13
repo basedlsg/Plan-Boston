@@ -72,7 +72,7 @@ const TopNav = () => {
                 e.preventDefault();
                 window.location.href = '/login';
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors shadow-sm"
+              className="bg-[#17B9E6] hover:bg-[#15a8d1] text-white py-2 px-4 rounded-md text-sm font-medium transition-colors shadow-sm"
             >
               Sign in with Google
             </a>
