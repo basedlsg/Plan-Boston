@@ -18,7 +18,6 @@ function App() {
         <main className="flex-1">
           <Switch>
             <Route path="/login" component={LoginPage} />
-            <Route path="/register" component={RegisterPage} />
             <Route path="/profile">
               <ProtectedRoute>
                 <ProfilePage />
