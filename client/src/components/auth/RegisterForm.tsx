@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import { Link } from 'wouter';
 import { useAuth } from '../../hooks/useAuth';
+import { initializeGoogleAuth, renderGoogleButton } from '../../lib/googleAuth';
 
 // Create the form schema with validation
 const registerSchema = z.object({
@@ -24,7 +26,46 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
-  const { register, error, clearError, isLoading } = useAuth();
+  const { register, loginWithGoogle, error, clearError, isLoading } = useAuth();
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Google Sign-In when component mounts
+  useEffect(() => {
+    // Set up Google Auth - this needs to be done before loading the script
+    initializeGoogleAuth('GOOGLE_CLIENT_ID', async (credential) => {
+      try {
+        await loginWithGoogle(credential);
+      } catch (err) {
+        console.error('Google authentication error:', err);
+      }
+    });
+    
+    // Load the Google Identity Services script if it's not already loaded
+    const scriptId = 'google-identity-script';
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        if (googleButtonRef.current) {
+          // Small timeout to ensure Google API is fully initialized
+          setTimeout(() => {
+            renderGoogleButton('google-register-button');
+          }, 100);
+        }
+      };
+      document.body.appendChild(script);
+    } else if (window.google && googleButtonRef.current) {
+      // Script already loaded, just render the button
+      renderGoogleButton('google-register-button');
+    }
+    
+    return () => {
+      // We don't remove the script on unmount as it might be used by other components
+    };
+  }, [loginWithGoogle]);
 
   // Initialize the form with react-hook-form
   const form = useForm<RegisterFormValues>({

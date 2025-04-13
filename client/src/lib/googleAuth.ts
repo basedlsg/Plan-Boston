@@ -1,31 +1,7 @@
-// Define the Google authentication interface for TypeScript
-interface GoogleAuthentication {
-  accounts: {
-    id: {
-      initialize: (config: any) => void;
-      renderButton: (
-        element: HTMLElement,
-        options: {
-          type: string;
-          theme?: string;
-          size?: string;
-          text?: string;
-          shape?: string;
-          logo_alignment?: string;
-          width?: string;
-          locale?: string;
-          click_listener?: () => void;
-        }
-      ) => void;
-      prompt: (options?: any) => void;
-    };
-  };
-}
-
-// Declare the window interface with google property
+// Define the type for global window object with Google authentication
 declare global {
   interface Window {
-    google?: GoogleAuthentication;
+    google?: any;
     handleGoogleCredentialResponse?: (response: { credential: string }) => void;
   }
 }
@@ -37,23 +13,15 @@ declare global {
  * @param callback Function to handle the credential response
  */
 export function initializeGoogleAuth(clientId: string, callback: (credential: string) => void) {
-  if (!window.google) {
-    console.error('Google Identity Services not available');
-    return;
-  }
-
-  // Set up the global callback function
+  // Set up the global callback function that Google will call
   window.handleGoogleCredentialResponse = (response) => {
-    callback(response.credential);
+    if (response && response.credential) {
+      callback(response.credential);
+    }
   };
-
-  // Initialize Google Identity Services
-  window.google.accounts.id.initialize({
-    client_id: clientId,
-    callback: window.handleGoogleCredentialResponse,
-    auto_select: false,
-    cancel_on_tap_outside: true,
-  });
+  
+  // We don't need to check for window.google here since we're dynamically loading the script
+  // The initialization will happen after the script is loaded
 }
 
 /**
@@ -62,8 +30,8 @@ export function initializeGoogleAuth(clientId: string, callback: (credential: st
  * @param elementId ID of the HTML element to render the button in
  */
 export function renderGoogleButton(elementId: string) {
-  if (!window.google) {
-    console.error('Google Identity Services not available');
+  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+    console.error('Google Identity Services not available yet');
     return;
   }
 
@@ -74,25 +42,44 @@ export function renderGoogleButton(elementId: string) {
     return;
   }
 
-  window.google.accounts.id.renderButton(element, {
-    type: 'standard',
-    theme: 'outline',
-    size: 'large',
-    text: 'continue_with',
-    shape: 'rectangular',
-    logo_alignment: 'left',
-    width: '100%',
-  });
+  try {
+    // Initialize Google Identity Services
+    window.google.accounts.id.initialize({
+      client_id: 'GOOGLE_CLIENT_ID', // This would be replaced with a real client ID in production
+      callback: window.handleGoogleCredentialResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+
+    // Render the button
+    window.google.accounts.id.renderButton(element, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'continue_with',
+      shape: 'rectangular',
+      logo_alignment: 'left',
+      width: 300, // This is a numeric value as required
+    });
+    
+    console.log('Google Sign-In button rendered successfully');
+  } catch (error) {
+    console.error('Error rendering Google Sign-In button:', error);
+  }
 }
 
 /**
  * Display the One Tap UI
  */
 export function promptGoogleSignIn() {
-  if (!window.google) {
+  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
     console.error('Google Identity Services not available');
     return;
   }
 
-  window.google.accounts.id.prompt();
+  try {
+    window.google.accounts.id.prompt();
+  } catch (error) {
+    console.error('Error prompting Google Sign-In:', error);
+  }
 }
