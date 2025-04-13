@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'wouter';
 import { useAuth } from '../../hooks/useAuth';
 import { initializeGoogleAuth, renderGoogleButton } from '../../lib/googleAuth';
-import { GOOGLE_CLIENT_ID } from '../../lib/env';
+import { useConfig } from '../../lib/env';
 
 // Create the form schema with validation
 const loginSchema = z.object({
@@ -23,12 +23,18 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const { login, loginWithGoogle, error, clearError, isLoading } = useAuth();
+  const { config, loading: configLoading } = useConfig();
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
-    // Set up Google Auth - this needs to be done before loading the script
-    initializeGoogleAuth(GOOGLE_CLIENT_ID, async (credential) => {
+    // Wait for config to be loaded
+    if (configLoading || !config) {
+      return;
+    }
+    
+    // Set up Google Auth with the client ID from server config
+    initializeGoogleAuth(config.googleClientId, async (credential) => {
       try {
         await loginWithGoogle(credential);
       } catch (err) {
@@ -61,7 +67,7 @@ export function LoginForm() {
     return () => {
       // We don't remove the script on unmount as it might be used by other components
     };
-  }, [loginWithGoogle]);
+  }, [loginWithGoogle, config, configLoading]);
 
   // Initialize the form with react-hook-form
   const form = useForm<LoginFormValues>({

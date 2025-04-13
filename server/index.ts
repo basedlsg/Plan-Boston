@@ -6,6 +6,7 @@ import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 import authRoutes from './routes/auth';
+import configRoutes from './routes/config';
 import { attachCurrentUser } from './middleware/requireAuth';
 
 // Import config module
@@ -43,6 +44,9 @@ app.use(attachCurrentUser);
 
 // Register authentication routes
 app.use('/api/auth', authRoutes);
+
+// Register configuration routes
+app.use('/api/config', configRoutes);
 
 app.use('/London', express.static('dist/public')); // Added static file serving for /London
 

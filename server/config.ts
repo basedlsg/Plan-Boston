@@ -116,6 +116,11 @@ export const API_CONFIG: Record<string, ApiConfig> = {
     key: '',
     pattern: API_KEY_PATTERNS.WEATHER,
     required: false
+  },
+  GOOGLE_CLIENT_ID: {
+    key: '',
+    pattern: /.+/,  // Any non-empty string
+    required: false
   }
 } as const;
 
