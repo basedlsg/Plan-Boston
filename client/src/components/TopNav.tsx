@@ -29,7 +29,7 @@ const TopNav = () => {
   };
 
   return (
-    <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="border-none bg-white">
       <div className="flex h-14 items-center px-4 container mx-auto justify-between">
         <div className="flex items-center gap-2">
           {/* Left side empty - removed London Day Planner text */}
