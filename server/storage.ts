@@ -190,9 +190,13 @@ export class MemStorage implements IStorage {
     
     // If userId provided, associate with user
     if (userId) {
+      console.log(`MemStorage: Associating itinerary #${id} with user ${userId}`);
       const userItineraries = this.userItineraryMap.get(userId) || [];
       userItineraries.push(id);
       this.userItineraryMap.set(userId, userItineraries);
+      console.log(`MemStorage: User ${userId} now has ${userItineraries.length} itineraries`);
+    } else {
+      console.log(`MemStorage: Created anonymous itinerary #${id} (no user association)`);
     }
     
     return itinerary;
@@ -203,11 +207,21 @@ export class MemStorage implements IStorage {
   }
   
   async getUserItineraries(userId: string): Promise<Itinerary[]> {
+    console.log(`MemStorage: Getting itineraries for user ${userId}`);
     const itineraryIds = this.userItineraryMap.get(userId) || [];
-    return itineraryIds
+    console.log(`MemStorage: Found ${itineraryIds.length} itinerary IDs for user ${userId}: ${JSON.stringify(itineraryIds)}`);
+    
+    // Debug all itineraries in memory
+    console.log(`MemStorage: Total itineraries in memory: ${this.itineraries.size}`);
+    
+    // Get and filter the itineraries
+    const userItineraries = itineraryIds
       .map(id => this.itineraries.get(id))
       .filter((itinerary): itinerary is Itinerary => itinerary !== undefined)
       .sort((a, b) => b.created.getTime() - a.created.getTime());
+    
+    console.log(`MemStorage: Returning ${userItineraries.length} itineraries for user ${userId}`);
+    return userItineraries;
   }
   
   async getUserById(id: string): Promise<User | undefined> {

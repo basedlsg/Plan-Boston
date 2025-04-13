@@ -19,7 +19,9 @@ router.get('/user', requireAuth, async (req: Request, res: Response) => {
       });
     }
     
+    console.log(`Fetching itineraries for user ID: ${userId}`);
     const itineraries = await storage.getUserItineraries(userId);
+    console.log(`Found ${itineraries.length} itineraries`);
     
     // Format the itineraries for the frontend, handle type safety
     const formattedItineraries = itineraries.map(itinerary => {
@@ -33,13 +35,14 @@ router.get('/user', requireAuth, async (req: Request, res: Response) => {
     });
     
     // Return the itineraries, sorted by creation date (newest first)
-    return res.json(
-      formattedItineraries.sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateB - dateA;
-      })
-    );
+    const sortedItineraries = formattedItineraries.sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA;
+    });
+    
+    console.log('Returning formatted itineraries:', sortedItineraries);
+    return res.json(sortedItineraries);
   } catch (error) {
     console.error('Error fetching user itineraries:', error);
     return res.status(500).json({

@@ -1094,11 +1094,13 @@ export async function registerRoutes(app: Express) {
       }
 
       // Create the final itinerary
+      const userId = req.session.userId;
+      console.log(`Creating itinerary with user ID: ${userId || 'none (anonymous)'}`);
       const itinerary = await storage.createItinerary({
         query,
         places: itineraryPlaces.map(sp => sp.place),
         travelTimes,
-      }, req.session.userId); // Associate with the current user if they're logged in
+      }, userId); // Associate with the current user if they're logged in
 
       res.json(itinerary);
     } catch (error: any) {
