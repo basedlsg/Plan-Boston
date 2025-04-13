@@ -69,26 +69,18 @@ export default function HomePage() {
 
   return (
     <div className="bg-white text-foreground min-h-screen">
-      {/* Header */}
-      <header className="border-b py-4 px-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">London Day Planner</h1>
-        <div className="flex items-center gap-4">
-          {user && (
-            <>
-              <span className="text-sm text-muted-foreground">
-                Welcome, {user.name || user.email}
-              </span>
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                Logout
-              </Button>
-            </>
-          )}
-        </div>
-      </header>
-
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex flex-col gap-8">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Plan Your Perfect Day</h1>
+            {user && (
+              <div className="text-sm text-muted-foreground">
+                Welcome back, {user.name?.split(' ')[0] || 'traveler'}
+              </div>
+            )}
+          </div>
+
           {/* Input Section */}
           <section className="py-4">
             <InputScreen 

@@ -33,9 +33,9 @@ const TopNav = () => {
       <div className="flex h-14 items-center px-4 container mx-auto justify-between">
         <div className="flex items-center gap-2">
           <Link href="/">
-            <a className="flex items-center gap-2">
+            <div className="flex items-center gap-2 cursor-pointer">
               <span className="font-bold text-xl">London Day Planner</span>
-            </a>
+            </div>
           </Link>
         </div>
         
@@ -52,15 +52,11 @@ const TopNav = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">
-                  <a className="w-full cursor-pointer">Profile</a>
-                </Link>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => window.location.href = '/profile'}>
+                Profile
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/">
-                  <a className="w-full cursor-pointer">Planner</a>
-                </Link>
+              <DropdownMenuItem className="cursor-pointer" onClick={() => window.location.href = '/'}>
+                Planner
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
@@ -71,10 +67,10 @@ const TopNav = () => {
         ) : (
           <div className="flex items-center gap-4">
             <Link href="/login">
-              <a className="text-sm font-medium">Log in</a>
+              <span className="text-sm font-medium cursor-pointer">Log in</span>
             </Link>
             <Link href="/register">
-              <a className="text-sm font-medium bg-primary text-primary-foreground py-1 px-3 rounded-md">Sign up</a>
+              <span className="text-sm font-medium bg-primary text-primary-foreground py-1 px-3 rounded-md cursor-pointer">Sign up</span>
             </Link>
           </div>
         )}

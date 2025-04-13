@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
+import ItineraryPage from './pages/ItineraryPage';
 import { Toaster } from './components/ui/toaster';
 
 function App() {
@@ -22,6 +23,9 @@ function App() {
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
+            </Route>
+            <Route path="/itinerary/:id">
+              <ItineraryPage />
             </Route>
             <Route path="/">
               <ProtectedRoute>
