@@ -10,7 +10,7 @@ import {
 } from "@shared/schema";
 import { db } from './db';
 import { users, itineraries, places, userItineraries } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc, or } from 'drizzle-orm';
 
 export interface IStorage {
   // Place operations
@@ -80,7 +80,21 @@ export class DbStorage implements IStorage {
   }
   
   async getUserItineraries(userId: string): Promise<Itinerary[]> {
-    // Join userItineraries and itineraries to get all user's itineraries
+    // Get all itinerary IDs associated with the user
+    const userItineraryAssociations = await db.select({
+      itineraryId: userItineraries.itineraryId
+    })
+    .from(userItineraries)
+    .where(eq(userItineraries.userId, userId));
+    
+    // Extract the itinerary IDs
+    const itineraryIds = userItineraryAssociations.map(assoc => assoc.itineraryId);
+    
+    if (itineraryIds.length === 0) {
+      return [];
+    }
+    
+    // Get all itineraries for those IDs in a separate query
     return await db.select({
       id: itineraries.id,
       query: itineraries.query,
@@ -88,10 +102,12 @@ export class DbStorage implements IStorage {
       travelTimes: itineraries.travelTimes,
       created: itineraries.created
     })
-      .from(userItineraries)
-      .innerJoin(itineraries, eq(userItineraries.itineraryId, itineraries.id))
-      .where(eq(userItineraries.userId, userId))
-      .orderBy(itineraries.created);
+      .from(itineraries)
+      .where(
+        // Create a where condition for each ID: id = 1 OR id = 2 OR ...
+        or(...itineraryIds.map(id => eq(itineraries.id, id)))
+      )
+      .orderBy(desc(itineraries.created)); // Sort newest first
   }
 
   async getUserById(id: string): Promise<User | undefined> {
@@ -292,4 +308,32 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Add debug logging to the DbStorage implementation
+export class DbStorageWithLogging extends DbStorage {
+  async createItinerary(insertItinerary: InsertItinerary, userId?: string): Promise<Itinerary> {
+    console.log(`DbStorage (with logging): Creating itinerary ${userId ? 'for user ' + userId : '(anonymous)'}`);
+    try {
+      const result = await super.createItinerary(insertItinerary, userId);
+      console.log(`DbStorage (with logging): Created itinerary #${result.id} successfully`);
+      return result;
+    } catch (error) {
+      console.error(`DbStorage (with logging): Error creating itinerary:`, error);
+      throw error;
+    }
+  }
+
+  async getUserItineraries(userId: string): Promise<Itinerary[]> {
+    console.log(`DbStorage (with logging): Getting itineraries for user ${userId}`);
+    try {
+      const result = await super.getUserItineraries(userId);
+      console.log(`DbStorage (with logging): Found ${result.length} itineraries for user ${userId}`);
+      return result;
+    } catch (error) {
+      console.error(`DbStorage (with logging): Error getting user itineraries:`, error);
+      throw error;
+    }
+  }
+}
+
+// Use the database storage implementation
+export const storage = new DbStorageWithLogging();
