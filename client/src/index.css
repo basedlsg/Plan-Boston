@@ -262,7 +262,7 @@
     background: linear-gradient(
       135deg, 
       rgba(23, 185, 230, 0.05), 
-      rgba(252, 148, 197, 0.08)
+      rgba(23, 185, 230, 0.02)
     );
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
@@ -450,7 +450,7 @@
   }
   
   .venue-glass:hover {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.08), rgba(252, 148, 197, 0.1));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.08), rgba(23, 185, 230, 0.04));
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06); /* Enhanced shadow on hover */
     transform: translateY(-2px); /* Subtle lift on hover */
   }
@@ -516,7 +516,7 @@
   
   /* Navigation arrow buttons - premium look for white background */
   .nav-arrow {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.1), rgba(252, 148, 197, 0.1));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.1), rgba(23, 185, 230, 0.05));
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-radius: 50%;
@@ -561,7 +561,7 @@
   }
   
   .nav-arrow:hover {
-    background: linear-gradient(135deg, rgba(23, 185, 230, 0.15), rgba(252, 148, 197, 0.15));
+    background: linear-gradient(135deg, rgba(23, 185, 230, 0.15), rgba(23, 185, 230, 0.08));
     transform: scale(1.08);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06); /* Enhanced shadow on hover */
   }
@@ -678,7 +678,7 @@
 
 /* Glass Effect Components */
 .glass-effect {
-  background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+  background: linear-gradient(135deg, var(--brand-blue-10), rgba(23, 185, 230, 0.03));
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border-radius: var(--radius-md);
@@ -691,7 +691,7 @@
 }
 
 .glass-card {
-  background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+  background: linear-gradient(135deg, var(--brand-blue-10), rgba(23, 185, 230, 0.03));
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border-radius: var(--radius-md);
@@ -705,7 +705,7 @@
 
 /* Form Elements */
 .form-container {
-  background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+  background: linear-gradient(135deg, var(--brand-blue-10), rgba(23, 185, 230, 0.03));
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border-radius: var(--radius-md);
@@ -806,10 +806,10 @@
   --color-text-neutral: #737373;
   --color-box-bg: #E3E9F2;
   --color-tag-bg: #BFD4ED;
-  --color-gradient-start: #E6DBEE;
-  --color-gradient-end: #BCC6E6;
+  --color-gradient-start: #E3F5FB;
+  --color-gradient-end: #C9EEFA;
   --color-white: #FFFFFF;
-  --color-brand-pink: #FC94C5;
+  --color-brand-blue: #17B9E6;
 
   /* Typography */
   --font-heading: 'Rozha One', serif;
