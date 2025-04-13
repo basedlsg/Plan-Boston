@@ -73,14 +73,17 @@ function initializeGoogleIdentity(clientId: string): void {
   }
   
   try {
+    // Log the client ID for debugging
+    console.log('Initializing Google Identity Services with client ID:', clientId);
+    
     window.google.accounts.id.initialize({
       client_id: clientId,
       callback: window.handleGoogleCredentialResponse,
       auto_select: false,
       cancel_on_tap_outside: true,
-      // Use current origin as the redirect URI
-      ux_mode: 'popup',
-      // Additional configuration
+      // Use popup mode to avoid redirect URI issues
+      ux_mode: 'popup', 
+      // Additional configuration for handling redirect
       prompt_parent_id: 'google-signin-prompt-container'
     });
     
@@ -140,7 +143,11 @@ function renderButton(elementId: string) {
   }
 
   try {
-    // Render the button
+    // Get the current origin to help with debugging
+    const currentOrigin = window.location.origin;
+    console.log('Current origin for Google Sign-In:', currentOrigin);
+    
+    // Render the button with popup mode to avoid redirect issues
     window.google.accounts.id.renderButton(element, {
       type: 'standard',
       theme: 'outline',
@@ -149,8 +156,7 @@ function renderButton(elementId: string) {
       shape: 'rectangular',
       logo_alignment: 'center',
       width: 250,
-      // The redirect_uri must match what's configured in Google Cloud Console
-      ux_mode: 'popup', // Using popup mode instead of redirect to avoid redirect URI issues
+      ux_mode: 'popup', // Using popup mode to avoid redirect URI issues
     });
     
     console.log('Google Sign-In button rendered successfully');

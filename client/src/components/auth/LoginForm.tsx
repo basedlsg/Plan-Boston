@@ -163,20 +163,24 @@ export function LoginForm() {
           </div>
         </div>
 
-        <div 
-          id="google-signin-button" 
-          ref={googleButtonRef} 
-          className="mt-4"
-          style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            width: '100%', 
-            minHeight: '40px' 
-          }}
-        ></div>
-        
-        {/* Container for Google Sign-In prompt */}
-        <div id="google-signin-prompt-container"></div>
+        {/* Main container for all Google Sign-In related elements */}
+        <div id="google-signin-container">
+          {/* Button container */}
+          <div 
+            id="google-signin-button" 
+            ref={googleButtonRef} 
+            className="mt-4"
+            style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              width: '100%', 
+              minHeight: '40px' 
+            }}
+          ></div>
+          
+          {/* Prompt container */}
+          <div id="google-signin-prompt-container"></div>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
