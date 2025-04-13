@@ -108,9 +108,9 @@ const ProfilePage = () => {
               <div className="text-center py-8 text-muted-foreground">
                 Failed to load itinerary history. Please try again later.
               </div>
-            ) : itineraries && itineraries.length > 0 ? (
+            ) : itineraries && Array.isArray(itineraries) && itineraries.length > 0 ? (
               <div className="space-y-4">
-                {itineraries.map((itinerary: ItineraryHistoryItem) => (
+                {itineraries.map((itinerary) => (
                   <div key={itinerary.id} className="space-y-2">
                     <div className="flex justify-between items-start">
                       <div>

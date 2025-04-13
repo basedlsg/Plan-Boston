@@ -38,8 +38,8 @@ export const attachCurrentUser = async (req: Request, res: Response, next: NextF
         req.currentUser = {
           id: user.id,
           email: user.email,
-          name: user.name,
-          avatar_url: user.avatar_url
+          name: user.name || '',
+          avatar_url: user.avatar_url || undefined
         };
       }
     } catch (error) {

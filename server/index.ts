@@ -7,6 +7,7 @@ import connectPgSimple from 'connect-pg-simple';
 import { pool } from './db';
 import authRoutes from './routes/auth';
 import configRoutes from './routes/config';
+import itinerariesRoutes from './routes/itineraries';
 import { attachCurrentUser } from './middleware/requireAuth';
 
 // Import config module
@@ -47,6 +48,9 @@ app.use('/api/auth', authRoutes);
 
 // Register configuration routes
 app.use('/api/config', configRoutes);
+
+// Register itineraries routes
+app.use('/api/itineraries', itinerariesRoutes);
 
 app.use('/London', express.static('dist/public')); // Added static file serving for /London
 

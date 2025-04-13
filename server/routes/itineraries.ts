@@ -21,13 +21,16 @@ router.get('/user', requireAuth, async (req: Request, res: Response) => {
     
     const itineraries = await storage.getUserItineraries(userId);
     
-    // Format the itineraries for the frontend
-    const formattedItineraries = itineraries.map(itinerary => ({
-      id: itinerary.id,
-      title: `London Itinerary ${itinerary.id}`,
-      query: itinerary.query,
-      created_at: itinerary.created?.toISOString() || new Date().toISOString(),
-    }));
+    // Format the itineraries for the frontend, handle type safety
+    const formattedItineraries = itineraries.map(itinerary => {
+      // Ensure we have valid data with fallbacks for any potentially missing fields
+      return {
+        id: itinerary.id,
+        title: `London Itinerary ${itinerary.id}`,
+        query: itinerary.query || 'London Itinerary',
+        created_at: itinerary.created?.toISOString() || new Date().toISOString(),
+      };
+    });
     
     // Return the itineraries, sorted by creation date (newest first)
     return res.json(
