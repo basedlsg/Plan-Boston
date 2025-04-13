@@ -1098,7 +1098,7 @@ export async function registerRoutes(app: Express) {
         query,
         places: itineraryPlaces.map(sp => sp.place),
         travelTimes,
-      });
+      }, req.session.userId); // Associate with the current user if they're logged in
 
       res.json(itinerary);
     } catch (error: any) {
