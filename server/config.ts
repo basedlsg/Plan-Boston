@@ -11,7 +11,8 @@ import { z } from "zod";
 const apiKeySchemas = {
   GEMINI_API_KEY: z.string().min(1),  // Always accept key if present, validation patterns will be checked later
   GOOGLE_PLACES_API_KEY: z.string().min(1),  // Always accept key if present, validation patterns will be checked later
-  WEATHER_API_KEY: z.string().optional()
+  WEATHER_API_KEY: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional()  // OAuth Client ID for Google authentication
 };
 
 // Legacy API key validation patterns - kept for compatibility
@@ -55,6 +56,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GOOGLE_PLACES_API_KEY: z.string().optional(),
   WEATHER_API_KEY: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
   FEATURE_FLAGS: z.record(z.boolean()).optional(),
 });
@@ -187,6 +189,7 @@ class Config {
     this.apiKeys["GEMINI_API_KEY"] = process.env.GEMINI_API_KEY;
     this.apiKeys["GOOGLE_PLACES_API_KEY"] = process.env.GOOGLE_PLACES_API_KEY;
     this.apiKeys["WEATHER_API_KEY"] = process.env.WEATHER_API_KEY;
+    this.apiKeys["GOOGLE_CLIENT_ID"] = process.env.GOOGLE_CLIENT_ID;
     
     // Debug log the API keys without revealing their values
     for (const [key, value] of Object.entries(this.apiKeys)) {

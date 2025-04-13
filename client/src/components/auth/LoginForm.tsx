@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'wouter';
 import { useAuth } from '../../hooks/useAuth';
 import { initializeGoogleAuth, renderGoogleButton } from '../../lib/googleAuth';
+import { GOOGLE_CLIENT_ID } from '../../lib/env';
 
 // Create the form schema with validation
 const loginSchema = z.object({
@@ -27,7 +28,7 @@ export function LoginForm() {
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
     // Set up Google Auth - this needs to be done before loading the script
-    initializeGoogleAuth('GOOGLE_CLIENT_ID', async (credential) => {
+    initializeGoogleAuth(GOOGLE_CLIENT_ID, async (credential) => {
       try {
         await loginWithGoogle(credential);
       } catch (err) {

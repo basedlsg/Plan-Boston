@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Link } from 'wouter';
 import { useAuth } from '../../hooks/useAuth';
 import { initializeGoogleAuth, renderGoogleButton } from '../../lib/googleAuth';
+import { GOOGLE_CLIENT_ID } from '../../lib/env';
 
 // Create the form schema with validation
 const registerSchema = z.object({
@@ -202,6 +203,27 @@ export function RegisterForm() {
             </Button>
           </form>
         </Form>
+
+        <div className="mt-4 relative">
+          <div className="absolute inset-0 flex items-center">
+            <Separator className="w-full" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+          </div>
+        </div>
+
+        <div 
+          id="google-register-button" 
+          ref={googleButtonRef} 
+          className="mt-4"
+          style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            width: '100%', 
+            minHeight: '40px' 
+          }}
+        ></div>
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">
