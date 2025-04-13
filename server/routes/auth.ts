@@ -142,6 +142,21 @@ router.post('/login', async (req: Request, res: Response) => {
  * POST /api/auth/logout
  */
 router.post('/logout', (req: Request, res: Response) => {
+  // Check for Accept header to ensure proper response
+  const acceptHeader = req.get('Accept');
+  const wantsJSON = acceptHeader && acceptHeader.includes('application/json');
+  
+  // Check if user is already logged out
+  if (!req.session || !req.session.userId) {
+    if (wantsJSON) {
+      return res.json({
+        message: 'Already logged out'
+      });
+    } else {
+      return res.redirect('/login');
+    }
+  }
+  
   // Destroy session
   req.session.destroy((err: Error | null) => {
     if (err) {
@@ -155,9 +170,14 @@ router.post('/logout', (req: Request, res: Response) => {
     // Clear cookie
     res.clearCookie('connect.sid');
     
-    return res.json({
-      message: 'Logout successful'
-    });
+    if (wantsJSON) {
+      return res.json({
+        message: 'Logout successful'
+      });
+    } else {
+      // Default behavior for browser requests
+      return res.redirect('/login');
+    }
   });
 });
 
@@ -203,6 +223,68 @@ router.get('/status', attachCurrentUser, async (req: Request, res: Response) => 
     return res.status(500).json({ 
       error: 'Server error',
       message: 'An error occurred while fetching authentication status'
+    });
+  }
+});
+
+/**
+ * Get current user
+ * GET /api/auth/me
+ */
+router.get('/me', async (req: Request, res: Response) => {
+  try {
+    // Check for Accept header to ensure we always return JSON
+    const acceptHeader = req.get('Accept');
+    const wantsJSON = acceptHeader && acceptHeader.includes('application/json');
+    
+    // If no user is logged in
+    if (!req.session.userId) {
+      if (wantsJSON) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'You must be logged in to access this resource'
+        });
+      } else {
+        // For API clients that don't explicitly request JSON, redirect to login
+        return res.redirect('/login');
+      }
+    }
+    
+    // Find user details
+    const user = await storage.getUserById(req.session.userId);
+    
+    if (!user) {
+      // Session exists but user doesn't - clear session
+      req.session.destroy((err: Error | null) => {
+        if (err) {
+          console.error('Error destroying session:', err);
+        }
+      });
+      
+      if (wantsJSON) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Session invalid, please log in again'
+        });
+      } else {
+        return res.redirect('/login');
+      }
+    }
+    
+    // Return user data
+    return res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    return res.status(500).json({ 
+      error: 'Server error',
+      message: 'An error occurred while fetching user information'
     });
   }
 });
