@@ -1,8 +1,11 @@
 import { OAuth2Client } from 'google-auth-library';
+import { getApiKey } from '../config';
 
-// Create a Google OAuth client
-// In a production environment, you would specify your clientId
-const client = new OAuth2Client();
+// Get the Google Client ID from environment variables
+const googleClientId = getApiKey('GOOGLE_CLIENT_ID');
+
+// Create a Google OAuth client with the client ID
+const client = new OAuth2Client(googleClientId);
 
 export interface GoogleUserInfo {
   email: string;
@@ -23,8 +26,7 @@ export async function verifyGoogleToken(token: string): Promise<GoogleUserInfo> 
     // Verify the token
     const ticket = await client.verifyIdToken({
       idToken: token,
-      // In production, specify your clientId here
-      // audience: process.env.GOOGLE_CLIENT_ID,
+      audience: googleClientId,
     });
 
     // Get the payload from the verified token
