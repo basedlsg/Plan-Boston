@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt';
 import { insertLocalUserSchema, loginSchema, googleAuthSchema, insertGoogleUserSchema } from '@shared/schema';
 import { attachCurrentUser } from '../middleware/requireAuth';
 import { SessionData } from 'express-session';
+import { storage } from '../storage';
 
 // Create a router for authentication routes
 const router = Router();
@@ -29,12 +30,9 @@ router.post('/register', async (req: Request, res: Response) => {
     const { email, password, name } = validation.data;
     
     // Check if user already exists
-    const existingUser = await db.select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const existingUser = await storage.getUserByEmail(email);
     
-    if (existingUser.length > 0) {
+    if (existingUser) {
       return res.status(409).json({ 
         error: 'User already exists',
         message: 'A user with this email already exists'
@@ -46,14 +44,10 @@ router.post('/register', async (req: Request, res: Response) => {
     const password_hash = await bcrypt.hash(password, saltRounds);
     
     // Create new user
-    const [user] = await db.insert(users)
-      .values({ 
-        email, 
-        password_hash, 
-        name,
-        auth_provider: 'local'
-      })
-      .returning({ id: users.id, email: users.email, name: users.name });
+    const user = await storage.createLocalUser(
+      { email, name, password, confirmPassword: password }, 
+      password_hash
+    );
       
     // Set user ID in session
     req.session.userId = user.id;
@@ -95,19 +89,14 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = validation.data;
     
     // Find user by email
-    const userResults = await db.select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const user = await storage.getUserByEmail(email);
     
-    if (userResults.length === 0) {
+    if (!user) {
       return res.status(401).json({ 
         error: 'Authentication failed',
         message: 'Invalid email or password'
       });
     }
-    
-    const user = userResults[0];
     
     // Check if this is a local auth account
     if (!user.password_hash || user.auth_provider !== 'local') {
@@ -186,16 +175,9 @@ router.get('/status', attachCurrentUser, async (req: Request, res: Response) => 
     }
     
     // Find user details
-    const userResults = await db.select({
-      id: users.id,
-      email: users.email,
-      name: users.name
-    })
-      .from(users)
-      .where(eq(users.id, req.session.userId))
-      .limit(1);
+    const user = await storage.getUserById(req.session.userId);
     
-    if (userResults.length === 0) {
+    if (!user) {
       // Session exists but user doesn't - clear session
       req.session.destroy((err: Error | null) => {
         if (err) {
@@ -210,13 +192,107 @@ router.get('/status', attachCurrentUser, async (req: Request, res: Response) => 
     // Return user status and data
     return res.json({
       loggedIn: true,
-      user: userResults[0]
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
     });
   } catch (error) {
     console.error('Error fetching user status:', error);
     return res.status(500).json({ 
       error: 'Server error',
       message: 'An error occurred while fetching authentication status'
+    });
+  }
+});
+
+/**
+ * Authenticate with Google
+ * POST /api/auth/google
+ */
+router.post('/google', async (req: Request, res: Response) => {
+  try {
+    // Validate request body
+    const validation = googleAuthSchema.safeParse(req.body);
+    
+    if (!validation.success) {
+      return res.status(400).json({ 
+        error: 'Invalid input', 
+        details: validation.error.format() 
+      });
+    }
+    
+    const { token } = validation.data;
+    
+    try {
+      // Call Google API to verify token and get user info
+      // For now, we'll return a mock implementation
+      // In a real app, you would verify the token with Google's OAuth API
+      
+      // This is a simplified example - in production, you should verify this token with Google
+      // using the Google Auth API or a library like google-auth-library
+      
+      // Mock decoded token info
+      const googleUserInfo = {
+        email: 'user@example.com',
+        name: 'Example User',
+        sub: '123456789', // This would be the Google ID
+        picture: 'https://example.com/photo.jpg'
+      };
+      
+      // Check if user exists by Google ID
+      let user = await storage.getUserByGoogleId(googleUserInfo.sub);
+      
+      if (!user) {
+        // Check if user exists by email
+        user = await storage.getUserByEmail(googleUserInfo.email);
+        
+        if (user) {
+          // If user exists but hasn't used Google auth before
+          if (user.auth_provider === 'local') {
+            return res.status(409).json({
+              error: 'Authentication conflict',
+              message: 'An account with this email already exists. Please log in with your password.'
+            });
+          }
+        } else {
+          // Create new user with Google info
+          user = await storage.createGoogleUser({
+            email: googleUserInfo.email,
+            name: googleUserInfo.name,
+            google_id: googleUserInfo.sub,
+            avatar_url: googleUserInfo.picture,
+            auth_provider: 'google'
+          });
+        }
+      }
+      
+      // Set user ID in session
+      req.session.userId = user.id;
+      
+      // Return user info
+      return res.json({
+        message: 'Google authentication successful',
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatar_url: user.avatar_url
+        }
+      });
+    } catch (error) {
+      console.error('Error verifying Google token:', error);
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'Could not verify Google authentication'
+      });
+    }
+  } catch (error) {
+    console.error('Error with Google authentication:', error);
+    return res.status(500).json({ 
+      error: 'Server error',
+      message: 'An error occurred during Google authentication'
     });
   }
 });

@@ -239,10 +239,13 @@ export class MemStorage implements IStorage {
 
   async createLocalUser(userData: InsertLocalUser, passwordHash: string): Promise<User> {
     const id = crypto.randomUUID();
+    // Use definite type casting to handle potential undefined values
+    const name: string | null = userData.name !== undefined ? userData.name : null;
+    
     const user: User = {
       id,
       email: userData.email,
-      name: userData.name,
+      name,
       password_hash: passwordHash,
       created_at: new Date(),
       auth_provider: 'local',
@@ -255,15 +258,20 @@ export class MemStorage implements IStorage {
 
   async createGoogleUser(userData: InsertGoogleUser): Promise<User> {
     const id = crypto.randomUUID();
+    // Use definite type casting to handle potential undefined values
+    const name: string | null = userData.name !== undefined ? userData.name : null;
+    const googleId: string | null = userData.google_id !== undefined ? userData.google_id : null;
+    const avatarUrl: string | null = userData.avatar_url !== undefined ? userData.avatar_url : null;
+    
     const user: User = {
       id,
       email: userData.email,
-      name: userData.name,
+      name,
       password_hash: null,
       created_at: new Date(),
       auth_provider: 'google',
-      google_id: userData.google_id,
-      avatar_url: userData.avatar_url || null
+      google_id: googleId,
+      avatar_url: avatarUrl
     };
     this.users.set(id, user);
     return user;
