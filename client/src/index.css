@@ -81,7 +81,7 @@
     right: 0;
     bottom: 0;
     background: #FFFFFF; /* White base */
-    background-image: linear-gradient(135deg, rgba(23, 185, 230, 0.02) 0%, rgba(252, 148, 197, 0.03) 100%);
+    background-image: linear-gradient(135deg, rgba(23, 185, 230, 0.03) 0%, rgba(23, 185, 230, 0.01) 100%);
     z-index: 0;
     pointer-events: none;
   }
@@ -112,7 +112,7 @@
     height: 100%;
     background-image: 
       linear-gradient(45deg, transparent 98%, rgba(23, 185, 230, 0.1) 99%, transparent 100%),
-      linear-gradient(135deg, transparent 97%, rgba(252, 148, 197, 0.1) 98%, transparent 100%);
+      linear-gradient(135deg, transparent 97%, rgba(23, 185, 230, 0.05) 98%, transparent 100%);
     background-size: 50px 50px;
     opacity: 0.5;
     z-index: 0;
@@ -193,9 +193,9 @@
     box-shadow: 0 0 0 2px rgba(23, 185, 230, 0.3);
   }
   
-  /* Premium glass effect containers with subtle blue-to-pink gradient */
+  /* Premium glass effect containers with subtle blue gradient */
   .glass-effect {
-    background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
+    background: linear-gradient(135deg, var(--brand-blue-10), rgba(23, 185, 230, 0.03));
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     border-radius: var(--radius-md);
@@ -285,7 +285,7 @@
     pointer-events: none;
   }
   
-  /* Form container - with blue-to-pink gradient - enhanced with more contrast */
+  /* Form container - with blue gradient - enhanced with more contrast */
   .form-container {
     background: linear-gradient(135deg, var(--brand-blue-10), var(--brand-pink-10));
     backdrop-filter: blur(15px);
@@ -329,7 +329,7 @@
     z-index: -1;
   }
   
-  /* Date/time card glass effect with blue-to-pink gradient */
+  /* Date/time card glass effect with subtle blue accent */
   .datetime-card {
     background: var(--white-80);
     backdrop-filter: blur(10px);
@@ -408,7 +408,7 @@
     opacity: 0.6;
   }
   
-  /* Venue swiper glass effect with blue-to-pink gradient */
+  /* Venue swiper glass effect with subtle blue accent */
   .venue-glass {
     background: var(--white-80);
     backdrop-filter: blur(10px);

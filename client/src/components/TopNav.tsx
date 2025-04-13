@@ -34,7 +34,16 @@ const TopNav = () => {
         <div className="flex items-center gap-2">
           <Link href="/">
             <div className="flex items-center gap-2 cursor-pointer">
-              <span className="font-bold text-xl">London Day Planner</span>
+              <span 
+                className="text-xl" 
+                style={{ 
+                  fontFamily: 'Rozha One, serif',
+                  letterSpacing: '0.04em',
+                  fontWeight: 'normal'
+                }}
+              >
+                London Day Planner
+              </span>
             </div>
           </Link>
         </div>
