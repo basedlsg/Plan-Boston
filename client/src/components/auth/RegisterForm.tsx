@@ -33,7 +33,7 @@ export function RegisterForm() {
   // Initialize Google Sign-In when component mounts
   useEffect(() => {
     // Set up Google Auth - this needs to be done before loading the script
-    initializeGoogleAuth('GOOGLE_CLIENT_ID', async (credential) => {
+    initializeGoogleAuth(GOOGLE_CLIENT_ID, async (credential) => {
       try {
         await loginWithGoogle(credential);
       } catch (err) {

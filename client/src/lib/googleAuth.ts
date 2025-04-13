@@ -6,6 +6,9 @@ declare global {
   }
 }
 
+// Keep track of initialization status
+let isInitialized = false;
+
 /**
  * Initialize Google OAuth
  * 
@@ -13,6 +16,11 @@ declare global {
  * @param callback Function to handle the credential response
  */
 export function initializeGoogleAuth(clientId: string, callback: (credential: string) => void) {
+  if (!clientId) {
+    console.error('No Google Client ID provided');
+    return;
+  }
+
   // Set up the global callback function that Google will call
   window.handleGoogleCredentialResponse = (response) => {
     if (response && response.credential) {
@@ -20,9 +28,70 @@ export function initializeGoogleAuth(clientId: string, callback: (credential: st
     }
   };
   
-  // We don't need to check for window.google here since we're dynamically loading the script
-  // The initialization will happen after the script is loaded
+  // We'll initialize in the loadGoogleScript function
+  loadGoogleScript(clientId);
 }
+
+/**
+ * Load the Google Identity Services script
+ * 
+ * @param clientId The Google Client ID to use for authentication
+ */
+function loadGoogleScript(clientId: string): void {
+  const scriptId = 'google-identity-script';
+  
+  // Don't load the script multiple times
+  if (document.getElementById(scriptId)) {
+    if (window.google && window.google.accounts) {
+      initializeGoogleIdentity(clientId);
+    }
+    return;
+  }
+  
+  const script = document.createElement('script');
+  script.id = scriptId;
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  script.onload = () => {
+    // Initialize once the script is loaded
+    initializeGoogleIdentity(clientId);
+  };
+  
+  document.body.appendChild(script);
+}
+
+/**
+ * Initialize the Google Identity Services
+ * 
+ * @param clientId The Google Client ID to use for authentication
+ */
+function initializeGoogleIdentity(clientId: string): void {
+  if (!window.google || !window.google.accounts) {
+    console.error('Google Identity Services not loaded properly');
+    return;
+  }
+  
+  try {
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: window.handleGoogleCredentialResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    });
+    
+    isInitialized = true;
+    console.log('Google Identity Services initialized successfully');
+    
+    // Render any pending buttons
+    renderPendingButtons();
+  } catch (error) {
+    console.error('Error initializing Google Identity Services:', error);
+  }
+}
+
+// Store buttons to render after initialization
+const pendingButtons: string[] = [];
 
 /**
  * Render the Google Sign-In button
@@ -30,11 +99,35 @@ export function initializeGoogleAuth(clientId: string, callback: (credential: st
  * @param elementId ID of the HTML element to render the button in
  */
 export function renderGoogleButton(elementId: string) {
-  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-    console.error('Google Identity Services not available yet');
+  if (!window.google || !window.google.accounts || !isInitialized) {
+    // Add to pending buttons to render later when initialized
+    if (!pendingButtons.includes(elementId)) {
+      pendingButtons.push(elementId);
+    }
     return;
   }
 
+  renderButton(elementId);
+}
+
+/**
+ * Render all pending buttons
+ */
+function renderPendingButtons() {
+  while (pendingButtons.length > 0) {
+    const elementId = pendingButtons.pop();
+    if (elementId) {
+      renderButton(elementId);
+    }
+  }
+}
+
+/**
+ * Helper function to render a single button
+ * 
+ * @param elementId ID of the HTML element to render the button in
+ */
+function renderButton(elementId: string) {
   const element = document.getElementById(elementId);
   
   if (!element) {
@@ -43,14 +136,6 @@ export function renderGoogleButton(elementId: string) {
   }
 
   try {
-    // Initialize Google Identity Services
-    window.google.accounts.id.initialize({
-      client_id: 'GOOGLE_CLIENT_ID', // This would be replaced with a real client ID in production
-      callback: window.handleGoogleCredentialResponse,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-
     // Render the button
     window.google.accounts.id.renderButton(element, {
       type: 'standard',
@@ -59,7 +144,7 @@ export function renderGoogleButton(elementId: string) {
       text: 'continue_with',
       shape: 'rectangular',
       logo_alignment: 'left',
-      width: 300, // This is a numeric value as required
+      width: 300,
     });
     
     console.log('Google Sign-In button rendered successfully');
@@ -72,8 +157,8 @@ export function renderGoogleButton(elementId: string) {
  * Display the One Tap UI
  */
 export function promptGoogleSignIn() {
-  if (!window.google || !window.google.accounts || !window.google.accounts.id) {
-    console.error('Google Identity Services not available');
+  if (!window.google || !window.google.accounts || !isInitialized) {
+    console.error('Google Identity Services not available or not initialized');
     return;
   }
 
