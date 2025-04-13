@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'wouter';
 import { useAuth } from '../../hooks/useAuth';
+import { initializeGoogleAuth, renderGoogleButton } from '../../lib/googleAuth';
 
 // Create the form schema with validation
 const loginSchema = z.object({

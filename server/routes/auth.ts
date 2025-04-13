@@ -226,20 +226,9 @@ router.post('/google', async (req: Request, res: Response) => {
     const { token } = validation.data;
     
     try {
-      // Call Google API to verify token and get user info
-      // For now, we'll return a mock implementation
-      // In a real app, you would verify the token with Google's OAuth API
-      
-      // This is a simplified example - in production, you should verify this token with Google
-      // using the Google Auth API or a library like google-auth-library
-      
-      // Mock decoded token info
-      const googleUserInfo = {
-        email: 'user@example.com',
-        name: 'Example User',
-        sub: '123456789', // This would be the Google ID
-        picture: 'https://example.com/photo.jpg'
-      };
+      // Verify the Google token
+      const { verifyGoogleToken } = await import('../lib/googleAuth');
+      const googleUserInfo = await verifyGoogleToken(token);
       
       // Check if user exists by Google ID
       let user = await storage.getUserByGoogleId(googleUserInfo.sub);
