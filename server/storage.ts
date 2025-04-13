@@ -1,4 +1,13 @@
-import { type Place, type InsertPlace, type Itinerary, type InsertItinerary, type User, type UserItinerary } from "@shared/schema";
+import { 
+  type Place, 
+  type InsertPlace, 
+  type Itinerary, 
+  type InsertItinerary, 
+  type User, 
+  type UserItinerary, 
+  type InsertLocalUser,
+  type InsertGoogleUser
+} from "@shared/schema";
 import { db } from './db';
 import { users, itineraries, places, userItineraries } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -16,6 +25,9 @@ export interface IStorage {
   // User operations
   getUserById(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  createLocalUser(userData: InsertLocalUser, passwordHash: string): Promise<User>;
+  createGoogleUser(userData: InsertGoogleUser): Promise<User>;
 }
 
 // Database-backed storage implementation
@@ -99,6 +111,38 @@ export class DbStorage implements IStorage {
     
     return results.length > 0 ? results[0] : undefined;
   }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const results = await db.select()
+      .from(users)
+      .where(eq(users.google_id, googleId))
+      .limit(1);
+    
+    return results.length > 0 ? results[0] : undefined;
+  }
+
+  async createLocalUser(userData: InsertLocalUser, passwordHash: string): Promise<User> {
+    const [user] = await db.insert(users)
+      .values({
+        ...userData,
+        password_hash: passwordHash,
+        auth_provider: 'local'
+      })
+      .returning();
+    
+    return user;
+  }
+
+  async createGoogleUser(userData: InsertGoogleUser): Promise<User> {
+    const [user] = await db.insert(users)
+      .values({
+        ...userData,
+        auth_provider: 'google'
+      })
+      .returning();
+    
+    return user;
+  }
 }
 
 // Memory-based storage implementation for compatibility
@@ -180,6 +224,49 @@ export class MemStorage implements IStorage {
       }
     });
     return foundUser;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    // Find user by Google ID
+    let foundUser: User | undefined = undefined;
+    this.users.forEach((user, _) => {
+      if (user.google_id === googleId) {
+        foundUser = user;
+      }
+    });
+    return foundUser;
+  }
+
+  async createLocalUser(userData: InsertLocalUser, passwordHash: string): Promise<User> {
+    const id = crypto.randomUUID();
+    const user: User = {
+      id,
+      email: userData.email,
+      name: userData.name,
+      password_hash: passwordHash,
+      created_at: new Date(),
+      auth_provider: 'local',
+      google_id: null,
+      avatar_url: null
+    };
+    this.users.set(id, user);
+    return user;
+  }
+
+  async createGoogleUser(userData: InsertGoogleUser): Promise<User> {
+    const id = crypto.randomUUID();
+    const user: User = {
+      id,
+      email: userData.email,
+      name: userData.name,
+      password_hash: null,
+      created_at: new Date(),
+      auth_provider: 'google',
+      google_id: userData.google_id,
+      avatar_url: userData.avatar_url || null
+    };
+    this.users.set(id, user);
+    return user;
   }
 }
 

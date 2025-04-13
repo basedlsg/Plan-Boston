@@ -6,9 +6,12 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  password_hash: text("password_hash").notNull(),
+  password_hash: text("password_hash"),  // Optional for OAuth users
   name: text("name"),
   created_at: timestamp("created_at").notNull().defaultNow(),
+  avatar_url: text("avatar_url"),
+  google_id: text("google_id").unique(),
+  auth_provider: text("auth_provider").default("local"),  // "local" or "google"
 });
 
 // Session table with structure compatible with connect-pg-simple
@@ -47,7 +50,15 @@ export const userItineraries = pgTable("user_itineraries", {
 
 export const insertPlaceSchema = createInsertSchema(places).omit({ id: true });
 export const insertItinerarySchema = createInsertSchema(itineraries).omit({ id: true, created: true });
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, created_at: true, password_hash: true })
+// Schema for local registration
+export const insertLocalUserSchema = createInsertSchema(users).omit({ 
+  id: true, 
+  created_at: true, 
+  password_hash: true,
+  google_id: true,
+  avatar_url: true,
+  auth_provider: true
+})
   .extend({
     password: z.string().min(8).max(100),
     confirmPassword: z.string().min(8).max(100)
@@ -57,9 +68,25 @@ export const insertUserSchema = createInsertSchema(users).omit({ id: true, creat
     path: ["confirmPassword"]
   });
 
+// Schema for Google sign-in
+export const insertGoogleUserSchema = createInsertSchema(users).omit({
+  id: true,
+  created_at: true,
+  password_hash: true,
+  auth_provider: true
+}).extend({
+  auth_provider: z.literal("google")
+});
+
+// Schema for login
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1)
+});
+
+// Schema for Google auth
+export const googleAuthSchema = z.object({
+  token: z.string()
 });
 
 export type Place = typeof places.$inferSelect;
@@ -67,9 +94,11 @@ export type InsertPlace = z.infer<typeof insertPlaceSchema>;
 export type Itinerary = typeof itineraries.$inferSelect;
 export type InsertItinerary = z.infer<typeof insertItinerarySchema>;
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertLocalUser = z.infer<typeof insertLocalUserSchema>;
+export type InsertGoogleUser = z.infer<typeof insertGoogleUserSchema>;
 export type UserItinerary = typeof userItineraries.$inferSelect;
 export type LoginCredentials = z.infer<typeof loginSchema>;
+export type GoogleAuthCredentials = z.infer<typeof googleAuthSchema>;
 
 export type PlaceDetails = {
   name: string;

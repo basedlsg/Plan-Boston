@@ -3,7 +3,7 @@ import { db } from '../db';
 import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcrypt';
-import { insertUserSchema, loginSchema } from '@shared/schema';
+import { insertLocalUserSchema, loginSchema, googleAuthSchema, insertGoogleUserSchema } from '@shared/schema';
 import { attachCurrentUser } from '../middleware/requireAuth';
 import { SessionData } from 'express-session';
 
@@ -17,7 +17,7 @@ const router = Router();
 router.post('/register', async (req: Request, res: Response) => {
   try {
     // Validate request body against the schema
-    const validation = insertUserSchema.safeParse(req.body);
+    const validation = insertLocalUserSchema.safeParse(req.body);
     
     if (!validation.success) {
       return res.status(400).json({ 
@@ -47,7 +47,12 @@ router.post('/register', async (req: Request, res: Response) => {
     
     // Create new user
     const [user] = await db.insert(users)
-      .values({ email, password_hash, name })
+      .values({ 
+        email, 
+        password_hash, 
+        name,
+        auth_provider: 'local'
+      })
       .returning({ id: users.id, email: users.email, name: users.name });
       
     // Set user ID in session
@@ -104,8 +109,16 @@ router.post('/login', async (req: Request, res: Response) => {
     
     const user = userResults[0];
     
+    // Check if this is a local auth account
+    if (!user.password_hash || user.auth_provider !== 'local') {
+      return res.status(401).json({ 
+        error: 'Authentication failed',
+        message: 'Please use the appropriate login method for this account'
+      });
+    }
+    
     // Compare password with hash
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+    const passwordMatch = await bcrypt.compare(password, user.password_hash || '');
     
     if (!passwordMatch) {
       return res.status(401).json({ 
