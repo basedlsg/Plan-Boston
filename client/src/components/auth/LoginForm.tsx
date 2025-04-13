@@ -174,6 +174,9 @@ export function LoginForm() {
             minHeight: '40px' 
           }}
         ></div>
+        
+        {/* Container for Google Sign-In prompt */}
+        <div id="google-signin-prompt-container"></div>
       </CardContent>
       <CardFooter className="flex justify-center">
         <p className="text-sm text-muted-foreground">

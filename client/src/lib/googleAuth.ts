@@ -78,6 +78,10 @@ function initializeGoogleIdentity(clientId: string): void {
       callback: window.handleGoogleCredentialResponse,
       auto_select: false,
       cancel_on_tap_outside: true,
+      // Use current origin as the redirect URI
+      ux_mode: 'popup',
+      // Additional configuration
+      prompt_parent_id: 'google-signin-prompt-container'
     });
     
     isInitialized = true;
@@ -141,10 +145,12 @@ function renderButton(elementId: string) {
       type: 'standard',
       theme: 'outline',
       size: 'large',
-      text: 'continue_with',
+      text: 'signin_with',
       shape: 'rectangular',
-      logo_alignment: 'left',
-      width: 300,
+      logo_alignment: 'center',
+      width: 250,
+      // The redirect_uri must match what's configured in Google Cloud Console
+      ux_mode: 'popup', // Using popup mode instead of redirect to avoid redirect URI issues
     });
     
     console.log('Google Sign-In button rendered successfully');
