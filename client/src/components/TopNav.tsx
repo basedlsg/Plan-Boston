@@ -53,10 +53,10 @@ const TopNav = () => {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="cursor-pointer" onClick={() => window.location.href = '/profile'}>
-                Profile
+                My Itineraries
               </DropdownMenuItem>
               <DropdownMenuItem className="cursor-pointer" onClick={() => window.location.href = '/'}>
-                Planner
+                Create New Plan
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
@@ -65,13 +65,17 @@ const TopNav = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-4">
-            <Link href="/login">
-              <span className="text-sm font-medium cursor-pointer">Log in</span>
-            </Link>
-            <Link href="/register">
-              <span className="text-sm font-medium bg-primary text-primary-foreground py-1 px-3 rounded-md cursor-pointer">Sign up</span>
-            </Link>
+          <div className="flex items-center">
+            <a 
+              href="#" 
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = '/login';
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors"
+            >
+              Sign in with Google
+            </a>
           </div>
         )}
       </div>

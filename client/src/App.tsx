@@ -28,9 +28,7 @@ function App() {
               <ItineraryPage />
             </Route>
             <Route path="/">
-              <ProtectedRoute>
-                <HomePage />
-              </ProtectedRoute>
+              <HomePage />
             </Route>
           </Switch>
         </main>
