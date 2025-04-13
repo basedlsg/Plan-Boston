@@ -68,16 +68,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-white">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 
-            className="text-3xl mb-2"
-            style={{ 
-              fontFamily: 'Rozha One, serif',
-              letterSpacing: '0.04em',
-              fontWeight: 'normal'
-            }}
-          >
-            London Day Planner
-          </h1>
+          {/* Removed "London Day Planner" header */}
           <p className="text-muted-foreground">
             Sign in to save your itineraries
           </p>

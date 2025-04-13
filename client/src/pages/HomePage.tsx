@@ -73,7 +73,7 @@ export default function HomePage() {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex flex-col gap-8">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">Plan Your Perfect Day</h1>
+            {/* Removed "Plan Your Perfect Day" header */}
             {user && (
               <div className="text-sm text-muted-foreground">
                 Welcome back, {user.name?.split(' ')[0] || 'traveler'}

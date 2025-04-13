@@ -32,20 +32,7 @@ const TopNav = () => {
     <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4 container mx-auto justify-between">
         <div className="flex items-center gap-2">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <span 
-                className="text-xl" 
-                style={{ 
-                  fontFamily: 'Rozha One, serif',
-                  letterSpacing: '0.04em',
-                  fontWeight: 'normal'
-                }}
-              >
-                London Day Planner
-              </span>
-            </div>
-          </Link>
+          {/* Left side empty - removed London Day Planner text */}
         </div>
         
         {user ? (
