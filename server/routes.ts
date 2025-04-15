@@ -644,15 +644,33 @@ export async function registerRoutes(app: Express) {
             continue;
           }
 
-          const newPlace = await storage.createPlace({
-            placeId: place.place_id,
-            name: place.name,
-            address: place.formatted_address,
-            location: place.geometry.location,
-            details: place,
-            alternatives: venueResult.alternatives,
-            scheduledTime: appointmentTime.toISOString(),
-          });
+          // Try to create the place with better error handling
+          let newPlace;
+          try {
+            newPlace = await storage.createPlace({
+              placeId: place.place_id,
+              name: place.name,
+              address: place.formatted_address,
+              location: place.geometry.location,
+              details: place,
+              alternatives: venueResult.alternatives,
+              scheduledTime: appointmentTime.toISOString(),
+            });
+          } catch (placeError: any) {
+            // If we get a duplicate key error, try to fetch the existing place
+            if (placeError.code === '23505') {
+              console.warn(`Duplicate place found for ${place.name}, trying to fetch existing record`);
+              const existingPlace = await storage.getPlace(place.place_id);
+              if (existingPlace) {
+                console.log(`Using existing place record for ${place.name}`);
+                newPlace = existingPlace;
+              } else {
+                throw placeError; // Re-throw if we can't recover
+              }
+            } else {
+              throw placeError; // Re-throw other errors
+            }
+          }
 
           scheduledPlaces.add(place.place_id);
           itineraryPlaces.push({
@@ -869,15 +887,33 @@ export async function registerRoutes(app: Express) {
                   console.warn("Weather service error (proceeding with original venue):", weatherError);
                 }
 
-                const newPlace = await storage.createPlace({
-                  placeId: suggestedPlace.place_id,
-                  name: suggestedPlace.name,
-                  address: suggestedPlace.formatted_address,
-                  location: suggestedPlace.geometry.location,
-                  details: suggestedPlace,
-                  alternatives: venueResult.alternatives,
-                  scheduledTime: activityTime.toISOString(),
-                });
+                // Try to create the place with better error handling
+                let newPlace;
+                try {
+                  newPlace = await storage.createPlace({
+                    placeId: suggestedPlace.place_id,
+                    name: suggestedPlace.name,
+                    address: suggestedPlace.formatted_address,
+                    location: suggestedPlace.geometry.location,
+                    details: suggestedPlace,
+                    alternatives: venueResult.alternatives,
+                    scheduledTime: activityTime.toISOString(),
+                  });
+                } catch (placeError: any) {
+                  // If we get a duplicate key error, try to fetch the existing place
+                  if (placeError.code === '23505') {
+                    console.warn(`Duplicate place found for ${suggestedPlace.name}, trying to fetch existing record`);
+                    const existingPlace = await storage.getPlace(suggestedPlace.place_id);
+                    if (existingPlace) {
+                      console.log(`Using existing place record for ${suggestedPlace.name}`);
+                      newPlace = existingPlace;
+                    } else {
+                      throw placeError; // Re-throw if we can't recover
+                    }
+                  } else {
+                    throw placeError; // Re-throw other errors
+                  }
+                }
 
                 scheduledPlaces.add(suggestedPlace.place_id);
                 itineraryPlaces.push({
@@ -960,15 +996,33 @@ export async function registerRoutes(app: Express) {
                 if (venueResult && venueResult.primary) {
                   console.log(`Found venue for activity "${activity.description}": ${venueResult.primary.name}`);
                   
-                  const newPlace = await storage.createPlace({
-                    placeId: venueResult.primary.place_id,
-                    name: venueResult.primary.name,
-                    address: venueResult.primary.formatted_address,
-                    location: venueResult.primary.geometry.location,
-                    details: venueResult.primary,
-                    scheduledTime: activityTime.toISOString(),
-                    alternatives: venueResult.alternatives || []
-                  });
+                  // Try to create the place with better error handling
+                  let newPlace;
+                  try {
+                    newPlace = await storage.createPlace({
+                      placeId: venueResult.primary.place_id,
+                      name: venueResult.primary.name,
+                      address: venueResult.primary.formatted_address,
+                      location: venueResult.primary.geometry.location,
+                      details: venueResult.primary,
+                      scheduledTime: activityTime.toISOString(),
+                      alternatives: venueResult.alternatives || []
+                    });
+                  } catch (placeError: any) {
+                    // If we get a duplicate key error, try to fetch the existing place
+                    if (placeError.code === '23505') {
+                      console.warn(`Duplicate place found for ${venueResult.primary.name}, trying to fetch existing record`);
+                      const existingPlace = await storage.getPlace(venueResult.primary.place_id);
+                      if (existingPlace) {
+                        console.log(`Using existing place record for ${venueResult.primary.name}`);
+                        newPlace = existingPlace;
+                      } else {
+                        throw placeError; // Re-throw if we can't recover
+                      }
+                    } else {
+                      throw placeError; // Re-throw other errors
+                    }
+                  }
                   
                   // Add to itinerary
                   itineraryPlaces.push({
