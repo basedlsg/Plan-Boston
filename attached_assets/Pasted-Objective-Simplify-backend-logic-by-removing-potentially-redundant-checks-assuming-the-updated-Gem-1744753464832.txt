@@ -1,0 +1,28 @@
+Objective: Simplify backend logic by removing potentially redundant checks, assuming the updated Gemini prompt is now reliable, and ensure the location is correctly passed to the venue search (e.g., Google Places API).
+
+Context:
+- The Gemini prompt has been updated (in `server/lib/geminiProcessor.ts`) to *require* a location string and default to 'Central London' if missing/vague.
+- Backend code in `processGeminiResponse` (also in `geminiProcessor.ts`) was *also* modified to perform similar default logic *after* Gemini responds.
+- Backend code in `routes.ts` was modified to infer activity type using `detectActivityTypeFromQuery` if not provided by Gemini.
+- These backend checks might now be redundant if the NLP prompt enhancements are effective.
+
+Task:
+1.  **Simplify `processGeminiResponse`:**
+    *   Review the logic added to `processGeminiResponse` in `server/lib/geminiProcessor.ts` that defaults the `location`.
+    *   **Comment out or remove** this specific backend defaulting logic (for both `fixedTimeEntries` and `flexibleTimeEntries`). Trust the updated Gemini prompt to provide a non-null string directly. This simplifies the code and avoids potential double-processing. Retain any essential type checking or structural processing.
+2.  **Simplify Activity Type Handling in `routes.ts`:**
+    *   Review the usage of `detectActivityTypeFromQuery` added in `server/routes.ts` for `fixedTimeEntries`.
+    *   Consider if this fallback is still necessary. If the Gemini prompt reliably extracts an `activity`, this backend inference might be removed for simplicity. (Optional: Keep it as a final safety net if preferred, but acknowledge it's a workaround).
+3.  **Verify Venue Search Input:**
+    *   Locate the code (likely in `server/routes.ts` or a service file called by it) where the itinerary generation logic iterates through the processed `fixedTimeEntries` or `flexibleTimeEntries`.
+    *   Find where it extracts the `location` string for an activity to initiate a venue search (e.g., querying the Google Places API).
+    *   **Confirm** that this code now *directly* uses the `location` string received from the processed Gemini response (which should always be non-null, e.g., "Soho" or "Central London") as the query/basis for the venue search. Ensure no legacy checks for `null` location remain here.
+
+Files to Modify:
+- `server/lib/geminiProcessor.ts` (Specifically the `processGeminiResponse` function)
+- `server/routes.ts` (Specifically where `detectActivityTypeFromQuery` is used and where venue searches are initiated)
+
+Expected Output:
+- Code snippets from `geminiProcessor.ts` showing the removal of the backend location defaulting logic.
+- Code snippets from `routes.ts` showing the potential removal/assessment of `detectActivityTypeFromQuery` usage.
+- Code snippet from `routes.ts` or related service confirming the direct use of the non-null `location` string for venue searching.
