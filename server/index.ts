@@ -85,6 +85,81 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Add database migration check
+  console.log("Running database migrations...");
+
+  // Add this function to ensure database tables exist
+  async function ensureDatabaseTables() {
+    try {
+      // Check if the places table exists
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'places'
+        );
+      `);
+      
+      const placesTableExists = tableCheck.rows[0].exists;
+      
+      if (!placesTableExists) {
+        console.log("Places table does not exist, creating it now...");
+        
+        // Create the places table
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS places (
+            id SERIAL PRIMARY KEY,
+            place_id TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            address TEXT NOT NULL,
+            location JSONB NOT NULL,
+            details JSONB NOT NULL,
+            alternatives JSONB,
+            scheduled_time TEXT
+          );
+        `);
+        
+        console.log("Places table created successfully.");
+      }
+      
+      // Similarly check for itineraries table
+      const itinerariesCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'itineraries'
+        );
+      `);
+      
+      const itinerariesTableExists = itinerariesCheck.rows[0].exists;
+      
+      if (!itinerariesTableExists) {
+        console.log("Itineraries table does not exist, creating it now...");
+        
+        // Create the itineraries table
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS itineraries (
+            id SERIAL PRIMARY KEY,
+            query TEXT NOT NULL,
+            places JSONB NOT NULL,
+            travel_times JSONB NOT NULL,
+            created TIMESTAMP NOT NULL DEFAULT NOW()
+          );
+        `);
+        
+        console.log("Itineraries table created successfully.");
+      }
+      
+      console.log("Database tables verified successfully.");
+    } catch (error) {
+      console.error("Error ensuring database tables:", error);
+      throw error;
+    }
+  }
+
+  // Call this function before starting the server
+  await ensureDatabaseTables();
+
   const server = await registerRoutes(app);
 
   // Register AI admin routes
