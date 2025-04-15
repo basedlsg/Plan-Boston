@@ -53,11 +53,48 @@ export class DbStorage implements IStorage {
   }
 
   async createPlace(insertPlace: InsertPlace): Promise<Place> {
-    const [place] = await db.insert(places)
-      .values(insertPlace)
-      .returning();
-    
-    return place;
+    try {
+      // First check if this place already exists by placeId
+      const existingPlace = await db.select()
+        .from(places)
+        .where(eq(places.placeId, insertPlace.placeId))
+        .limit(1);
+      
+      // If place already exists, just return it
+      if (existingPlace.length > 0) {
+        console.log(`Place "${insertPlace.name}" already exists, returning existing record`);
+        return existingPlace[0];
+      }
+      
+      // If not, create a new place
+      const [place] = await db.insert(places)
+        .values(insertPlace)
+        .returning();
+      
+      return place;
+    } catch (error: any) {
+      console.error("Error creating place:", error);
+      
+      // For duplicate key errors, try to get the existing record
+      if (error.code === '23505') { // PostgreSQL duplicate key error
+        try {
+          // Retrieve the existing place
+          const existingPlace = await db.select()
+            .from(places)
+            .where(eq(places.placeId, insertPlace.placeId))
+            .limit(1);
+          
+          if (existingPlace.length > 0) {
+            console.log(`Recovered existing place "${insertPlace.name}" after duplicate key error`);
+            return existingPlace[0];
+          }
+        } catch (innerError) {
+          console.error("Error retrieving existing place:", innerError);
+        }
+      }
+      
+      throw error;
+    }
   }
 
   async createItinerary(insertItinerary: InsertItinerary, userId?: string): Promise<Itinerary> {
@@ -324,14 +361,57 @@ export class MemStorage implements IStorage {
 export class DbStorageWithLogging extends DbStorage {
   async createPlace(insertPlace: InsertPlace): Promise<Place> {
     try {
+      // First try to see if this is a duplicate place
+      if (insertPlace.placeId) {
+        try {
+          // Check if this place already exists by placeId
+          const existingPlace = await db.select()
+            .from(places)
+            .where(eq(places.placeId, insertPlace.placeId))
+            .limit(1);
+          
+          // If place already exists, just return it
+          if (existingPlace.length > 0) {
+            console.log(`Place "${insertPlace.name}" already exists, returning existing record`);
+            return existingPlace[0];
+          }
+        } catch (checkError) {
+          console.warn("Error checking for existing place:", checkError);
+          // Continue to creating the place
+        }
+      }
+      
+      // If we reach here, try creating the place
       const result = await super.createPlace(insertPlace);
       return result;
     } catch (error: any) {
+      // Special handling for duplicate key errors
+      if (error.code === '23505') { // PostgreSQL duplicate key error
+        try {
+          console.log(`Handling duplicate key error for place "${insertPlace.name}"`);
+          // Retrieve the existing place
+          const existingPlace = await db.select()
+            .from(places)
+            .where(eq(places.placeId, insertPlace.placeId))
+            .limit(1);
+          
+          if (existingPlace.length > 0) {
+            console.log(`Recovered existing place "${insertPlace.name}" after duplicate key error`);
+            return existingPlace[0];
+          }
+        } catch (innerError) {
+          console.error("Error retrieving existing place:", innerError);
+        }
+      }
+      
+      // Fall back to in-memory storage if enabled
       if (USE_IN_MEMORY_FALLBACK) {
         console.warn("Database error in createPlace, using in-memory fallback:", error.message);
         
         // Use in-memory storage as fallback
-        const id = inMemoryStorage.nextPlaceId++;
+        const id = inMemoryStorage.nextPlaceId || 1;
+        inMemoryStorage.nextPlaceId = (inMemoryStorage.nextPlaceId || 1) + 1;
+        
         const place: Place = {
           ...insertPlace,
           id,
