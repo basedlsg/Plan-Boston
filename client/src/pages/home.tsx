@@ -19,6 +19,42 @@ import { TimeInput } from "@/components/TimeInput";
 import { formatDateTime, formatTime, getLocalTimeNow } from "@/lib/dateUtils";
 import { Link } from "wouter";
 
+/**
+ * Validates query for better user experience and clearer error messages
+ * Checks for minimal length and location information
+ */
+function validateQuery(query: string): { valid: boolean; message?: string } {
+  // Check for minimal query length
+  if (query.length < 5) {
+    return { 
+      valid: false, 
+      message: "Please provide more details about what you'd like to do in London."
+    };
+  }
+  
+  // Check if query mentions a London location
+  const commonLondonLocations = [
+    "soho", "covent garden", "camden", "shoreditch", "mayfair", 
+    "piccadilly", "oxford street", "kensington", "hyde park", 
+    "westminster", "london bridge", "south bank", "notting hill",
+    "greenwich", "brixton", "islington", "hackney", "knightsbridge",
+    "central london", "london"
+  ];
+  
+  const hasLocation = commonLondonLocations.some(location => 
+    query.toLowerCase().includes(location)
+  );
+  
+  if (!hasLocation) {
+    return { 
+      valid: false, 
+      message: "Please specify at least one London location (e.g., Soho, Covent Garden, or Central London)."
+    };
+  }
+  
+  return { valid: true };
+}
+
 const formSchema = z.object({
   query: z.string().min(10, "Please provide more details about your plans"),
   date: z.string().optional(),
@@ -109,7 +145,19 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-brand-black mb-6 text-center">What's The Plan?</h2>
               <Form {...form}>
                 <form
-                  onSubmit={form.handleSubmit((data) => planMutation.mutate(data))}
+                  onSubmit={form.handleSubmit((data) => {
+                    // Add validation before form submission
+                    const validation = validateQuery(data.query);
+                    if (!validation.valid) {
+                      toast({
+                        title: "Please enhance your request",
+                        description: validation.message,
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    planMutation.mutate(data);
+                  })}
                   className={`space-y-6 ${isFormSubmitting ? 'opacity-70 pointer-events-none' : ''}`}
                 >
                   <div className="grid sm:grid-cols-2 gap-6">
