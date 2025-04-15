@@ -14,7 +14,7 @@ import { getApiKey, isFeatureEnabled } from '../config';
 const FixedTimeEntrySchema = z.object({
   time: z.string().describe("The time for this activity (e.g., '9:00', '15:30')"),
   activity: z.string().describe("The activity description"),
-  location: z.string().optional().describe("The specific location or area in London"),
+  location: z.string().describe("The specific location or area in London"),
   venue: z.string().optional().describe("A specific venue name if mentioned"),
   searchParameters: z.object({
     cuisine: z.string().optional().describe("Type of cuisine if food-related"),
@@ -29,7 +29,7 @@ const FixedTimeEntrySchema = z.object({
 const FlexibleTimeEntrySchema = z.object({
   time: z.string().describe("The time period for this activity (e.g., 'morning', 'afternoon')"),
   activity: z.string().describe("The activity description"),
-  location: z.string().optional().describe("The specific location or area in London"),
+  location: z.string().describe("The specific location or area in London"),
   venue: z.string().optional().describe("A specific venue name if mentioned"),
   day: z.string().optional().describe("The day for this activity if different from the main date"),
   searchParameters: z.object({
@@ -294,10 +294,14 @@ function processGeminiResponse(
       // Convert time period names to specific times
       const convertedTime = convertTo24Hour(entry.time);
       
-      // Use the flexible time entry data but with the converted time
+      // Default to Central London if location is missing
+      const location = entry.location || "Central London";
+      
+      // Use the flexible time entry data but with the converted time and ensured location
       return {
         ...entry,
-        time: convertedTime
+        time: convertedTime,
+        location: location
       };
     });
     
@@ -316,8 +320,20 @@ function processGeminiResponse(
     });
   }
   
-  // Ensure each fixed time entry has search parameters
+  // Ensure each fixed time entry has search parameters and valid locations
   structuredData.fixedTimeEntries = structuredData.fixedTimeEntries.map(entry => {
+    // Ensure location is never undefined/null - default to Central London
+    if (!entry.location) {
+      entry.location = "Central London";
+    }
+    
+    // Handle vague locations by replacing them with Central London
+    const vagueLocations = ['somewhere', 'anywhere', 'london', 'nearby'];
+    if (vagueLocations.includes(entry.location.toLowerCase())) {
+      entry.location = "Central London";
+    }
+    
+    // Ensure search parameters object exists
     if (!entry.searchParameters) {
       entry.searchParameters = {};
     }

@@ -1,0 +1,24 @@
+Objective: Modify the Google Gemini API prompt to robustly handle missing or vague locations by BOTH defaulting to 'Central London' AND ensuring strict schema compliance for location fields.
+
+Context:
+- Application: London Day Planner (Node.js/Express/TypeScript backend, React/TypeScript frontend).
+- Problem: User queries often lack specific locations (e.g., "massage and spa"), leading to `null` values in the `location` field of the structured JSON output from Gemini. This violates the schema (causing Zod errors) and prevents effective venue searching.
+- Goal: Ensure the `location` field in `fixedTimeEntries` and `flexibleTimeEntries` is *always* a non-null string. When the user doesn't provide a clear London location for an activity, default it to 'Central London'.
+
+Task:
+1.  Locate the function/file where the prompt for the Google Gemini API (gemini-1.5-pro) is constructed (likely in `server/lib/nlp.ts` or similar, based on user's prompts).
+2.  Modify the `IMPORTANT RULES` or add a new dedicated section within the prompt text. Incorporate the following critical instructions for Gemini:
+    *   **Rule [NEW/MODIFIED]: Location Handling:** "For **EACH** activity object within the `fixedTimeEntries` and `flexibleTimeEntries` arrays:
+        *   You **MUST** identify a specific London location (neighborhood, landmark, station, address).
+        *   If the user explicitly provides a valid London location (e.g., 'Soho', 'British Museum', 'near King's Cross'), use that exact location string.
+        *   If the user does **NOT** specify a location for an activity, OR provides a vague location like 'somewhere', 'anywhere', 'London', 'nearby', or it's otherwise unclear within London, you **MUST** populate the `location` field for that specific activity with the exact string **'Central London'**.
+        *   **Crucially: The `location` field inside `fixedTimeEntries` and `flexibleTimeEntries` must NEVER be `null`. Always output a valid string, using 'Central London' as the default when necessary.**"
+    *   **Rule [REINFORCE]: Schema Compliance:** "Strictly adhere to the JSON schema. Ensure **ALL** required fields within `fixedTimeEntries` and `flexibleTimeEntries` (including `time`, `activity`, and `location`) are present and contain non-null **string** values. Assign reasonable defaults like 'afternoon' or '13:00' for time if unspecified, and 'Central London' for location if unspecified."
+3.  Remove any previous rules that might contradict this (e.g., rules that might have allowed `null` locations or added separate `locationMissing` flags, as the default now handles the 'missing' case directly).
+4.  Ensure the rest of the prompt (JSON format, 24hr time, etc.) remains intact.
+
+Files to Modify:
+- `server/lib/nlp.ts` (or wherever the Gemini prompt string is defined/built).
+
+Expected Output:
+- The complete, updated Gemini prompt text incorporating these precise location handling and schema compliance rules.
