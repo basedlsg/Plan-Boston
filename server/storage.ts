@@ -326,7 +326,7 @@ export class DbStorageWithLogging extends DbStorage {
     try {
       const result = await super.createPlace(insertPlace);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       if (USE_IN_MEMORY_FALLBACK) {
         console.warn("Database error in createPlace, using in-memory fallback:", error.message);
         
@@ -348,7 +348,7 @@ export class DbStorageWithLogging extends DbStorage {
   async getPlace(placeId: string): Promise<Place | undefined> {
     try {
       return await super.getPlace(placeId);
-    } catch (error) {
+    } catch (error: any) {
       if (USE_IN_MEMORY_FALLBACK) {
         console.warn("Database error in getPlace, using in-memory fallback:", error.message);
         return inMemoryStorage.places.get(placeId);
@@ -363,7 +363,7 @@ export class DbStorageWithLogging extends DbStorage {
       const result = await super.createItinerary(insertItinerary, userId);
       console.log(`DbStorage (with logging): Created itinerary #${result.id} successfully`);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`DbStorage (with logging): Error creating itinerary:`, error);
       
       if (USE_IN_MEMORY_FALLBACK) {
@@ -395,12 +395,13 @@ export class DbStorageWithLogging extends DbStorage {
   async getItinerary(id: number): Promise<Itinerary | undefined> {
     try {
       return await super.getItinerary(id);
-    } catch (error) {
+    } catch (err) {
       if (USE_IN_MEMORY_FALLBACK) {
-        console.warn("Database error in getItinerary, using in-memory fallback:", error.message);
+        const error = err as Error;
+        console.warn("Database error in getItinerary, using in-memory fallback:", error.message || 'Unknown error');
         return inMemoryStorage.itineraries.get(id);
       }
-      throw error;
+      throw err;
     }
   }
 
@@ -410,7 +411,8 @@ export class DbStorageWithLogging extends DbStorage {
       const result = await super.getUserItineraries(userId);
       console.log(`DbStorage (with logging): Found ${result.length} itineraries for user ${userId}`);
       return result;
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
       console.error(`DbStorage (with logging): Error getting user itineraries:`, error);
       
       if (USE_IN_MEMORY_FALLBACK) {
