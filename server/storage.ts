@@ -12,6 +12,17 @@ import { db } from './db';
 import { users, itineraries, places, userItineraries } from '@shared/schema';
 import { eq, desc, or } from 'drizzle-orm';
 
+// Configure in-memory fallback for development
+const USE_IN_MEMORY_FALLBACK = process.env.NODE_ENV === 'development';
+const inMemoryStorage = {
+  places: new Map<string, Place>(),
+  itineraries: new Map<number, Itinerary>(),
+  users: new Map<string, User>(),
+  userItineraries: new Map<string, number[]>(),
+  nextPlaceId: 1,
+  nextItineraryId: 1
+};
+
 export interface IStorage {
   // Place operations
   getPlace(placeId: string): Promise<Place | undefined>;
@@ -309,7 +320,43 @@ export class MemStorage implements IStorage {
 }
 
 // Add debug logging to the DbStorage implementation
+// With fallback to in-memory storage when database operations fail in development
 export class DbStorageWithLogging extends DbStorage {
+  async createPlace(insertPlace: InsertPlace): Promise<Place> {
+    try {
+      const result = await super.createPlace(insertPlace);
+      return result;
+    } catch (error) {
+      if (USE_IN_MEMORY_FALLBACK) {
+        console.warn("Database error in createPlace, using in-memory fallback:", error.message);
+        
+        // Use in-memory storage as fallback
+        const id = inMemoryStorage.nextPlaceId++;
+        const place: Place = {
+          ...insertPlace,
+          id,
+          scheduledTime: insertPlace.scheduledTime || null,
+          alternatives: insertPlace.alternatives || null
+        };
+        inMemoryStorage.places.set(insertPlace.placeId, place);
+        return place;
+      }
+      throw error;
+    }
+  }
+  
+  async getPlace(placeId: string): Promise<Place | undefined> {
+    try {
+      return await super.getPlace(placeId);
+    } catch (error) {
+      if (USE_IN_MEMORY_FALLBACK) {
+        console.warn("Database error in getPlace, using in-memory fallback:", error.message);
+        return inMemoryStorage.places.get(placeId);
+      }
+      throw error;
+    }
+  }
+
   async createItinerary(insertItinerary: InsertItinerary, userId?: string): Promise<Itinerary> {
     console.log(`DbStorage (with logging): Creating itinerary ${userId ? 'for user ' + userId : '(anonymous)'}`);
     try {
@@ -318,6 +365,41 @@ export class DbStorageWithLogging extends DbStorage {
       return result;
     } catch (error) {
       console.error(`DbStorage (with logging): Error creating itinerary:`, error);
+      
+      if (USE_IN_MEMORY_FALLBACK) {
+        console.warn("Using in-memory fallback for createItinerary due to database error");
+        
+        // Use in-memory storage as fallback
+        const id = inMemoryStorage.nextItineraryId++;
+        const itinerary: Itinerary = {
+          ...insertItinerary,
+          id,
+          created: new Date()
+        };
+        inMemoryStorage.itineraries.set(id, itinerary);
+        
+        // If userId provided, associate with user
+        if (userId) {
+          const userItineraries = inMemoryStorage.userItineraries.get(userId) || [];
+          userItineraries.push(id);
+          inMemoryStorage.userItineraries.set(userId, userItineraries);
+        }
+        
+        return itinerary;
+      }
+      
+      throw error;
+    }
+  }
+
+  async getItinerary(id: number): Promise<Itinerary | undefined> {
+    try {
+      return await super.getItinerary(id);
+    } catch (error) {
+      if (USE_IN_MEMORY_FALLBACK) {
+        console.warn("Database error in getItinerary, using in-memory fallback:", error.message);
+        return inMemoryStorage.itineraries.get(id);
+      }
       throw error;
     }
   }
@@ -330,6 +412,21 @@ export class DbStorageWithLogging extends DbStorage {
       return result;
     } catch (error) {
       console.error(`DbStorage (with logging): Error getting user itineraries:`, error);
+      
+      if (USE_IN_MEMORY_FALLBACK) {
+        console.warn("Using in-memory fallback for getUserItineraries due to database error");
+        
+        const itineraryIds = inMemoryStorage.userItineraries.get(userId) || [];
+        
+        // Get and filter the itineraries
+        const userItineraries = itineraryIds
+          .map(id => inMemoryStorage.itineraries.get(id))
+          .filter((itinerary): itinerary is Itinerary => itinerary !== undefined)
+          .sort((a, b) => b.created.getTime() - a.created.getTime());
+        
+        return userItineraries;
+      }
+      
       throw error;
     }
   }
