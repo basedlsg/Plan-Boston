@@ -1192,7 +1192,7 @@ export async function registerRoutes(app: Express) {
               // If we get a duplicate key error, try to fetch the existing place
               if (placeError.code === '23505') {
                 console.warn(`Duplicate place found for ${venueResult.primary.name}, trying to fetch existing record`);
-                const existingPlace = await storage.getPlace(venueResult.primary.place_id);
+                const existingPlace = await storage.getPlaceByPlaceId(venueResult.primary.place_id);
                 if (existingPlace) {
                   console.log(`Using existing place record for ${venueResult.primary.name}`);
                   newPlace = existingPlace;

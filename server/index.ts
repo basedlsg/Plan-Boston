@@ -150,6 +150,90 @@ app.use((req, res, next) => {
         console.log("Itineraries table created successfully.");
       }
       
+      // Check if the users table exists
+      const usersCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'users'
+        );
+      `);
+      
+      const usersTableExists = usersCheck.rows[0].exists;
+      
+      if (!usersTableExists) {
+        console.log("Users table does not exist, creating it now...");
+        
+        // Create the users table
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS users (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            email VARCHAR(255) NOT NULL UNIQUE,
+            password_hash TEXT,
+            name TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+            avatar_url TEXT,
+            google_id TEXT UNIQUE,
+            auth_provider TEXT DEFAULT 'local'
+          );
+        `);
+        
+        console.log("Users table created successfully.");
+      }
+      
+      // Check if the user_itineraries table exists
+      const userItinerariesCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'user_itineraries'
+        );
+      `);
+      
+      const userItinerariesTableExists = userItinerariesCheck.rows[0].exists;
+      
+      if (!userItinerariesTableExists) {
+        console.log("User itineraries table does not exist, creating it now...");
+        
+        // Create the user_itineraries table
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS user_itineraries (
+            id SERIAL PRIMARY KEY,
+            user_id UUID NOT NULL REFERENCES users(id),
+            itinerary_id INTEGER NOT NULL REFERENCES itineraries(id),
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+          );
+        `);
+        
+        console.log("User itineraries table created successfully.");
+      }
+      
+      // Check if the sessions table exists
+      const sessionsCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'sessions'
+        );
+      `);
+      
+      const sessionsTableExists = sessionsCheck.rows[0].exists;
+      
+      if (!sessionsTableExists) {
+        console.log("Sessions table does not exist, creating it now...");
+        
+        // Create the sessions table
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS sessions (
+            sid VARCHAR(255) NOT NULL PRIMARY KEY,
+            sess JSONB NOT NULL,
+            expire TIMESTAMP NOT NULL
+          );
+        `);
+        
+        console.log("Sessions table created successfully.");
+      }
+      
       console.log("Database tables verified successfully.");
     } catch (error) {
       console.error("Error ensuring database tables:", error);
