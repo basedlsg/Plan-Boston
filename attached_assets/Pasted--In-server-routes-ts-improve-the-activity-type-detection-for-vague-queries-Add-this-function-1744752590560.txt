@@ -1,0 +1,92 @@
+// In server/routes.ts - improve the activity type detection for vague queries
+
+// Add this function near the top of the file
+function detectActivityTypeFromQuery(query, activity) {
+  // Normalize queries to lowercase for matching
+  const normalizedQuery = query.toLowerCase();
+  const normalizedActivity = activity.toLowerCase();
+  
+  // Food-related detection
+  if (
+    normalizedQuery.includes('sandwich') || 
+    normalizedQuery.includes('lunch') || 
+    normalizedQuery.includes('dinner') || 
+    normalizedQuery.includes('breakfast') || 
+    normalizedQuery.includes('food') || 
+    normalizedQuery.includes('restaurant') || 
+    normalizedQuery.includes('eat') || 
+    normalizedQuery.includes('meal')
+  ) {
+    return 'restaurant';
+  }
+  
+  // Coffee/cafe detection
+  if (
+    normalizedQuery.includes('coffee') || 
+    normalizedQuery.includes('cafe') || 
+    normalizedQuery.includes('tea')
+  ) {
+    return 'cafe';
+  }
+  
+  // Spa/massage detection
+  if (
+    normalizedQuery.includes('spa') || 
+    normalizedQuery.includes('massage') || 
+    normalizedQuery.includes('relax') || 
+    normalizedQuery.includes('treatment')
+  ) {
+    return 'spa';
+  }
+  
+  // Shopping detection
+  if (
+    normalizedQuery.includes('shop') || 
+    normalizedQuery.includes('store') || 
+    normalizedQuery.includes('buy') || 
+    normalizedQuery.includes('mall')
+  ) {
+    return 'shopping_mall';
+  }
+  
+  // Attraction detection
+  if (
+    normalizedQuery.includes('see') || 
+    normalizedQuery.includes('visit') || 
+    normalizedQuery.includes('tour') || 
+    normalizedQuery.includes('attraction')
+  ) {
+    return 'tourist_attraction';
+  }
+  
+  // Nightlife detection
+  if (
+    normalizedQuery.includes('bar') || 
+    normalizedQuery.includes('pub') || 
+    normalizedQuery.includes('drink') || 
+    normalizedQuery.includes('club')
+  ) {
+    return 'bar';
+  }
+  
+  // Default to restaurant as a reasonable fallback for food-related activities
+  if (normalizedActivity.includes('eat') || normalizedActivity.includes('food')) {
+    return 'restaurant';
+  }
+  
+  // Use tourist_attraction as a generic fallback
+  return 'tourist_attraction';
+}
+
+// Then in the /api/plan endpoint handler, update the search options generation:
+// Find where fixedTimes are processed and add this:
+
+// When processing each fixed time entry with a vague type:
+if (!fixedTimeEntry.type || fixedTimeEntry.type === 'activity') {
+  // Infer the type from the query and search term
+  fixedTimeEntry.type = detectActivityTypeFromQuery(
+    query, 
+    fixedTimeEntry.searchTerm || ''
+  );
+  console.log(`Inferred activity type for "${fixedTimeEntry.searchTerm}": ${fixedTimeEntry.type}`);
+}

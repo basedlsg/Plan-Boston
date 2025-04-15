@@ -15,6 +15,91 @@ import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWea
 import { parseAndNormalizeTime } from './lib/timeUtils';
 
 /**
+ * Detect the appropriate activity type from query and activity text
+ * Used to improve type detection for vague queries
+ * 
+ * @param query The original user query
+ * @param activity The specific activity text
+ * @returns Place type string for Google Places API
+ */
+function detectActivityTypeFromQuery(query: string, activity: string): string {
+  // Normalize queries to lowercase for matching
+  const normalizedQuery = query.toLowerCase();
+  const normalizedActivity = activity.toLowerCase();
+  
+  // Food-related detection
+  if (
+    normalizedQuery.includes('sandwich') || 
+    normalizedQuery.includes('lunch') || 
+    normalizedQuery.includes('dinner') || 
+    normalizedQuery.includes('breakfast') || 
+    normalizedQuery.includes('food') || 
+    normalizedQuery.includes('restaurant') || 
+    normalizedQuery.includes('eat') || 
+    normalizedQuery.includes('meal')
+  ) {
+    return 'restaurant';
+  }
+  
+  // Coffee/cafe detection
+  if (
+    normalizedQuery.includes('coffee') || 
+    normalizedQuery.includes('cafe') || 
+    normalizedQuery.includes('tea')
+  ) {
+    return 'cafe';
+  }
+  
+  // Spa/massage detection
+  if (
+    normalizedQuery.includes('spa') || 
+    normalizedQuery.includes('massage') || 
+    normalizedQuery.includes('relax') || 
+    normalizedQuery.includes('treatment')
+  ) {
+    return 'spa';
+  }
+  
+  // Shopping detection
+  if (
+    normalizedQuery.includes('shop') || 
+    normalizedQuery.includes('store') || 
+    normalizedQuery.includes('buy') || 
+    normalizedQuery.includes('mall')
+  ) {
+    return 'shopping_mall';
+  }
+  
+  // Attraction detection
+  if (
+    normalizedQuery.includes('see') || 
+    normalizedQuery.includes('visit') || 
+    normalizedQuery.includes('tour') || 
+    normalizedQuery.includes('attraction')
+  ) {
+    return 'tourist_attraction';
+  }
+  
+  // Nightlife detection
+  if (
+    normalizedQuery.includes('bar') || 
+    normalizedQuery.includes('pub') || 
+    normalizedQuery.includes('drink') || 
+    normalizedQuery.includes('club')
+  ) {
+    return 'bar';
+  }
+  
+  // Default to restaurant as a reasonable fallback for food-related activities
+  if (normalizedActivity.includes('eat') || normalizedActivity.includes('food')) {
+    return 'restaurant';
+  }
+  
+  // Use tourist_attraction as a generic fallback
+  return 'tourist_attraction';
+}
+
+/**
  * Parse a time string to a Date object
  * Provides consistent time parsing throughout the application
  * 
@@ -464,6 +549,16 @@ export async function registerRoutes(app: Express) {
           });
 
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
+          
+          // Infer activity type for vague or missing types
+          if (!timeSlot.type || timeSlot.type === 'activity') {
+            // Infer the type from the query and search term
+            timeSlot.type = detectActivityTypeFromQuery(
+              query, 
+              timeSlot.searchTerm || ''
+            );
+            console.log(`Inferred activity type for "${timeSlot.searchTerm}": ${timeSlot.type}`);
+          }
           
           // Enhanced search options with parameters from fixedTimes
           const searchOptions: any = {
