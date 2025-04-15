@@ -157,11 +157,18 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     9. Extract as much detail as possible while staying true to the user's request
     10. For incomplete information, make reasonable assumptions based on context
     11. Keep activity descriptions concise but clear
+    12. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
+       - You MUST identify a specific London location (neighborhood, landmark, station, address)
+       - If the user explicitly provides a valid London location (e.g., 'Soho', 'British Museum', 'near King's Cross'), use that exact location string
+       - If the user does NOT specify a location OR provides a vague location like 'somewhere', 'anywhere', 'London', 'nearby', you MUST use the exact string 'Central London'
+       - The location field must NEVER be null or missing - always provide a valid string value
+    13. SCHEMA COMPLIANCE: Strictly adhere to the JSON schema. Ensure ALL required fields within fixedTimeEntries and flexibleTimeEntries (including time, activity, and location) are present and contain non-null string values.
     
     SCHEMA GUIDANCE:
     - Use fixedTimeEntries for activities with specific clock times (9:00, 14:30, etc.)
     - Use flexibleTimeEntries for activities with time periods (morning, afternoon, etc.)
-    - Both entry types should include: time, activity, location
+    - Both entry types MUST include: time, activity, location (never null, use 'Central London' when unspecified)
+    - Always provide reasonable defaults: '13:00' for time if unspecified, 'Central London' for location if unspecified
 
     Here's the request to analyze:
     ${query}
