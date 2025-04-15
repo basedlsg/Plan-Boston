@@ -1,0 +1,92 @@
+// In server/lib/geminiProcessor.ts - prevent creating duplicate activities
+
+// Find the function that converts Gemini response to app format 
+// (look for something like convertToAppFormat or processGeminiResponse)
+// and modify it to ensure each activity is only added once
+
+function convertGeminiResponseToAppFormat(geminiResult) {
+  // Create a Set to track unique activity signatures to avoid duplicates
+  const uniqueActivities = new Set();
+  
+  // Create the base structure
+  const result = {
+    startLocation: geminiResult.startLocation || "Central London",
+    destinations: [],
+    fixedTimes: [],
+    preferences: {
+      requirements: []
+    }
+  };
+  
+  // Process fixed time entries if available
+  if (geminiResult.fixedTimeEntries && Array.isArray(geminiResult.fixedTimeEntries)) {
+    for (const entry of geminiResult.fixedTimeEntries) {
+      if (entry && entry.location && entry.time && entry.activity) {
+        // Create a unique signature for this activity
+        const activitySignature = `${entry.location}|${entry.time}|${entry.activity}`;
+        
+        // Only add if we haven't seen this exact activity before
+        if (!uniqueActivities.has(activitySignature)) {
+          uniqueActivities.add(activitySignature);
+          
+          result.fixedTimes.push({
+            location: entry.location,
+            time: entry.time,
+            type: "activity", // Default type
+            searchTerm: entry.activity,
+            minRating: 4 // Default rating
+          });
+          
+          console.log(`Added fixed time entry: ${entry.activity} at ${entry.location}, ${entry.time}`);
+        }
+      }
+    }
+  }
+  
+  // Process flexible time entries if available - but avoid duplicates with fixed entries
+  if (geminiResult.flexibleTimeEntries && Array.isArray(geminiResult.flexibleTimeEntries)) {
+    console.log(`Found flexibleTimeEntries in Gemini response:`, geminiResult.flexibleTimeEntries);
+    
+    for (const entry of geminiResult.flexibleTimeEntries) {
+      if (entry && entry.location && entry.time && entry.activity) {
+        // Create a unique signature for this activity
+        const activitySignature = `${entry.location}|${entry.time}|${entry.activity}`;
+        
+        // Only add if we haven't seen this exact activity before
+        if (!uniqueActivities.has(activitySignature)) {
+          uniqueActivities.add(activitySignature);
+          
+          // Determine activity type
+          let activityType = "activity";
+          
+          // Food-related activities should use restaurant type
+          if (
+            entry.activity.toLowerCase().includes("eat") || 
+            entry.activity.toLowerCase().includes("food") ||
+            entry.activity.toLowerCase().includes("lunch") ||
+            entry.activity.toLowerCase().includes("dinner") ||
+            entry.activity.toLowerCase().includes("breakfast") ||
+            entry.activity.toLowerCase().includes("restaurant") ||
+            entry.activity.toLowerCase().includes("meal") ||
+            entry.activity.toLowerCase().includes("sandwich") ||
+            entry.activity.toLowerCase().includes("steak")
+          ) {
+            activityType = "restaurant";
+          }
+          
+          result.fixedTimes.push({
+            location: entry.location,
+            time: entry.time,
+            type: activityType,
+            searchTerm: entry.activity,
+            minRating: 4
+          });
+          
+          console.log(`Added flexible time entry to fixedTimes: ${entry.location} at ${entry.time}, activity: ${entry.activity}`);
+        }
+      }
+    }
+  }
+  
+  return result;
+}

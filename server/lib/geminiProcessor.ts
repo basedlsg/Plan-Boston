@@ -275,10 +275,13 @@ function processGeminiResponse(
   validatedData: StructuredRequest,
   rawResponse: string
 ): StructuredRequest {
+  // Create a Set to track unique activity signatures to avoid duplicates
+  const uniqueActivities = new Set<string>();
+  
   // Make a copy to avoid modifying the original
   const structuredData: StructuredRequest = {
     ...validatedData,
-    fixedTimeEntries: [...(validatedData.fixedTimeEntries || [])],
+    fixedTimeEntries: [], // We'll rebuild this with de-duplication
     flexibleTimeEntries: [...(validatedData.flexibleTimeEntries || [])],
     preferences: validatedData.preferences ? { ...validatedData.preferences } : undefined,
     travelGroup: validatedData.travelGroup ? { ...validatedData.travelGroup } : undefined,
@@ -292,29 +295,54 @@ function processGeminiResponse(
     structuredData.startLocation = "Central London";
   }
   
+  // First process fixed time entries with duplicate detection
+  if (validatedData.fixedTimeEntries && validatedData.fixedTimeEntries.length > 0) {
+    console.log(`Processing ${validatedData.fixedTimeEntries.length} fixed time entries with duplicate detection`);
+    
+    for (const entry of validatedData.fixedTimeEntries) {
+      if (entry && entry.location && entry.time && entry.activity) {
+        // Create a unique signature for this activity
+        const activitySignature = `${entry.location}|${entry.time}|${entry.activity}`;
+        
+        // Only add if we haven't seen this exact activity before
+        if (!uniqueActivities.has(activitySignature)) {
+          uniqueActivities.add(activitySignature);
+          structuredData.fixedTimeEntries.push(entry);
+          console.log(`Added fixed time entry: ${entry.activity} at ${entry.location}, ${entry.time}`);
+        } else {
+          console.log(`Skipped duplicate fixed time entry: ${entry.activity} at ${entry.location}, ${entry.time}`);
+        }
+      }
+    }
+  }
+  
   // Process flexible time entries and convert them to fixed time entries
   if (structuredData.flexibleTimeEntries && structuredData.flexibleTimeEntries.length > 0) {
     console.log(`Found ${structuredData.flexibleTimeEntries.length} flexible time entries to process`);
     
-    // Convert flexible time entries to fixed times with appropriate time values
-    const convertedFlexibleEntries = structuredData.flexibleTimeEntries.map(entry => {
+    // Process each flexible entry with duplicate detection
+    for (const entry of structuredData.flexibleTimeEntries) {
       // Convert time period names to specific times
       const convertedTime = convertTo24Hour(entry.time);
       
-      // SIMPLIFIED: Location defaulting removed - Gemini prompt ensures valid locations
-      // Original code removed:
-      // const location = entry.location || "Central London";
-      
-      // Use the flexible time entry data with the converted time
-      return {
+      // Create converted entry
+      const convertedEntry = {
         ...entry,
         time: convertedTime
       };
-    });
-    
-    // Add the converted flexible entries to the fixed time entries array
-    structuredData.fixedTimeEntries = [...structuredData.fixedTimeEntries, ...convertedFlexibleEntries];
-    console.log(`Added ${convertedFlexibleEntries.length} converted flexible entries to fixed time entries`);
+      
+      // Create a unique signature for this activity
+      const activitySignature = `${convertedEntry.location}|${convertedEntry.time}|${convertedEntry.activity}`;
+      
+      // Only add if we haven't seen this exact activity before
+      if (!uniqueActivities.has(activitySignature)) {
+        uniqueActivities.add(activitySignature);
+        structuredData.fixedTimeEntries.push(convertedEntry);
+        console.log(`Added flexible time entry to fixedTimes: ${convertedEntry.activity} at ${convertedEntry.location}, ${convertedEntry.time}`);
+      } else {
+        console.log(`Skipped duplicate flexible time entry: ${convertedEntry.activity} at ${convertedEntry.location}, ${convertedEntry.time}`);
+      }
+    }
   }
   
   // Sort fixed time entries chronologically

@@ -27,26 +27,31 @@ function detectActivityTypeFromQuery(query: string, activity: string): string {
   const normalizedQuery = query.toLowerCase();
   const normalizedActivity = activity.toLowerCase();
   
-  // Food-related detection
-  if (
-    normalizedQuery.includes('sandwich') || 
-    normalizedQuery.includes('lunch') || 
-    normalizedQuery.includes('dinner') || 
-    normalizedQuery.includes('breakfast') || 
-    normalizedQuery.includes('food') || 
-    normalizedQuery.includes('restaurant') || 
-    normalizedQuery.includes('eat') || 
-    normalizedQuery.includes('meal')
-  ) {
+  // Food-related detection - check both query and activity text
+  const foodKeywords = [
+    'sandwich', 'lunch', 'dinner', 'breakfast', 'brunch', 'food', 
+    'restaurant', 'eat', 'meal', 'burger', 'steak', 'pizza', 
+    'sushi', 'dining', 'hungry'
+  ];
+  
+  // Check for food keywords in both query and activity
+  const isFoodRelated = foodKeywords.some(keyword => 
+    normalizedQuery.includes(keyword) || normalizedActivity.includes(keyword)
+  );
+  
+  if (isFoodRelated) {
     return 'restaurant';
   }
   
-  // Coffee/cafe detection
-  if (
-    normalizedQuery.includes('coffee') || 
-    normalizedQuery.includes('cafe') || 
-    normalizedQuery.includes('tea')
-  ) {
+  // Coffee/cafe detection - check both query and activity text
+  const cafeKeywords = ['coffee', 'cafe', 'tea', 'espresso'];
+  
+  // Check for cafe keywords in both query and activity
+  const isCafeRelated = cafeKeywords.some(keyword => 
+    normalizedQuery.includes(keyword) || normalizedActivity.includes(keyword)
+  );
+  
+  if (isCafeRelated) {
     return 'cafe';
   }
   
