@@ -429,7 +429,7 @@ export class DbStorageWithLogging extends DbStorage {
         return userItineraries;
       }
       
-      throw error;
+      throw err; // Use err instead of error
     }
   }
 }
