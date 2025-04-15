@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin, Clock, Calendar, Loader2 } from "lucide-react";
+import { MapPin, Clock, Calendar, Loader2, Sparkles } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,87 @@ function validateQuery(query: string): { valid: boolean; message?: string } {
   }
   
   return { valid: true };
+}
+
+/**
+ * Enhances vague queries by adding location and time information
+ * Helps users by providing more context for better itinerary planning
+ */
+function enhanceVagueQuery(query: string): string {
+  // Extract the key request from a very vague query
+  const lowercaseQuery = query.toLowerCase().trim();
+  
+  // Simple extraction patterns for common activities
+  if (lowercaseQuery.length < 20) {
+    // Very short query - likely just mentions an activity
+    
+    // Food-related queries
+    if (
+      lowercaseQuery.includes("food") || 
+      lowercaseQuery.includes("eat") ||
+      lowercaseQuery.includes("restaurant") ||
+      lowercaseQuery.includes("lunch") ||
+      lowercaseQuery.includes("dinner") ||
+      lowercaseQuery.includes("sandwich") ||
+      lowercaseQuery.includes("breakfast")
+    ) {
+      return `${query} in Covent Garden around ${new Date().getHours() < 15 ? '13:00' : '19:00'}`;
+    }
+    
+    // Coffee/cafe queries
+    if (
+      lowercaseQuery.includes("coffee") ||
+      lowercaseQuery.includes("cafe") ||
+      lowercaseQuery.includes("tea")
+    ) {
+      return `${query} in Soho around ${new Date().getHours() < 12 ? '10:30' : '15:00'}`;
+    }
+    
+    // Shopping queries
+    if (
+      lowercaseQuery.includes("shop") ||
+      lowercaseQuery.includes("store") ||
+      lowercaseQuery.includes("buy")
+    ) {
+      return `${query} on Oxford Street in the afternoon`;
+    }
+    
+    // Attraction/sightseeing queries
+    if (
+      lowercaseQuery.includes("see") ||
+      lowercaseQuery.includes("visit") ||
+      lowercaseQuery.includes("attraction")
+    ) {
+      return `${query} near Westminster in the afternoon`;
+    }
+    
+    // Spa/relaxation queries
+    if (
+      lowercaseQuery.includes("spa") ||
+      lowercaseQuery.includes("massage") ||
+      lowercaseQuery.includes("relax")
+    ) {
+      return `${query} in Mayfair in the afternoon`;
+    }
+    
+    // Nightlife queries
+    if (
+      lowercaseQuery.includes("bar") ||
+      lowercaseQuery.includes("pub") ||
+      lowercaseQuery.includes("drink") ||
+      lowercaseQuery.includes("club")
+    ) {
+      return `${query} in Soho around 20:00`;
+    }
+    
+    // For any other very short queries, make a generic enhancement
+    if (lowercaseQuery.length < 10) {
+      return `${query} in Central London in the ${new Date().getHours() < 12 ? 'afternoon' : 'evening'}`;
+    }
+  }
+  
+  // Return original if no enhancement was needed
+  return query;
 }
 
 const formSchema = z.object({
@@ -220,6 +301,30 @@ export default function Home() {
                               disabled={isFormSubmitting}
                             />
                           </FormControl>
+                          <div className="flex items-center mt-2 gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentQuery = form.getValues().query;
+                                const enhanced = enhanceVagueQuery(currentQuery);
+                                if (enhanced !== currentQuery) {
+                                  form.setValue("query", enhanced);
+                                  toast({
+                                    title: "Query enhanced",
+                                    description: "Added location and time details to your request",
+                                  });
+                                }
+                              }}
+                            >
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Smart Enhance
+                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              Click to add location and time details to vague requests
+                            </p>
+                          </div>
                         </FormItem>
                       )}
                     />
