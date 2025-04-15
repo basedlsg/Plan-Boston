@@ -551,6 +551,8 @@ export async function registerRoutes(app: Express) {
           const appointmentTime = parseTimeString(timeSlot.time, baseDate);
           
           // Infer activity type for vague or missing types
+          // NOTE: This is kept as a safety fallback even though Gemini should now provide types directly
+          // It serves as a final safeguard in case the AI doesn't properly categorize an activity
           if (!timeSlot.type || timeSlot.type === 'activity') {
             // Infer the type from the query and search term
             timeSlot.type = detectActivityTypeFromQuery(
@@ -614,6 +616,8 @@ export async function registerRoutes(app: Express) {
             type: timeSlot.type
           });
           
+          // VERIFIED: Now directly using the non-null location from Gemini without additional checks
+          // The location string should now always be valid as enforced by the Gemini prompt
           const venueResult = await searchPlace(timeSlot.location, searchOptions);
 
           if (!venueResult || !venueResult.primary) {

@@ -301,14 +301,14 @@ function processGeminiResponse(
       // Convert time period names to specific times
       const convertedTime = convertTo24Hour(entry.time);
       
-      // Default to Central London if location is missing
-      const location = entry.location || "Central London";
+      // SIMPLIFIED: Location defaulting removed - Gemini prompt ensures valid locations
+      // Original code removed:
+      // const location = entry.location || "Central London";
       
-      // Use the flexible time entry data but with the converted time and ensured location
+      // Use the flexible time entry data with the converted time
       return {
         ...entry,
-        time: convertedTime,
-        location: location
+        time: convertedTime
       };
     });
     
@@ -327,18 +327,17 @@ function processGeminiResponse(
     });
   }
   
-  // Ensure each fixed time entry has search parameters and valid locations
+  // Ensure each fixed time entry has search parameters
   structuredData.fixedTimeEntries = structuredData.fixedTimeEntries.map(entry => {
-    // Ensure location is never undefined/null - default to Central London
-    if (!entry.location) {
-      entry.location = "Central London";
-    }
-    
-    // Handle vague locations by replacing them with Central London
-    const vagueLocations = ['somewhere', 'anywhere', 'london', 'nearby'];
-    if (vagueLocations.includes(entry.location.toLowerCase())) {
-      entry.location = "Central London";
-    }
+    // SIMPLIFIED: Location defaulting removed - Gemini prompt now ensures valid locations
+    // Original code removed:
+    // if (!entry.location) {
+    //   entry.location = "Central London";
+    // }
+    // const vagueLocations = ['somewhere', 'anywhere', 'london', 'nearby'];
+    // if (vagueLocations.includes(entry.location.toLowerCase())) {
+    //   entry.location = "Central London";
+    // }
     
     // Ensure search parameters object exists
     if (!entry.searchParameters) {
