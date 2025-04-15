@@ -1176,15 +1176,33 @@ export async function registerRoutes(app: Express) {
           if (venueResult && venueResult.primary) {
             console.log(`Found venue: ${venueResult.primary.name}`);
             
-            const newPlace = await storage.createPlace({
-              placeId: venueResult.primary.place_id,
-              name: venueResult.primary.name,
-              address: venueResult.primary.formatted_address,
-              location: venueResult.primary.geometry.location,
-              details: venueResult.primary,
-              scheduledTime: currentTime.toISOString(),
-              alternatives: venueResult.alternatives || []
-            });
+            // Try to create the place with better error handling
+            let newPlace;
+            try {
+              newPlace = await storage.createPlace({
+                placeId: venueResult.primary.place_id,
+                name: venueResult.primary.name,
+                address: venueResult.primary.formatted_address,
+                location: venueResult.primary.geometry.location,
+                details: venueResult.primary,
+                scheduledTime: currentTime.toISOString(),
+                alternatives: venueResult.alternatives || []
+              });
+            } catch (placeError: any) {
+              // If we get a duplicate key error, try to fetch the existing place
+              if (placeError.code === '23505') {
+                console.warn(`Duplicate place found for ${venueResult.primary.name}, trying to fetch existing record`);
+                const existingPlace = await storage.getPlace(venueResult.primary.place_id);
+                if (existingPlace) {
+                  console.log(`Using existing place record for ${venueResult.primary.name}`);
+                  newPlace = existingPlace;
+                } else {
+                  throw placeError; // Re-throw if we can't recover
+                }
+              } else {
+                throw placeError; // Re-throw other errors
+              }
+            }
             
             // Add to itinerary
             itineraryPlaces.push({
