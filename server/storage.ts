@@ -26,6 +26,7 @@ const inMemoryStorage = {
 export interface IStorage {
   // Place operations
   getPlace(placeId: string): Promise<Place | undefined>;
+  getPlaceByPlaceId(placeId: string): Promise<Place | undefined>;
   createPlace(place: InsertPlace): Promise<Place>;
   
   // Itinerary operations
@@ -50,6 +51,11 @@ export class DbStorage implements IStorage {
       .limit(1);
     
     return results.length > 0 ? results[0] : undefined;
+  }
+  
+  // This method is an alias to getPlace for better semantic meaning and compatibility
+  async getPlaceByPlaceId(placeId: string): Promise<Place | undefined> {
+    return this.getPlace(placeId);
   }
 
   async createPlace(insertPlace: InsertPlace): Promise<Place> {
@@ -229,6 +235,11 @@ export class MemStorage implements IStorage {
 
   async getPlace(placeId: string): Promise<Place | undefined> {
     return this.places.get(placeId);
+  }
+  
+  // This method is an alias to getPlace for better semantic meaning and compatibility
+  async getPlaceByPlaceId(placeId: string): Promise<Place | undefined> {
+    return this.getPlace(placeId);
   }
 
   async createPlace(insertPlace: InsertPlace): Promise<Place> {
@@ -431,6 +442,18 @@ export class DbStorageWithLogging extends DbStorage {
     } catch (error: any) {
       if (USE_IN_MEMORY_FALLBACK) {
         console.warn("Database error in getPlace, using in-memory fallback:", error.message);
+        return inMemoryStorage.places.get(placeId);
+      }
+      throw error;
+    }
+  }
+  
+  async getPlaceByPlaceId(placeId: string): Promise<Place | undefined> {
+    try {
+      return await super.getPlaceByPlaceId(placeId);
+    } catch (error: any) {
+      if (USE_IN_MEMORY_FALLBACK) {
+        console.warn("Database error in getPlaceByPlaceId, using in-memory fallback:", error.message);
         return inMemoryStorage.places.get(placeId);
       }
       throw error;
