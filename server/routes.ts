@@ -250,7 +250,7 @@ export function findInterestingActivities(
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
   
-  app.post("/api/create-itinerary", async (req, res) => {
+  app.post("/api/plan", async (req, res) => {
     try {
       const requestSchema = z.object({
         query: z.string(),
