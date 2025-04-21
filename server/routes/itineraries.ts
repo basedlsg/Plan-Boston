@@ -28,8 +28,8 @@ router.get('/user', requireAuth, async (req: Request, res: Response) => {
       // Ensure we have valid data with fallbacks for any potentially missing fields
       return {
         id: itinerary.id,
-        title: `London Itinerary ${itinerary.id}`,
-        query: itinerary.query || 'London Itinerary',
+        title: `NYC Itinerary ${itinerary.id}`,
+        query: itinerary.query || 'NYC Itinerary',
         created_at: itinerary.created?.toISOString() || new Date().toISOString(),
       };
     });

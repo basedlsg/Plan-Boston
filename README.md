@@ -1,10 +1,10 @@
-# London Day Planner
+# NYC Day Planner
 
-An intelligent day planner that generates personalized, time-optimized itineraries for exploring London using advanced natural language processing and the Google Places API.
+An intelligent day planner that generates personalized, time-optimized itineraries for exploring New York City using advanced natural language processing and the Google Places API.
 
 ## Features
 
-- **Natural Language Input**: Simply describe your plans in plain English (e.g., "I'm at Tower Bridge and need a coffee shop to work until my dinner at Hakkasan Mayfair at 8pm")
+- **Natural Language Input**: Simply describe your plans in plain English (e.g., "I'm at Brooklyn Bridge and need a coffee shop to work until my dinner at Carbone in Greenwich Village at 8pm")
 - **Smart Scheduling**: Automatically fills your day with interesting activities based on location and time
 - **Time-Aware Planning**: 
   - Supports both 12-hour and 24-hour time formats
@@ -14,7 +14,7 @@ An intelligent day planner that generates personalized, time-optimized itinerari
 - **Contextual Recommendations**:
   - Morning activities (bakeries, markets, coffee spots)
   - Midday venues (museums, galleries, parks)
-  - Afternoon activities (shopping, tea rooms, walks)
+  - Afternoon activities (shopping, cafes, walks)
   - Evening entertainment (bars, theaters, live music)
 
 ## How It Works
@@ -62,12 +62,12 @@ An intelligent day planner that generates personalized, time-optimized itinerari
 ## Example Use Cases
 
 1. **Work & Dinner Plans**:
-   "I'm at Liverpool Street Station and need a quiet café to work until my dinner at Duck & Waffle at 8pm"
+   "I'm at Grand Central Station and need a quiet café to work until my dinner at Carbone in Greenwich Village at 8pm"
 
 2. **Tourist Day Out**:
-   "Starting from Tower Bridge at 10am, I want to see some museums and have dinner in Soho at 7pm"
+   "Starting from Times Square at 10am, I want to see some museums and have dinner in SoHo at 7pm"
 
 3. **Shopping & Entertainment**:
-   "Meeting friends at Oxford Circus at 11am for shopping, then we have theater tickets for 7:30pm in Covent Garden"
+   "Meeting friends at Fifth Avenue at 11am for shopping, then we have theater tickets for 7:30pm in Broadway"
 
 The app will create a balanced itinerary that includes appropriate meal times, interesting activities, and accounts for travel between locations.

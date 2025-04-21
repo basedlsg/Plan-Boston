@@ -31,7 +31,7 @@ app.use(session({
     pool,
     tableName: 'sessions' // Must match the table name in your schema
   }),
-  secret: process.env.SESSION_SECRET || 'london-day-planner-dev-secret',
+  secret: process.env.SESSION_SECRET || 'nyc-day-planner-dev-secret',
   resave: false,
   saveUninitialized: false,
   cookie: { 
@@ -52,7 +52,7 @@ app.use('/api/config', configRoutes);
 // Register itineraries routes
 app.use('/api/itineraries', itinerariesRoutes);
 
-app.use('/London', express.static('dist/public')); // Added static file serving for /London
+app.use('/NYC', express.static('dist/public')); // Added static file serving for NYC route
 
 app.use((req, res, next) => {
   const start = Date.now();
