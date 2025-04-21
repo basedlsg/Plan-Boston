@@ -8,6 +8,7 @@ import { StructuredRequest } from "@shared/types";
 import { insertPlaceSchema, insertItinerarySchema, Place, PlaceDetails } from "@shared/schema";
 import { z } from "zod";
 import { format } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, NYCArea, nycAreas } from "./data/new-york-areas";
 import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWeatherAwareVenue } from "./lib/weatherService";
 
@@ -107,10 +108,11 @@ function detectActivityTypeFromQuery(query: string, activity: string): string {
 /**
  * Parse a time string to a Date object
  * Provides consistent time parsing throughout the application
+ * Uses America/New_York timezone for consistent local time representation
  * 
  * @param timeStr Time string to parse (e.g., "3pm", "15:00", "evening", "at 6", "around noon", "around 3 PM")
  * @param baseDate Base date to use (defaults to current date)
- * @returns Date object with the specified time
+ * @returns Date object with the specified time in America/New_York timezone
  */
 function parseTimeString(timeStr: string, baseDate?: Date): Date {
   try {
@@ -126,16 +128,27 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
     const hours = parseInt(hoursStr, 10);
     const minutes = parseInt(minutesStr, 10);
     
-    // Create a new date with the specified time
+    // Create a new date with the specified time in UTC
     const date = new Date(currentDate);
     date.setHours(hours, minutes, 0, 0);
     
+    // NYC timezone
+    const nycTimeZone = 'America/New_York';
+    
+    // Convert to NYC timezone
+    const nycDate = toZonedTime(date, nycTimeZone);
+    
+    // Format time for logging
+    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+    
+    console.log(`Parsed time "${formattedTime}" to NYC time: ${formatInTimeZone(date, nycTimeZone, 'yyyy-MM-dd HH:mm:ss zzz')}`);
+    
     return date;
   } catch (error) {
-    console.error(`Error parsing time string "${timeStr}":`, error);
+    console.error(`Error parsing time:`, error);
     // Return a default time if parsing fails
     const defaultDate = baseDate || new Date();
-    // Default to 10:00 AM if parsing fails
+    // Default to 10:00 AM NYC time if parsing fails
     defaultDate.setHours(10, 0, 0, 0);
     return defaultDate;
   }
