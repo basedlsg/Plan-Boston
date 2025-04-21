@@ -1,7 +1,7 @@
 /**
  * AI Logging System
  * 
- * This module provides comprehensive logging for AI interactions in the London Day Planner.
+ * This module provides comprehensive logging for AI interactions in the NYC Day Planner.
  * It captures queries, responses, processing times, and contextual information
  * to help with debugging, analysis, and optimization.
  */
