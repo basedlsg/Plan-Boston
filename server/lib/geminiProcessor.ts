@@ -23,7 +23,7 @@ const FixedTimeEntrySchema = z.object({
     venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
     specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
     venuePreference: z.string().optional().describe("Specific venue preference (e.g., 'sandwich place', 'sports bar')"),
-  }).optional()
+  }).optional().describe("IMPORTANT: Use venuePreference for specific venue types like 'hipster coffee shop' or 'authentic Jewish deli'")
 });
 
 // Define flexible time entry schema - this is for less specific time periods
@@ -39,7 +39,7 @@ const FlexibleTimeEntrySchema = z.object({
     venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
     specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
     venuePreference: z.string().optional().describe("Specific venue preference (e.g., 'sandwich place', 'sports bar')"),
-  }).optional()
+  }).optional().describe("IMPORTANT: Use venuePreference for specific venue types like 'hipster art gallery' or 'authentic Jewish deli'")
 });
 
 const StructuredRequestSchema = z.object({
@@ -161,9 +161,10 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     11. For incomplete information, make reasonable assumptions based on context
     12. Keep activity descriptions concise but clear
     13. VENUE PREFERENCES: Always capture specific venue preferences when mentioned:
-       - If user specifies a venue type like "sandwich place" or "sports bar", include it in searchParameters.venuePreference
-       - Use venuePreference for specific venue descriptions (e.g., "hipster coffee shop", "upscale steakhouse", "family-friendly diner")
+       - If user specifies a venue type like "sandwich place", "sports bar", "authentic Jewish deli", "trendy cafe", include it in searchParameters.venuePreference
+       - Use venuePreference for ANY specific venue descriptions (e.g., "hipster coffee shop", "upscale steakhouse", "family-friendly diner", "authentic Jamaican restaurant")
        - This is different from venueType which should be broader categories like "restaurant", "cafe", "bar"
+       - Examples: for "I want to get a real NY bagel from an authentic Jewish deli", set venuePreference to "authentic Jewish deli"
     14. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
        - You MUST identify a specific NYC location (neighborhood, landmark, station, address)
        - If the user explicitly provides a valid NYC location (e.g., 'SoHo', 'The Met', 'Times Square', 'Wall St'), use that exact location string

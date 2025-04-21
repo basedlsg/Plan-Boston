@@ -110,6 +110,15 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
     }
   };
   
+  // Inspect the venuePreference data in the Gemini response
+  if (geminiResult.fixedTimeEntries && geminiResult.fixedTimeEntries.length > 0) {
+    geminiResult.fixedTimeEntries.forEach(entry => {
+      if (entry.searchParameters?.venuePreference) {
+        console.log(`Found raw venuePreference in Gemini fixed time entry: "${entry.searchParameters.venuePreference}" for activity "${entry.activity}"`);
+      }
+    });
+  }
+  
   // Create a map to track unique activities by location and similar activity text
   // This will help us avoid duplicates from both fixedTimeEntries and flexibleTimeEntries
   const activityMap = new Map<string, FixedTimeEntry>();
@@ -146,6 +155,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   
   // Process fixed time entries if present
   if (geminiResult.fixedTimeEntries && Array.isArray(geminiResult.fixedTimeEntries)) {
+    console.log("Raw fixed time entries from Gemini:", JSON.stringify(geminiResult.fixedTimeEntries, null, 2));
     for (const entry of geminiResult.fixedTimeEntries) {
       if (entry && typeof entry === 'object' && entry.location && entry.time) {
         // Parse time expressions using our enhanced timeUtils
@@ -223,7 +233,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   
   // Process flexible time entries - THIS IS THE KEY FIX for the British Museum/Soho case
   if (geminiResult.flexibleTimeEntries && Array.isArray(geminiResult.flexibleTimeEntries)) {
-    console.log("Found flexibleTimeEntries in Gemini response:", geminiResult.flexibleTimeEntries);
+    console.log("Raw flexible time entries from Gemini:", JSON.stringify(geminiResult.flexibleTimeEntries, null, 2));
     
     for (const entry of geminiResult.flexibleTimeEntries) {
       if (entry && typeof entry === 'object' && entry.location) {
