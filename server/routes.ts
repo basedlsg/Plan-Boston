@@ -130,286 +130,127 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
     const date = new Date(currentDate);
     date.setHours(hours, minutes, 0, 0);
     
-    console.log(`Parsed time "${timeStr}" as "${normalizedTime}" (${date.toLocaleTimeString()})`);
     return date;
   } catch (error) {
     console.error(`Error parsing time string "${timeStr}":`, error);
-    
-    // Provide a reasonable default (noon) instead of throwing an error
-    const fallbackDate = new Date(baseDate || new Date());
-    fallbackDate.setHours(12, 0, 0, 0);
-    
-    return fallbackDate;
+    // Return a default time if parsing fails
+    const defaultDate = baseDate || new Date();
+    // Default to 10:00 AM if parsing fails
+    defaultDate.setHours(10, 0, 0, 0);
+    return defaultDate;
   }
 }
 
-// Enhanced findInterestingActivities function with improved contextual awareness
 export function findInterestingActivities(
-  location: string,
-  duration: number,
-  timeOfDay: string,
-  preferences: { type?: string; requirements?: string[] } = {}
-): string[] {
-  const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
-  const hour = parseInt(timeOfDay.split(':')[0]);
-  const currentDate = new Date();
-  const timeDate = new Date(currentDate);
-  timeDate.setHours(hour, parseInt(timeOfDay.split(':')[1]) || 0, 0, 0);
-
-  // More granular time slots for better suggestions
-  const getTimeSlot = (hour: number) => 
-    hour < 10 ? 'early-morning'
-    : hour < 12 ? 'morning'
-    : hour < 14 ? 'midday'
-    : hour < 17 ? 'afternoon'
-    : hour < 20 ? 'evening'
-    : 'night';
-
-  const currentTimeSlot = getTimeSlot(hour);
+  currentLocation: string,
+  availableHours: number,
+  preferences: any,
+  // Optional user preferences
+  dayPart: 'morning' | 'afternoon' | 'evening' | 'night' = 'afternoon'
+): any[] {
+  console.log("Finding activities based on preferences:", preferences);
   
-  // Define activity categories with more detailed options
-  const activityCategories = {
-    cultural: [
-      'museum', 'art gallery', 'historic site', 'landmark', 'guided tour', 
-      'architecture tour', 'cultural center', 'exhibition'
-    ],
-    dining: [
-      'restaurant', 'bistro', 'cafe', 'food market', 'street food', 
-      'food tour', 'cookery class', 'fine dining'
-    ],
-    entertainment: [
-      'theater', 'cinema', 'comedy club', 'live music', 'concert', 
-      'nightclub', 'jazz club', 'dance performance'
-    ],
-    shopping: [
-      'shopping center', 'market', 'boutique shopping', 'department store', 
-      'antique shop', 'bookstore', 'specialty shop', 'design store'
-    ],
-    outdoor: [
-      'park', 'garden', 'riverside walk', 'canal walk', 'bike ride', 
-      'outdoor sightseeing', 'boat tour', 'picnic spot'
-    ],
-    relaxation: [
-      'spa', 'tea room', 'coffee shop', 'relaxing cafe', 'garden terrace', 
-      'quiet reading spot', 'peaceful walk', 'meditation center'
-    ]
-  };
-
-  // Time-appropriate activities
-  const timeBasedActivities = {
-    'early-morning': ['breakfast spot', 'bakery', 'morning walk', 'coffee shop', 'farmers market', 'yoga class'],
-    'morning': ['artisan cafe', 'museum', 'gallery', 'shopping', 'sightseeing tour', 'coffee tasting'],
-    'midday': ['lunch restaurant', 'bistro', 'food market', 'gallery', 'shopping', 'walking tour'],
-    'afternoon': ['tea room', 'dessert cafe', 'museum', 'park', 'shopping', 'boat tour', 'gallery'],
-    'evening': ['dinner restaurant', 'wine bar', 'cocktail bar', 'theater', 'comedy show', 'twilight tour'],
-    'night': ['cocktail bar', 'pub', 'nightclub', 'late dinner', 'jazz club', 'evening walk', 'night tour']
-  };
-  
-  // Duration-appropriate activities
-  const getDurationBasedActivities = (hours: number) => {
-    if (hours <= 1) {
-      return ['coffee break', 'quick snack', 'short walk', 'small gallery', 'bookstore visit'];
-    } else if (hours <= 2) {
-      return ['museum visit', 'lunch spot', 'shopping trip', 'guided tour', 'coffee tasting'];
-    } else {
-      return ['full museum experience', 'theater show', 'extended dining', 'multiple galleries', 'walking tour'];
-    }
-  };
-
-  // Try to get area information for weather-aware suggestions
-  let areaInfo: NYCArea | undefined;
-  try {
-    const possibleArea = nycAreas.find((a: NYCArea) => 
-      a.name.toLowerCase() === location.toLowerCase() || 
-      a.neighbors.some((n: string) => n.toLowerCase() === location.toLowerCase())
-    );
-    if (possibleArea) {
-      areaInfo = possibleArea;
-    }
-  } catch (error) {
-    console.warn("Could not find area information for weather context");
-  }
-
-  // Weather-aware suggestions (try to get weather data if available)
-  let isOutdoorSuitable = true;
-  let weatherAwareActivities: string[] = [];
-  
-  try {
-    // Only attempt weather-aware activity suggestions if we have coord data (would come from Google Places)
-    // This is a placeholder for actual implementation that would use real coordinates
-    // We'll make a best effort but won't require it
-    if (areaInfo) {
-      const useIndoorActivities = !isOutdoorSuitable;
-      
-      if (useIndoorActivities) {
-        weatherAwareActivities = [
-          ...activityCategories.cultural,
-          ...activityCategories.dining,
-          ...activityCategories.entertainment,
-          ...activityCategories.shopping
-        ].filter(activity => !activityCategories.outdoor.includes(activity));
-      }
-    }
-  } catch (error) {
-    console.warn("Could not get weather information for contextual suggestions");
-  }
-
-  // Handle specific meal-time requests with more diverse options
-  if (preferences.type) {
-    if (hour >= 7 && hour <= 10 && preferences.type.includes('breakfast')) {
-      return [
-        `breakfast at a local cafe in ${location}`,
-        `brunch spot near ${location}`,
-        `bakery with coffee in ${location}`
-      ];
-    }
-    
-    if (hour >= 12 && hour <= 15 && preferences.type.includes('lunch')) {
-      return [
-        `lunch restaurant in ${location}`,
-        `casual bistro near ${location}`,
-        `food market in ${location}`
-      ];
-    }
-    
-    if (hour >= 18 && hour <= 22 && preferences.type.includes('dinner')) {
-      return [
-        `dinner restaurant in ${location}`,
-        `bistro for evening meal near ${location}`,
-        `local dining spot in ${location}`
-      ];
-    }
-  }
-
-  // If user wants non-crowded places - enhanced with more activity variety
-  if (preferences.requirements?.includes('non-crowded')) {
-    const quietAreas = findQuietAreas(timeOfDay, isWeekend, location);
-    if (quietAreas.length > 0) {
-      // Get activity type based on time of day with more variety
-      const activities = {
-        'early-morning': ['quiet cafe', 'peaceful park walk', 'bakery', 'light breakfast'],
-        'morning': ['artisan cafe', 'specialty coffee', 'small gallery', 'boutique shopping'],
-        'midday': ['hidden gem restaurant', 'small museum', 'local gallery', 'quiet lunch spot'],
-        'afternoon': ['boutique shopping', 'tea room', 'book shop', 'garden visit'],
-        'evening': ['wine bar', 'quiet cocktail bar', 'intimate dining', 'small music venue'],
-        'night': ['speakeasy bar', 'jazz club', 'quiet late night cafe', 'intimate wine bar']
-      };
-
-      const areaActivities = activities[currentTimeSlot];
-      return quietAreas.slice(0, 2).map(area => {
-        const activity = areaActivities[Math.floor(Math.random() * areaActivities.length)];
-        return `${activity} in ${area.name}`;
-      });
-    }
-  }
-
-  // Enhanced area matching for preferences
-  const userRequirements = preferences.requirements || [];
-  
-  // Infer additional requirements based on preferences.type
-  if (preferences.type) {
-    if (preferences.type.includes('cultural')) {
-      userRequirements.push('cultural', 'historic');
-    } else if (preferences.type.includes('dining')) {
-      userRequirements.push('foodie', 'restaurants');
-    } else if (preferences.type.includes('nightlife')) {
-      userRequirements.push('lively', 'vibrant');
-    } else if (preferences.type.includes('relaxing')) {
-      userRequirements.push('peaceful', 'quiet');
-    }
-  }
-
-  // Find areas matching enhanced characteristics
-  const matchingAreas = findAreasByCharacteristics(
-    userRequirements,
-    location ? [location] : []
+  // Check for area matches first
+  const possibleArea = nycAreas.find((a: NYCArea) => 
+    a.name.toLowerCase().includes(currentLocation.toLowerCase()) ||
+    a.keywords.some(k => currentLocation.toLowerCase().includes(k))
   );
-
-  if (matchingAreas.length > 0) {
-    const suggestions: string[] = [];
+  
+  const areaParam = possibleArea ? possibleArea.name : undefined;
+  
+  // Start with empty results, we'll fill based on what we find
+  const results = [];
+  
+  // Attempt to find an area in NYC that matches the specified preferences
+  let matchedAreas: NYCArea[] = [];
+  
+  // If we have specific requirements, use them for filtering
+  if (preferences?.requirements && preferences.requirements.length > 0) {
+    matchedAreas = findAreasByCharacteristics(
+      preferences.requirements,
+      possibleArea ? [possibleArea.name] : undefined
+    );
+  } 
+  // Otherwise use preference type as a guide
+  else if (preferences?.type) {
+    const typeToCharacteristics: Record<string, string[]> = {
+      'cafe': ['quiet', 'relaxed'],
+      'park': ['outdoor', 'nature'],
+      'restaurant': ['dining', 'food'],
+      'bar': ['lively', 'nightlife'],
+      'shopping': ['shopping', 'busy'],
+      'museum': ['culture', 'quiet'],
+      'art': ['culture', 'creative'],
+      'activity': ['interesting', 'popular'],
+      'tourist_attraction': ['popular', 'must-see']
+    };
     
-    for (const area of matchingAreas.slice(0, 2)) {
-      let activityOptions: string[] = [];
+    // Get characteristics matching the preference type, or use 'interesting' as default
+    const characteristics = typeToCharacteristics[preferences.type] || ['interesting'];
+    
+    // Find areas matching these characteristics
+    matchedAreas = findAreasByCharacteristics(
+      characteristics,
+      possibleArea ? [possibleArea.name] : undefined
+    );
+  }
+  
+  // If we got area matches, create suggested activities from them
+  if (matchedAreas.length > 0) {
+    // Limit to top 3 areas
+    matchedAreas = matchedAreas.slice(0, 3);
+    
+    for (const area of matchedAreas) {
+      // Time per activity in hours (roughly)
+      const activityLength = Math.min(1.5, availableHours / matchedAreas.length);
       
-      // Try to match activities with area.popularFor
-      for (const popular of area.popularFor) {
-        if (popular.includes('museum') || popular.includes('gallery')) {
-          activityOptions.push(...activityCategories.cultural);
-        } else if (popular.includes('restaurant') || popular.includes('food')) {
-          activityOptions.push(...activityCategories.dining);
-        } else if (popular.includes('shop') || popular.includes('market')) {
-          activityOptions.push(...activityCategories.shopping);
-        } else if (popular.includes('park') || popular.includes('garden')) {
-          // Only suggest outdoor activities if weather is suitable
-          if (isOutdoorSuitable) {
-            activityOptions.push(...activityCategories.outdoor);
-          }
+      // Type of place to suggest based on preferences and time of day
+      let placeType = 'tourist_attraction';
+      
+      if (preferences.type === 'cafe' || preferences.type === 'restaurant' || 
+          preferences.type === 'bar' || preferences.type === 'shop') {
+        placeType = preferences.type;
+      } else {
+        // Default types based on time of day if no specific type
+        if (dayPart === 'morning') {
+          placeType = 'cafe';
+        } else if (dayPart === 'afternoon') {
+          placeType = 'tourist_attraction';
+        } else if (dayPart === 'evening' || dayPart === 'night') {
+          placeType = 'bar';
         }
       }
       
-      // If we couldn't match with popularFor, use time-based activities
-      if (activityOptions.length === 0) {
-        activityOptions = timeBasedActivities[currentTimeSlot];
-      }
-      
-      // Get 1-2 activities 
-      const randomIndex = Math.floor(Math.random() * activityOptions.length);
-      const activity = activityOptions[randomIndex];
-      suggestions.push(`${activity} in ${area.name}`);
-      
-      // If the area has a specific thing it's known for, suggest that too
-      if (area.popularFor.length > 0) {
-        const popularActivity = area.popularFor[Math.floor(Math.random() * area.popularFor.length)];
-        suggestions.push(`${popularActivity} in ${area.name}`);
-      }
+      // Create a suggestion based on area characteristics
+      results.push({
+        activity: `Explore ${area.name}`,
+        location: area.name,
+        duration: Math.round(activityLength * 60), // Convert to minutes
+        type: placeType,
+        description: `${area.description || 'Interesting area to explore'} Known for ${area.knownFor.join(', ')}.`
+      });
     }
-    
-    return suggestions;
-  }
-
-  // Consider both time and duration for default suggestions
-  const durationActivities = getDurationBasedActivities(duration);
-  const timeActivities = timeBasedActivities[currentTimeSlot];
-  
-  // Combine time and duration appropriate activities
-  const combinedActivities = [
-    ...timeActivities,
-    ...durationActivities,
-    ...(weatherAwareActivities.length > 0 ? weatherAwareActivities : [])
-  ];
-  
-  // Return 2-3 diverse suggestions
-  const suggestions: string[] = [];
-  const usedIndices = new Set<number>();
-  
-  for (let i = 0; i < Math.min(3, combinedActivities.length); i++) {
-    let randomIndex: number;
-    // Avoid duplicate suggestions
-    do {
-      randomIndex = Math.floor(Math.random() * combinedActivities.length);
-    } while (usedIndices.has(randomIndex) && usedIndices.size < combinedActivities.length);
-    
-    usedIndices.add(randomIndex);
-    const activity = combinedActivities[randomIndex];
-    suggestions.push(`${activity} near ${location}`);
   }
   
-  return suggestions;
+  // If no area-based suggestions or fewer than needed, add general suggestions
+  if (results.length === 0) {
+    // Default suggestion - tourist_attraction is a good generic fallback
+    results.push({
+      activity: "See interesting sights",
+      location: possibleArea ? possibleArea.name : "NYC",
+      duration: Math.round(Math.min(2, availableHours) * 60), // Convert to minutes
+      type: "tourist_attraction",
+      description: "Explore interesting attractions and sights in the area."
+    });
+  }
+  
+  return results;
 }
 
-// Update the /api/plan endpoint to handle fixed appointments better
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
-
-  // Add endpoint to get current server time
-  app.get("/api/time", (_req, res) => {
-    res.json({
-      currentTime: new Date().toISOString(),
-      timestamp: Date.now()
-    });
-  });
-
-  app.post("/api/plan", async (req, res) => {
+  
+  app.post("/api/create-itinerary", async (req, res) => {
     try {
       const requestSchema = z.object({
         query: z.string(),
@@ -422,6 +263,9 @@ export async function registerRoutes(app: Express) {
       // Parse the request using NLP
       const parsed = await parseItineraryRequest(query);
       console.log("Parsed request:", parsed);
+      
+      // Flag to control automatic gap-filling (set to false to only use explicitly requested activities)
+      const enableGapFilling = false;
 
       // If no explicit start location, use the first location mentioned
       if (!parsed.startLocation) {
@@ -441,8 +285,8 @@ export async function registerRoutes(app: Express) {
       const scheduledPlaces = new Set(); // Track unique places
       const itineraryPlaces = [];
 
-      // Handle lunch request specifically
-      if (parsed.preferences?.type?.includes('lunch')) {
+      // Handle lunch request specifically - only if gap filling is enabled or explicitly requested
+      if (enableGapFilling && parsed.preferences?.type?.includes('lunch')) {
         console.log("Searching for lunch venue near:", parsed.startLocation);
         try {
           // Enhanced search options for lunch
@@ -692,6 +536,8 @@ export async function registerRoutes(app: Express) {
       // Sort fixed appointments chronologically
       itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
+      // Gap-filling logic has been commented out to only include activities explicitly requested by the user
+      /*
       // Fill gaps with interesting activities based on preferences
       if (parsed.preferences?.type || parsed.preferences?.requirements) {
         for (let i = 0; i < itineraryPlaces.length - 1; i++) {
@@ -701,253 +547,100 @@ export async function registerRoutes(app: Express) {
 
           // Calculate gap between activities
           const gap = next.time.getTime() - (current.time.getTime() + 90 * 60 * 1000);
-
+       
           if (gap > 1.5 * 60 * 60 * 1000) { // If gap > 1.5 hours
             const suggestedActivities = findInterestingActivities(
               current.place.name,
               gap / (60 * 60 * 1000),
-              format(new Date(current.time.getTime() + 90 * 60 * 1000), 'HH:mm'),
-              parsed.preferences
+              parsed.preferences,
+              getDayPart(next.time)
             );
             
-            // Limit to maximum 2 activities per gap to prevent overcrowding
-            const maxActivitiesPerGap = Math.min(2, suggestedActivities.length);
-            // Calculate time increment for each activity to space them out evenly
-            const timeSpacing = gap / (maxActivitiesPerGap + 1);
-            
-            // Store existing times to check for duplicates
-            const existingTimes: number[] = itineraryPlaces.map(p => p.time.getTime());
-
-            for (let i = 0; i < maxActivitiesPerGap; i++) {
-              const activity = suggestedActivities[i];
+            // Only add the first suggestion to avoid overcrowding
+            if (suggestedActivities.length > 0) {
+              const activity = suggestedActivities[0];
+              
               try {
-                // Enhanced search options for gap filling
+                console.log(`Filling gap between ${current.place.name} and ${next.place.name} with activity: ${activity.activity}`);
+                
+                // Calculate the midpoint time for the gap activity
+                const midpointTime = new Date(current.time.getTime() + gap / 2);
+                
+                // Determine activity type based on day part and preferences
+                const activityType = 
+                  parsed.preferences?.type || 
+                  (midpointTime.getHours() < 12 ? 'cafe' : 
+                  midpointTime.getHours() < 18 ? 'museum' : 'restaurant');
+                
+                // Enhanced search options for the gap activity
                 const searchOptions: any = {
-                  requireOpenNow: true,
+                  type: activity.type || activityType,
+                  keywords: ['recommended', 'popular'],
                   minRating: 4.0,
-                  keywords: []
+                  // Use activity description as search term
+                  searchTerm: activity.activity
                 };
                 
-                // First check if this activity has a matching activity in the activities array
-                // This would allow us to leverage rich search parameters from Gemini if available
-                let matchingActivity;
-                
-                if (parsed.activities && Array.isArray(parsed.activities) && parsed.activities.length > 0) {
-                  // Try to find a matching activity by similarity
-                  matchingActivity = parsed.activities.find(a => 
-                    a.description.toLowerCase().includes(activity.toLowerCase()) ||
-                    activity.toLowerCase().includes(a.description.toLowerCase())
-                  );
-                  
-                  // If we found a matching activity with search parameters, use them
-                  if (matchingActivity?.searchParameters) {
-                    console.log(`Found matching activity with rich search parameters: "${matchingActivity.description}"`);
-                    
-                    // Copy the rich search parameters
-                    searchOptions.type = matchingActivity.searchParameters.type;
-                    searchOptions.searchTerm = matchingActivity.searchParameters.searchTerm;
-                    searchOptions.keywords = Array.isArray(matchingActivity.searchParameters.keywords) ? 
-                                          [...matchingActivity.searchParameters.keywords] : 
-                                          [];
-                    searchOptions.minRating = typeof matchingActivity.searchParameters.minRating === 'number' ? 
-                                          matchingActivity.searchParameters.minRating : 
-                                          4.0;
-                                          
-                    // Also add any requirements as additional keywords
-                    if (Array.isArray(matchingActivity.requirements) && matchingActivity.requirements.length > 0) {
-                      searchOptions.keywords = [
-                        ...searchOptions.keywords,
-                        ...matchingActivity.requirements
-                      ];
-                    }
-                    
-                    console.log(`Using rich search parameters:`, JSON.stringify(searchOptions, null, 2));
-                  }
-                }
-                
-                // If no matching activity with rich parameters was found, use activity name as search term
-                // and infer other parameters from text
-                if (!matchingActivity?.searchParameters) {
-                  // Add activity name as search term for better context
-                  searchOptions.searchTerm = activity;
-                  
-                  // Add keywords based on common activity types
-                  if (activity.toLowerCase().includes('coffee') || 
-                      activity.toLowerCase().includes('cafe')) {
-                    searchOptions.type = 'cafe';
-                    searchOptions.keywords.push('coffee', 'espresso', 'cafe');
-                  } else if (activity.toLowerCase().includes('dinner') || 
-                            activity.toLowerCase().includes('lunch') || 
-                            activity.toLowerCase().includes('restaurant') ||
-                            activity.toLowerCase().includes('food')) {
-                    searchOptions.type = 'restaurant';
-                    searchOptions.keywords.push('restaurant', 'food', 'dining');
-                  } else if (activity.toLowerCase().includes('museum') || 
-                            activity.toLowerCase().includes('gallery') ||
-                            activity.toLowerCase().includes('exhibition')) {
-                    searchOptions.type = 'museum';
-                    searchOptions.keywords.push('art', 'museum', 'exhibit');
-                  } else if (activity.toLowerCase().includes('park') || 
-                            activity.toLowerCase().includes('garden') ||
-                            activity.toLowerCase().includes('green')) {
-                    searchOptions.type = 'park';
-                    searchOptions.keywords.push('park', 'green space', 'outdoor');
-                  } else if (activity.toLowerCase().includes('shop') || 
-                            activity.toLowerCase().includes('shopping') ||
-                            activity.toLowerCase().includes('mall')) {
-                    searchOptions.type = 'shopping_mall';
-                    searchOptions.keywords.push('shopping', 'shop', 'store');
-                  } else if (activity.toLowerCase().includes('market')) {
-                    searchOptions.type = 'store';
-                    searchOptions.keywords.push('market', 'food market', 'shops');
-                  } else {
-                    // Default to attraction
-                    searchOptions.type = 'tourist_attraction';
-                    searchOptions.keywords.push('attraction', 'sight', 'landmark');
-                  }
-                }
-                
-                // Use parsed requirements if available
-                if (parsed.preferences?.requirements && Array.isArray(parsed.preferences.requirements)) {
+                // If we have requirements from preferences, add them as keywords
+                if (parsed.preferences?.requirements && parsed.preferences.requirements.length > 0) {
                   searchOptions.keywords = [
                     ...searchOptions.keywords,
                     ...parsed.preferences.requirements
                   ];
                 }
                 
-                const venueResult = await searchPlace(activity, searchOptions);
+                const venueResult = await searchPlace(activity.location, searchOptions);
                 
-                if (!venueResult || !venueResult.primary) {
-                  console.log(`No suitable venue found for activity: ${activity}`);
-                  continue;
-                }
-                
-                // Use the primary venue from the result
-                let suggestedPlace = venueResult.primary;
-
-                // Create composite key for gap activities including the activity name
-                const gapActivityKey = `${suggestedPlace.place_id}:${activity}`;
-                
-                if (suggestedPlace && !scheduledPlaces.has(gapActivityKey)) {
-                // Calculate evenly spaced time for this activity
-                // First activity starts after 90 mins, subsequent activities are spaced evenly
-                const activityOffset = 90 * 60 * 1000 + (i + 1) * timeSpacing;
-                const proposedTime = current.time.getTime() + activityOffset;
-                
-                // Ensure this time doesn't conflict with existing times
-                // We'll consider anything within 60 minutes to be a conflict
-                const timeConflict = existingTimes.some(
-                  existingTime => Math.abs(existingTime - proposedTime) < 60 * 60 * 1000
-                );
-                
-                if (timeConflict) {
-                  console.log(`Time conflict detected at ${new Date(proposedTime).toLocaleTimeString()}, skipping activity`);
-                  continue;
-                }
-                
-                // Set activity time and add to existing times list to check for future conflicts
-                const activityTime = new Date(proposedTime);
-                existingTimes.push(activityTime.getTime());
-                
-                // Log the scheduled time clearly
-                console.log(`Scheduling gap activity "${activity}" at ${activityTime.toLocaleTimeString()} (${format(activityTime, 'h:mm a')})`);
-                
-                try {
-                  // Check if we should use a weather-aware venue recommendation
-                  if (process.env.WEATHER_API_KEY && suggestedPlace.types) {
-                    console.log("Checking weather conditions for outdoor activities...");
-                    
-                    // Determine if venue is outdoors based on its types
-                    const isOutdoor = suggestedPlace.types && isVenueOutdoor(suggestedPlace.types);
-                    suggestedPlace.isOutdoorVenue = isOutdoor;
-                    
-                    // Get weather-aware venue recommendation
-                    const { venue: recommendedVenue, weatherSuitable } = await getWeatherAwareVenue(
-                      suggestedPlace,
-                      venueResult.alternatives,
-                      suggestedPlace.geometry.location.lat,
-                      suggestedPlace.geometry.location.lng,
-                      activityTime
-                    );
-                    
-                    // Set weather information on both the suggested place and alternatives
-                    suggestedPlace.weatherSuitable = weatherSuitable;
-                    
-                    // If this venue has alternatives, mark them appropriately
-                    if (venueResult.alternatives && venueResult.alternatives.length > 0) {
-                      venueResult.alternatives.forEach(alt => {
-                        alt.isOutdoorVenue = alt.types ? isVenueOutdoor(alt.types) : false;
-                        alt.weatherSuitable = weatherSuitable;
-                      });
-                    }
-                    
-                    // If conditions are not suitable for outdoor venues and we have an alternative
-                    if (!weatherSuitable && recommendedVenue !== suggestedPlace) {
-                      console.log(`Weather conditions not optimal for ${suggestedPlace.name} (outdoor venue)`);
-                      console.log(`Suggesting indoor alternative: ${recommendedVenue.name}`);
-                      recommendedVenue.weatherAwareRecommendation = true;
-                      suggestedPlace = recommendedVenue;
-                    } else {
-                      console.log(`Weather conditions suitable for outdoor activities at ${activityTime.toLocaleTimeString()}`);
-                    }
+                if (venueResult && venueResult.primary) {
+                  const place = venueResult.primary;
+                  console.log(`Found gap-filling activity venue: ${place.name}`);
+                  
+                  // Create a composite key with gap location
+                  const compositeKey = `${place.place_id}:gap`;
+                  
+                  if (scheduledPlaces.has(compositeKey)) {
+                    console.log("Skipping duplicate gap-filling venue:", place.name);
+                    continue;
                   }
-                } catch (weatherError) {
-                  console.warn("Weather service error (proceeding with original venue):", weatherError);
-                }
-
-                // Try to create the place with better error handling
-                let newPlace;
-                try {
-                  newPlace = await storage.createPlace({
-                    placeId: suggestedPlace.place_id,
-                    name: suggestedPlace.name,
-                    address: suggestedPlace.formatted_address,
-                    location: suggestedPlace.geometry.location,
-                    details: suggestedPlace,
-                    alternatives: venueResult.alternatives,
-                    scheduledTime: activityTime.toISOString(),
-                  });
-                } catch (placeError: any) {
-                  // If we get a duplicate key error, try to fetch the existing place
-                  if (placeError.code === '23505') {
-                    console.warn(`Duplicate place found for ${suggestedPlace.name}, trying to fetch existing record`);
-                    const existingPlace = await storage.getPlaceByPlaceId(suggestedPlace.place_id);
-                    if (existingPlace) {
-                      console.log(`Using existing place record for ${suggestedPlace.name}`);
-                      newPlace = existingPlace;
-                    } else {
-                      throw placeError; // Re-throw if we can't recover
-                    }
-                  } else {
-                    throw placeError; // Re-throw other errors
+                  
+                  try {
+                    const newPlace = await storage.createPlace({
+                      placeId: place.place_id,
+                      name: place.name,
+                      address: place.formatted_address,
+                      location: place.geometry.location,
+                      details: place,
+                      alternatives: venueResult.alternatives,
+                      scheduledTime: midpointTime.toISOString(),
+                    });
+                    
+                    scheduledPlaces.add(compositeKey);
+                    
+                    // Add to itinerary
+                    itineraryPlaces.push({
+                      place: newPlace,
+                      time: midpointTime,
+                      isFixed: false
+                    });
+                  } catch (error) {
+                    console.error(`Error creating place for gap activity:`, error);
                   }
                 }
-
-                scheduledPlaces.add(gapActivityKey);
-                itineraryPlaces.push({
-                  place: newPlace,
-                  time: new Date(activityTime),
-                  isFixed: false
-                });
-                
-                // Log the alternatives found
-                console.log(`Added activity ${suggestedPlace.name} with ${venueResult.alternatives.length} alternatives`);
-              }
               } catch (error) {
-                console.error(`Error finding venue for activity "${activity}":`, error);
+                console.error(`Error finding venue for activity "${activity.activity}":`, error);
               }
             }
           }
         }
       }
+      */
 
       // Handle cases where preferences exist but no fixed times
-      if (itineraryPlaces.length === 0 && (
-          parsed.preferences?.type || 
-          (parsed.preferences?.requirements && parsed.preferences.requirements.length > 0) ||
+      // Only include activities that were explicitly mentioned by the user
+      if (itineraryPlaces.length === 0 && 
           (parsed.activities && parsed.activities.length > 0)
-        )) {
-        console.log(`No fixed times but found preference for ${parsed.preferences?.type || 'activities with requirements'} or activities`);
+        ) {
+        console.log(`No fixed times but found activities`);
         
         try {
           // Use current time as default starting point
@@ -1059,175 +752,11 @@ export async function registerRoutes(app: Express) {
               }));
             }
           }
-          
-          // Fallback to a single venue if no activities were added
-          console.log("Falling back to single venue recommendation based on preferences");
-          // Reset current time to now for the fallback option
-          currentTime.setTime(new Date().getTime());
-          
-          // First check if we have direct activity search parameters from Gemini
-          let searchOptions: any = { keywords: [], requireOpenNow: true, minRating: 4.0 };
-          
-          // Check if we have an activity with search parameters from the NLP parsing
-          const hasRichParams = parsed.activities !== undefined && 
-                              Array.isArray(parsed.activities) && 
-                              parsed.activities.length > 0 && 
-                              parsed.activities[0]?.searchParameters !== undefined;
-          
-          if (hasRichParams) {
-            // Use the rich search parameters directly from Gemini's activity details
-            const activity = parsed.activities![0];
-            console.log(`Using rich search parameters from Gemini for "${activity.description}"`);
-            
-            searchOptions = {
-              type: activity.searchParameters.type,
-              keywords: Array.isArray(activity.searchParameters.keywords) ? 
-                       activity.searchParameters.keywords : [],
-              requireOpenNow: !!activity.searchParameters.requireOpenNow,
-              minRating: activity.searchParameters.minRating || 4.0,
-              searchTerm: activity.searchParameters.searchTerm
-            };
-            
-            // Add any requirements as additional keywords
-            if (Array.isArray(activity.requirements) && activity.requirements.length > 0) {
-              searchOptions.keywords = [
-                ...searchOptions.keywords,
-                ...activity.requirements
-              ];
-            }
-            
-            // Enable review checking for specific food-related searches
-            const isFoodSpecificSearch = activity.description.toLowerCase().includes('sandwich') || 
-                                        activity.description.toLowerCase().includes('pizza') ||
-                                        activity.description.toLowerCase().includes('pasta') ||
-                                        activity.description.toLowerCase().includes('burger') ||
-                                        activity.description.toLowerCase().includes('focaccia') ||
-                                        activity.description.toLowerCase().includes('sushi');
-            
-            if (isFoodSpecificSearch) {
-              console.log(`Enabling review checking for specific food search: ${activity.description}`);
-              searchOptions.checkReviewsForKeywords = true;
-              
-              // Extract food item keywords from the description
-              const foodKeywords = activity.description
-                .toLowerCase()
-                .split(' ')
-                .filter((word: string) => 
-                  word.length > 3 && 
-                  !['with', 'and', 'the', 'for', 'near', 'good', 'nice', 'best'].includes(word)
-                );
-              
-              if (foodKeywords.length > 0) {
-                // Add specific food keywords at the beginning of the keywords list for higher priority
-                searchOptions.keywords = [
-                  ...foodKeywords,
-                  ...searchOptions.keywords
-                ];
-              }
-            }
-          } else {
-            // Fall back to regular preference-based search parameters
-            
-            // Add requirements as keywords for better place matching
-            if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
-              searchOptions.keywords = [...parsed.preferences.requirements];
-            }
-            
-            // Map preference type to search type
-            if (parsed.preferences.type) {
-              if (parsed.preferences.type.includes('coffee') || 
-                  parsed.preferences.type.includes('cafe')) {
-                searchOptions.type = 'cafe';
-                searchOptions.searchTerm = 'coffee shop';
-              } else if (parsed.preferences.type.includes('restaurant') || 
-                        parsed.preferences.type.includes('dinner') ||
-                        parsed.preferences.type.includes('lunch')) {
-                searchOptions.type = 'restaurant';
-                searchOptions.searchTerm = parsed.preferences.type;
-              } else if (parsed.preferences.type.includes('bar') || 
-                        parsed.preferences.type.includes('pub') ||
-                        parsed.preferences.type.includes('drinks')) {
-                searchOptions.type = 'bar';
-                searchOptions.searchTerm = parsed.preferences.type;
-              } else {
-                // Generic search based on preference type
-                searchOptions.type = parsed.preferences.type;
-                // Also use it as a search term
-                searchOptions.searchTerm = parsed.preferences.type;
-              }
-            } else if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
-              // Try to determine type from requirements
-              const requirements = parsed.preferences.requirements.map(r => r.toLowerCase());
-              
-              if (requirements.some(r => r.includes('coffee') || r.includes('cafe') || r.includes('quiet'))) {
-                searchOptions.type = 'cafe';
-                searchOptions.searchTerm = 'coffee shop';
-              } else if (requirements.some(r => r.includes('restaurant') || r.includes('dinner') || r.includes('food'))) {
-                searchOptions.type = 'restaurant';
-                searchOptions.searchTerm = 'restaurant';
-              } else if (requirements.some(r => r.includes('bar') || r.includes('pub') || r.includes('drinks'))) {
-                searchOptions.type = 'bar';
-                searchOptions.searchTerm = 'bar';
-              } else {
-                // Default to a generic activity
-                searchOptions.type = 'tourist_attraction';
-                searchOptions.searchTerm = 'attraction';
-              }
-            }
-          }
-          
-          console.log(`Searching for ${searchOptions.type} near ${parsed.startLocation} with params:`, searchOptions);
-          
-          // Perform the search
-          const venueResult = await searchPlace(parsed.startLocation, searchOptions);
-          
-          if (venueResult && venueResult.primary) {
-            console.log(`Found venue: ${venueResult.primary.name}`);
-            
-            // Try to create the place with better error handling
-            let newPlace;
-            try {
-              newPlace = await storage.createPlace({
-                placeId: venueResult.primary.place_id,
-                name: venueResult.primary.name,
-                address: venueResult.primary.formatted_address,
-                location: venueResult.primary.geometry.location,
-                details: venueResult.primary,
-                scheduledTime: currentTime.toISOString(),
-                alternatives: venueResult.alternatives || []
-              });
-            } catch (placeError: any) {
-              // If we get a duplicate key error, try to fetch the existing place
-              if (placeError.code === '23505') {
-                console.warn(`Duplicate place found for ${venueResult.primary.name}, trying to fetch existing record`);
-                const existingPlace = await storage.getPlaceByPlaceId(venueResult.primary.place_id);
-                if (existingPlace) {
-                  console.log(`Using existing place record for ${venueResult.primary.name}`);
-                  newPlace = existingPlace;
-                } else {
-                  throw placeError; // Re-throw if we can't recover
-                }
-              } else {
-                throw placeError; // Re-throw other errors
-              }
-            }
-            
-            // Add to itinerary
-            itineraryPlaces.push({
-              place: newPlace,
-              time: currentTime,
-              isFixed: false
-            });
-            
-            // Mark this place as scheduled with composite key for preference type
-            const preferenceType = parsed.preferences.type || 'general';
-            scheduledPlaces.add(`${venueResult.primary.place_id}:${preferenceType}`);
-          }
         } catch (error) {
-          console.error(`Error finding venue for preference ${parsed.preferences.type}:`, error);
+          console.error("Error processing activities with no fixed times:", error);
         }
       }
-      
+
       // Final chronological sort
       itineraryPlaces.sort((a, b) => a.time.getTime() - b.time.getTime());
 
@@ -1333,4 +862,19 @@ export async function registerRoutes(app: Express) {
   });
 
   return httpServer;
+}
+
+// Helper function to determine the part of the day (for recommendations)
+function getDayPart(date: Date): 'morning' | 'afternoon' | 'evening' | 'night' {
+  const hour = date.getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    return 'morning';
+  } else if (hour >= 12 && hour < 17) {
+    return 'afternoon';
+  } else if (hour >= 17 && hour < 22) {
+    return 'evening';
+  } else {
+    return 'night';
+  }
 }
