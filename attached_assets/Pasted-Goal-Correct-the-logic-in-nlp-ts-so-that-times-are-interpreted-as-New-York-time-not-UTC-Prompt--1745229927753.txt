@@ -1,0 +1,49 @@
+Goal: Correct the logic in nlp.ts so that times are interpreted as New York time, not UTC.
+
+Prompt:
+"The server logs show the timezone conversion is incorrect. For example, it logs:
+Converted time "10:00" to NYC time: 2:00 AM (2025-04-21T06:00:00.000Z)
+
+This is wrong. '10:00' from the user request (meaning 10 AM NYC time) should result in a display time of '10:00 AM' and the corresponding UTC ISO string (which would be ...T14:00:00.000Z during EDT). The current logic seems to be treating '10:00' as UTC.
+
+Open server/lib/nlp.ts. Go to the convertGeminiResultToAppFormat function.
+
+Find the specific code that processes the time string (like "10:00") from Gemini's fixedTimeEntries and flexibleTimeEntries. It's currently producing the incorrect time (ISO string) and displayTime values.
+
+Replace the existing incorrect time conversion logic for both fixed and flexible entries with the correct date-fns-tz approach below. Ensure any old, incorrect logic is removed:
+
+// Ensure this import is present at the top:
+import { zonedTimeToUtc, format, utcToZonedTime } from 'date-fns-tz'; 
+
+// --- Inside the loop processing each entry from Gemini ---
+const timeStringFromGemini = entry.time; // e.g., "10:00"
+const timeZone = 'America/New_York';
+
+// Get today's date components IN the target timezone to avoid DST issues at midnight
+const nowInNYC = utcToZonedTime(new Date(), timeZone);
+const year = nowInNYC.getFullYear();
+const month = String(nowInNYC.getMonth() + 1).padStart(2, '0');
+const day = String(nowInNYC.getDate()).padStart(2, '0');
+
+// Construct the date string *representing the intended time in NYC*
+const dateTimeStringInNYCTz = `${year}-${month}-${day}T${timeStringFromGemini}:00`;
+
+// Parse this string *as if it's in NYC* and get the correct UTC Date object
+const utcDate = zonedTimeToUtc(dateTimeStringInNYCTz, timeZone);
+
+// Generate the correct ISO string representing this moment in UTC
+const correctIsoTimestamp = utcDate.toISOString();
+
+// Generate the correct display string by formatting the UTC time *back* to NYC time
+const correctDisplayTime = format(utcDate, 'p', { timeZone }); // 'p' = 'h:mm aa' format
+
+// --- Update the app's fixedTime entry ---
+// Assign correctIsoTimestamp to the 'time' field.
+// Assign correctDisplayTime to the 'displayTime' field.
+
+// Add this log for verification:
+console.log(`Correctly interpreted time "${timeStringFromGemini}" as NYC time: ${correctDisplayTime} (${correctIsoTimestamp})`);
+// --- End of loop ---
+Use code with caution.
+TypeScript
+Restart the server and test with a query like 'Coffee at 10am'. Verify the new log message shows the correct interpretation (e.g., Correctly interpreted time "10:00" as NYC time: 10:00 AM (...T14:00:00.000Z) assuming EDT)."

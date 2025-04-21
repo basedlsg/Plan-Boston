@@ -90,6 +90,38 @@ type FixedTimeEntry = {
 };
 
 /**
+ * Helper function to correctly convert a time string into NYC timezone-aware values
+ * 
+ * @param timeString Time string in 24-hour format (HH:MM)
+ * @returns Object containing the ISO timestamp and formatted display time
+ */
+function convertTimeStringToNYC(timeString: string): { isoTimestamp: string, displayTime: string } {
+  const timeZone = 'America/New_York';
+  const [hours, minutes] = timeString.split(':').map(Number);
+  
+  // Get current date in NYC time zone to ensure proper DST handling
+  const now = new Date();
+  const nycTime = toZonedTime(now, timeZone);
+  
+  // Extract date components from NYC time
+  const year = nycTime.getFullYear();
+  const month = nycTime.getMonth(); // 0-indexed in JavaScript
+  const day = nycTime.getDate();
+  
+  // Create a new date with the parsed time components but NYC date
+  const localDate = new Date(year, month, day, hours, minutes);
+  
+  // Calculate UTC equivalent by accounting for timezone offset
+  const utcDate = new Date(localDate.getTime() + (localDate.getTimezoneOffset() * 60000));
+  
+  // Format for output
+  const isoTimestamp = utcDate.toISOString();
+  const displayTime = formatInTimeZone(localDate, timeZone, 'h:mm a');
+  
+  return { isoTimestamp, displayTime };
+}
+
+/**
  * Convert Gemini structured request to the application's expected format
  */
 function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null): StructuredRequest | null {
@@ -169,39 +201,14 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           timeValue = parseAndNormalizeTime(timeValue);
           console.log(`Fixed time entry: Normalized time from "${originalTime}" to "${timeValue}"`);
           
-          // Convert the normalized time string (HH:MM) to a proper timezone-aware datetime
-          const timeZone = 'America/New_York';
-          
-          // Use today's date but with time components from the normalized time string
-          const [hours, minutes] = timeValue.split(':').map(Number);
-          
-          // Get current date in NYC time zone
-          const now = new Date();
-          const nycTime = toZonedTime(now, timeZone);
-          
-          // Create a date based on NYC time zone's current date (to handle DST correctly)
-          const year = nycTime.getFullYear();
-          const month = nycTime.getMonth(); // month is 0-indexed
-          const day = nycTime.getDate();
-          
-          // Create a new date with the parsed time components but NYC date
-          const localDate = new Date(year, month, day, hours, minutes);
-          
-          // Convert to UTC by adding the timezone offset (in minutes)
-          const utcMillis = localDate.getTime() + (localDate.getTimezoneOffset() * 60000);
-          const utcDate = new Date(utcMillis);
-          
-          // Generate standard ISO string for backend use
-          const correctIsoTimestamp = utcDate.toISOString();
-          
-          // Format the display time for NYC timezone
-          const correctDisplayTime = formatInTimeZone(localDate, timeZone, 'h:mm a');
+          // Convert the normalized time string (HH:MM) to NYC timezone-aware values
+          const { isoTimestamp, displayTime: formattedTime } = convertTimeStringToNYC(timeValue);
           
           // Store the ISO timestamp for backend processing
-          timeValue = correctIsoTimestamp;
-          displayTime = correctDisplayTime;
+          timeValue = isoTimestamp;
+          displayTime = formattedTime;
           
-          console.log(`Correctly interpreted time "${originalTime}" as NYC time: ${correctDisplayTime} (${correctIsoTimestamp})`);
+          console.log(`Correctly interpreted time "${originalTime}" as NYC time: ${displayTime} (${timeValue})`);
         }
         
         // Determine the most appropriate activity type
@@ -265,7 +272,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
     }
   }
   
-  // Process flexible time entries - THIS IS THE KEY FIX for the British Museum/Soho case
+  // Process flexible time entries - THIS IS THE KEY FIX for the correct timezone handling
   if (geminiResult.flexibleTimeEntries && Array.isArray(geminiResult.flexibleTimeEntries)) {
     console.log("Raw flexible time entries from Gemini:", JSON.stringify(geminiResult.flexibleTimeEntries, null, 2));
     
@@ -283,39 +290,14 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           timeValue = parseAndNormalizeTime(timeValue);
           console.log(`Normalized time from "${originalTime}" to "${timeValue}"`);
           
-          // Convert the normalized time string (HH:MM) to a proper timezone-aware datetime
-          const timeZone = 'America/New_York';
-          
-          // Use today's date but with time components from the normalized time string
-          const [hours, minutes] = timeValue.split(':').map(Number);
-          
-          // Get current date in NYC time zone
-          const now = new Date();
-          const nycTime = toZonedTime(now, timeZone);
-          
-          // Create a date based on NYC time zone's current date (to handle DST correctly)
-          const year = nycTime.getFullYear();
-          const month = nycTime.getMonth(); // month is 0-indexed
-          const day = nycTime.getDate();
-          
-          // Create a new date with the parsed time components but NYC date
-          const localDate = new Date(year, month, day, hours, minutes);
-          
-          // Convert to UTC by adding the timezone offset (in minutes)
-          const utcMillis = localDate.getTime() + (localDate.getTimezoneOffset() * 60000);
-          const utcDate = new Date(utcMillis);
-          
-          // Generate standard ISO string for backend use
-          const correctIsoTimestamp = utcDate.toISOString();
-          
-          // Format the display time for NYC timezone
-          const correctDisplayTime = formatInTimeZone(localDate, timeZone, 'h:mm a');
+          // Convert the normalized time string (HH:MM) to NYC timezone-aware values
+          const { isoTimestamp, displayTime: formattedTime } = convertTimeStringToNYC(timeValue);
           
           // Store the ISO timestamp for backend processing
-          timeValue = correctIsoTimestamp;
-          displayTime = correctDisplayTime;
+          timeValue = isoTimestamp;
+          displayTime = formattedTime;
           
-          console.log(`Correctly interpreted time "${originalTime}" as NYC time: ${correctDisplayTime} (${correctIsoTimestamp})`);
+          console.log(`Correctly interpreted time "${originalTime}" as NYC time: ${displayTime} (${timeValue})`);
         }
         
         // Determine the most appropriate activity type
@@ -554,9 +536,8 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         searchTerm: query
       }] : [],
     preferences: {
-      requirements: extractedActivities
-        .filter(a => a.requirements)
-        .flatMap(a => a.requirements || [])
+      type: null,
+      requirements: []
     }
   };
 
@@ -591,42 +572,38 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         // Apply location validation and normalization when possible
         try {
           // Using imported functions directly
-          
-          // Create destinations array from fixed time locations
-          const uniqueLocations = new Set<string>();
-          geminiResult.fixedTimes.forEach(entry => {
-            if (entry.location && entry.location !== "New York" && entry.location !== "NYC" && entry.location !== "Midtown") {
-              uniqueLocations.add(entry.location);
+          for (const destination of geminiResult.destinations) {
+            const validatedLocation = await validateAndNormalizeLocation(destination);
+            // If validation succeeds, replace the original location with the validated one
+            if (validatedLocation) {
+              console.log(`Validated "${destination}" as neighborhood: "${validatedLocation}"`);
+              // Update it in-place
+              const index = geminiResult.destinations.indexOf(destination);
+              if (index !== -1) {
+                geminiResult.destinations[index] = validatedLocation;
+              }
             }
-          });
-          
-          geminiResult.destinations = Array.from(uniqueLocations);
-          
-          // Process each destination
-          if (geminiResult.destinations.length > 0) {
-            const validatedDestinations = await Promise.all(
-              geminiResult.destinations.map(async (destination: string) => {
-                return await validateAndNormalizeLocation(destination);
-              })
-            );
-            
-            geminiResult.destinations = validatedDestinations.filter(Boolean);
           }
           
-          // Process each fixed time location
-          if (geminiResult.fixedTimes.length > 0) {
+          // Validate fixed time locations
+          if (geminiResult.fixedTimes) {
             for (const fixedTime of geminiResult.fixedTimes) {
-              // Only process if location is generic but searchTerm contains hints
-              if ((fixedTime.location === "New York" || fixedTime.location === "NYC" || fixedTime.location === "Midtown") && fixedTime.searchTerm) {
-                const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
-                if (enhancedLocation && enhancedLocation !== "New York" && enhancedLocation !== "NYC" && enhancedLocation !== "Midtown") {
-                  fixedTime.location = enhancedLocation;
-                  console.log(`Enhanced fixed time location from generic to "${enhancedLocation}"`);
-                }
-              } else if (fixedTime.location) {
-                const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
-                if (validatedLocation) {
-                  fixedTime.location = validatedLocation;
+              if (fixedTime.location) {
+                // Try more advanced mapping with AI first if it's a vague location
+                if (fixedTime.location.toLowerCase() === 'central manhattan' || 
+                    fixedTime.location.toLowerCase() === 'central nyc' || 
+                    fixedTime.location.toLowerCase() === 'central new york') {
+                  
+                  const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.location, fixedTime.searchTerm);
+                  if (enhancedLocation && enhancedLocation !== "New York" && enhancedLocation !== "NYC" && enhancedLocation !== "Midtown") {
+                    fixedTime.location = enhancedLocation;
+                    console.log(`Enhanced fixed time location from generic to "${enhancedLocation}"`);
+                  }
+                } else if (fixedTime.location) {
+                  const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
+                  if (validatedLocation) {
+                    fixedTime.location = validatedLocation;
+                  }
                 }
               }
             }
@@ -650,285 +627,33 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       
       // Even though we're using the fallback structure, let's improve it with Google Maps verification
       // This will help improve the location data quality even without Gemini
-      try {
-        // Using imported functions directly
-        
-        // Process each destination
-        if (fallbackStructure.destinations.length > 0) {
-          const validatedDestinations = await Promise.all(
-            fallbackStructure.destinations.map(async (destination: string) => {
-              return await validateAndNormalizeLocation(destination);
-            })
-          );
-          
-          fallbackStructure.destinations = validatedDestinations.filter(Boolean);
+      for (let i = 0; i < fallbackStructure.destinations.length; i++) {
+        const destination = fallbackStructure.destinations[i];
+        const validated = await validateAndNormalizeLocation(destination);
+        if (validated) {
+          fallbackStructure.destinations[i] = validated;
         }
-        
-        // Process each fixed time location
-        if (fallbackStructure.fixedTimes.length > 0) {
-          for (const fixedTime of fallbackStructure.fixedTimes) {
-            // Only process if location is explicitly set to "London" (generic) but searchTerm contains hints
-            if ((fixedTime.location === "New York" || fixedTime.location === "NYC" || fixedTime.location === "Midtown") && fixedTime.searchTerm) {
-              const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
-              if (enhancedLocation && enhancedLocation !== "New York" && enhancedLocation !== "NYC" && enhancedLocation !== "Midtown") {
-                fixedTime.location = enhancedLocation;
-                console.log(`Enhanced fixed time location from generic NYC reference to "${enhancedLocation}"`);
-              }
-            } else if (fixedTime.location) {
-              const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);
-              if (validatedLocation) {
-                fixedTime.location = validatedLocation;
-              }
-            }
-          }
+      }
+      
+      // Also validate fixed time locations
+      for (const fixedTime of fallbackStructure.fixedTimes) {
+        const validated = await validateAndNormalizeLocation(fixedTime.location);
+        if (validated) {
+          fixedTime.location = validated;
         }
-      } catch (error) {
-        console.error("Error during location enhancement:", error);
-        // Continue with original fallback structure if enhancement fails
       }
       
       return fallbackStructure;
     }
 
-    // Try to use the original Gemini implementation for more intelligent parsing
-    try {
-      // Then use our comprehensive Gemini prompt for enhanced understanding
-      const prompt = `
-You are a New York City travel planning expert with deep knowledge of NYC's geography, neighborhoods, and venues. Analyze this request carefully:
+    // Still here? Use the fallback structure
+    return fallbackStructure;
 
-"${query}"
-
-TASK: Provide a complete interpretation for creating a NYC itinerary with Google Places API integration.
-
-Step 1: Identify all NYC locations with full context:
-- Distinguish between neighborhoods (SoHo, Greenwich Village), landmarks (Empire State Building), and transport hubs (Grand Central)
-- For ambiguous references, clarify which specific NYC location is meant
-- Recognize colloquial area names and local terminology (The Village, Midtown, FiDi, etc.)
-
-Step 2: Understand all activities with venue-specific details:
-- Extract explicit activities (coffee, lunch, museum visit)
-- Infer implied activities based on context ("something nice" → what specifically?)
-- Capture qualitative requirements (quiet, fancy, historic, family-friendly)
-- Note when activities are vague and need appropriate venue suggestions
-
-Step 3: Interpret time references carefully:
-- Convert all time formats to 24-hour format
-- Handle time ranges correctly (e.g., "between 2-4pm" → 14:00-16:00)
-- Interpret relative times (morning, afternoon, evening) 
-- Avoid creating duplicate activities for similar times
-
-Step 4: Create optimal Google Places search parameters:
-- Provide the exact search term to use (e.g., "specialty coffee shop" rather than just "coffee")
-- Specify the correct Google Places 'type' parameter (cafe, restaurant, museum, etc.)
-- Suggest additional keywords that will improve search relevance
-- Recommend minimum rating thresholds based on quality expectations
-
-RETURN ONLY this JSON structure:
-{
-  "startLocation": string | null,
-  "destinations": string[],
-  "activities": [
-    {
-      "description": string, // Original activity description from request
-      "location": string, // Where this should happen
-      "time": string, // Time in 24h format or period name like "afternoon"
-      "searchParameters": { // CRITICAL - Parameters for Google Places API
-        "searchTerm": string, // Optimized search term (e.g., "quiet cafe with workspace")
-        "type": string, // Google Places API type parameter (e.g., "cafe", "restaurant")
-        "keywords": string[], // Additional keywords to improve search
-        "minRating": number, // Recommended minimum rating (1.0-5.0)
-        "requireOpenNow": boolean // Whether time constraints require the venue to be open now
-      },
-      "requirements": string[] // Special requirements like "quiet", "outdoor seating"
-    }
-  ],
-  "preferences": {
-    "venueQualities": string[], // Qualities applying to all venues (upscale, budget, etc.)
-    "restrictions": string[] // Restrictions applying to all venues (no chains, etc.)
-  }
-}`;
-
-      try {
-        const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
-        
-        if (!responseText || responseText.trim() === '') {
-          throw new Error("Empty response received from language model");
-        }
-      
-        // Clean and parse the response
-        let cleanedContent = responseText.trim();
-        
-        // Remove markdown code block syntax if present
-        if (cleanedContent.startsWith('```json') || cleanedContent.startsWith('```')) {
-          const firstBlockEnd = cleanedContent.indexOf('\n');
-          const lastBlockStart = cleanedContent.lastIndexOf('```');
-          
-          if (firstBlockEnd !== -1) {
-            cleanedContent = cleanedContent.substring(firstBlockEnd + 1);
-            if (lastBlockStart !== -1 && lastBlockStart > firstBlockEnd) {
-              cleanedContent = cleanedContent.substring(0, lastBlockStart).trim();
-            }
-          }
-        }
-        
-        // Remove any extra characters after the last closing brace
-        const lastBrace = cleanedContent.lastIndexOf('}');
-        if (lastBrace !== -1) {
-          cleanedContent = cleanedContent.substring(0, lastBrace + 1);
-        }
-        
-        // Remove comments from JSON
-        cleanedContent = cleanedContent
-          .replace(/\/\/.*$/gm, '')
-          .replace(/\/\*[\s\S]*?\*\//g, '');
-        
-        // Parse the JSON response with validation
-        let parsedResponse;
-        try {
-          parsedResponse = JSON.parse(cleanedContent);
-        } catch (error) {
-          // Try to extract JSON by looking for { and }
-          const jsonStart = cleanedContent.indexOf('{');
-          const jsonEnd = cleanedContent.lastIndexOf('}');
-          
-          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-            const extractedJson = cleanedContent.substring(jsonStart, jsonEnd + 1);
-            parsedResponse = JSON.parse(extractedJson);
-          } else {
-            throw new Error(`Failed to parse response as JSON: ${error}`);
-          }
-        }
-        
-        // Simple validation: Check that we received some data
-        if (!parsedResponse || (typeof parsedResponse !== 'object') || !Object.keys(parsedResponse).length) {
-          throw new Error("JSON response is empty or invalid");
-        }
-        
-        // Start with a copy of the fallback structure to ensure we have all required fields
-        const parsed: StructuredRequest = {
-          startLocation: parsedResponse.startLocation || null,
-          destinations: Array.isArray(parsedResponse.destinations) ? parsedResponse.destinations : [],
-          fixedTimes: [],
-          preferences: {
-            type: parsedResponse.preferences?.type || undefined,
-            requirements: [
-              ...(parsedResponse.preferences?.restrictions || []),
-              ...(parsedResponse.preferences?.venueQualities || [])
-            ]
-          }
-        };
-        
-        // Map activities to fixed times with enhanced search parameters
-        if (Array.isArray(parsedResponse.activities) && parsedResponse.activities.length > 0) {
-          // Using the FixedTimeEntry type defined at the top of the file
-          
-          parsed.fixedTimes = parsedResponse.activities.map((activity: any): FixedTimeEntry => {
-            // Convert time formats and handle special cases
-            let timeValue = activity.time || "12:00";
-            
-            // Process period-based times
-            if (timeValue.toLowerCase().includes('morning')) {
-              timeValue = '09:00';
-            } else if (timeValue.toLowerCase().includes('afternoon')) {
-              timeValue = '14:00';
-            } else if (timeValue.toLowerCase().includes('evening')) {
-              timeValue = '19:00';
-            } else if (timeValue.toLowerCase().includes('night')) {
-              timeValue = '21:00';
-            }
-            
-            return {
-              location: activity.location || "Midtown",
-              time: timeValue,
-              type: activity.searchParameters?.type,
-              searchTerm: activity.searchParameters?.searchTerm || activity.description,
-              keywords: activity.searchParameters?.keywords || [],
-              minRating: activity.searchParameters?.minRating || 3.5
-            };
-          });
-          
-          // Ensure we have at least the preference requirements
-          if (Array.isArray(parsedResponse.activities)) {
-            for (const activity of parsedResponse.activities) {
-              if (Array.isArray(activity.requirements)) {
-                parsed.preferences.requirements = [
-                  ...(parsed.preferences.requirements || []),
-                  ...activity.requirements
-                ];
-              }
-            }
-          }
-          
-          // Ensure preferences is an array if requirements exist
-          if (parsed.preferences.requirements && parsed.preferences.requirements.length > 0) {
-            // Deduplicate the requirements array
-            parsed.preferences.requirements = Array.from(new Set(parsed.preferences.requirements));
-          }
-        } else {
-          // If no activities were extracted, fallback to our basic extraction
-          parsed.fixedTimes = fallbackStructure.fixedTimes;
-        }
-        
-        // Ensure we have destination information
-        if ((!parsed.destinations || parsed.destinations.length === 0) && extractedLocations.length > 0) {
-          parsed.destinations = extractedLocations.map(loc => loc.name);
-        }
-        
-        // Add a smart default for start location if not specified
-        if (!parsed.startLocation && parsed.destinations && parsed.destinations.length > 0) {
-          // Use the first destination as default starting point
-          parsed.startLocation = parsed.destinations[0];
-        }
-        
-        // Remove duplicates from fixed times by checking for similar locations and times
-        const stringified = parsed.fixedTimes.map((item: FixedTimeEntry) => JSON.stringify(item));
-        const uniqueItems = new Set(stringified);
-        parsed.fixedTimes = Array.from(uniqueItems).map(str => JSON.parse(str));
-        
-        // Sort fixed times chronologically
-        parsed.fixedTimes.sort((a, b) => {
-          if (!a.time) return -1;
-          if (!b.time) return 1;
-          return a.time.localeCompare(b.time);
-        });
-        
-        // Sort fixed times chronologically
-        parsed.fixedTimes.sort((a, b) => {
-          if (!a.time) return -1;
-          if (!b.time) return 1;
-          return a.time.localeCompare(b.time);
-        });
-
-        return parsed;
-
-      } catch (error) {
-        // Log error details without excessive output
-        console.error("Error during Gemini API processing:", {
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-          query: query.substring(0, 100) + (query.length > 100 ? '...' : '')
-        });
-        
-        return fallbackStructure;
-      }
-    } catch (error) {
-      // Log error details while avoiding excessive console output
-      console.error("Fatal error in parseItineraryRequest:", {
-        errorType: error instanceof Error ? error.constructor.name : typeof error,
-        message: error instanceof Error ? error.message : String(error),
-        query: query.substring(0, 100) + (query.length > 100 ? '...' : '')
-      });
-
-      return fallbackStructure;
-    }
   } catch (error) {
-    // This is the outer catch block to handle any errors in the entire function
-    console.error("Catastrophic error in parseItineraryRequest:", {
-      errorType: error instanceof Error ? error.constructor.name : typeof error,
-      message: error instanceof Error ? error.message : String(error),
-      query: query.substring(0, 100) + (query.length > 100 ? '...' : '')
-    });
-    
+    console.error("Error during NLP processing:", error);
     return fallbackStructure;
   }
 }
+
+// Re-export everything from this file
+export * from './nlp';
