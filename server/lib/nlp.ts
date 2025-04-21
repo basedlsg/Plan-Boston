@@ -109,15 +109,28 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   if (geminiResult.fixedTimeEntries && Array.isArray(geminiResult.fixedTimeEntries)) {
     for (const entry of geminiResult.fixedTimeEntries) {
       if (entry && typeof entry === 'object' && entry.location && entry.time) {
+        // Parse time expressions using our enhanced timeUtils
+        let timeValue = entry.time;
+        
+        // Process time values with our improved parser
+        if (typeof timeValue === 'string') {
+          const { parseAndNormalizeTime } = require('./timeUtils');
+          
+          // Parse times like "noon", "around 3 PM", etc.
+          const originalTime = timeValue;
+          timeValue = parseAndNormalizeTime(timeValue);
+          console.log(`Fixed time entry: Normalized time from "${originalTime}" to "${timeValue}"`);
+        }
+        
         appFormatRequest.fixedTimes.push({
           location: entry.location,
-          time: entry.time,
+          time: timeValue,
           type: entry.searchParameters?.venueType || "activity",
           searchTerm: entry.activity,
           keywords: entry.searchParameters?.specificRequirements || undefined,
           minRating: 4.0 // Default to high quality
         });
-        console.log(`Added fixed time entry: ${entry.activity} at ${entry.location}, ${entry.time}`);
+        console.log(`Added fixed time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}`);
       }
     }
   }
@@ -197,7 +210,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   // Create destinations array from fixed time locations
   const uniqueLocations = new Set<string>();
   appFormatRequest.fixedTimes.forEach(entry => {
-    if (entry.location && entry.location !== "London" && entry.location !== "Central London") {
+    if (entry.location && entry.location !== "New York" && entry.location !== "NYC" && entry.location !== "Midtown") {
       uniqueLocations.add(entry.location);
     }
   });
@@ -392,7 +405,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
           // Create destinations array from fixed time locations
           const uniqueLocations = new Set<string>();
           geminiResult.fixedTimes.forEach(entry => {
-            if (entry.location && entry.location !== "London" && entry.location !== "Central London") {
+            if (entry.location && entry.location !== "New York" && entry.location !== "NYC" && entry.location !== "Midtown") {
               uniqueLocations.add(entry.location);
             }
           });
