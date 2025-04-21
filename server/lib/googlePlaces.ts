@@ -92,14 +92,16 @@ export async function searchPlace(
     
     // Use search preference as the highest priority if available
     if (options.searchPreference) {
-      console.log(`Using specific venue preference as primary search term: "${options.searchPreference}"`);
+      console.log(`VENUE PREFERENCE: Using specific venue preference as primary search term: "${options.searchPreference}"`);
       searchKeyword = options.searchPreference;
     } 
     // Otherwise use regular searchTerm if available
     else if (options.searchTerm) {
+      console.log(`VENUE SEARCH: Using searchTerm: "${options.searchTerm}"`);
       searchKeyword = options.searchTerm;
     } else {
       // Ensure we have at least a basic search term for all searches
+      console.log(`VENUE SEARCH: Using query as fallback search term: "${query}"`);
       searchKeyword = query;
     }
     
