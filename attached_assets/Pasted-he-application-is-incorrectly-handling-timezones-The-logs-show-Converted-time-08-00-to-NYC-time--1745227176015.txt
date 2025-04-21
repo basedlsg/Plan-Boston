@@ -1,0 +1,48 @@
+he application is incorrectly handling timezones. The logs show Converted time "08:00" to NYC time: 4:00 AM (2025-04-21T08:00:00.000Z). This indicates it's taking '08:00', creating a UTC timestamp ...T08:00:00.000Z, and then formatting that UTC time into the local display time (EDT), resulting in '4:00 AM'.
+
+We need to interpret the time string (e.g., '08:00') as if it is already in the America/New_York timezone.
+
+Open server/lib/nlp.ts. Find the function convertGeminiResultToAppFormat or the specific code block where the fixedTimeEntries and flexibleTimeEntries from the Gemini response are processed.
+
+Locate the Time Conversion Logic: Find where the time string (e.g., "08:00") is currently being processed to create the time (ISO string) and displayTime fields for the application's fixedTimes array.
+
+Replace the incorrect logic with the following using date-fns-tz:
+
+// Ensure you have this import at the top of the file:
+import { zonedTimeToUtc, format } from 'date-fns-tz';
+
+// Inside the loop processing each entry from Gemini:
+const timeStringFromGemini = entry.time; // e.g., "08:00"
+const timeZone = 'America/New_York';
+
+// Get today's date components (use a stable reference if needed across requests)
+const now = new Date(); 
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+
+// Construct the date string *assuming* the time is in NYC
+const dateTimeStringInNYCTz = `${year}-${month}-${day}T${timeStringFromGemini}:00`;
+
+// Convert this conceptual NYC time string to the actual UTC Date object
+const utcDate = zonedTimeToUtc(dateTimeStringInNYCTz, timeZone);
+
+// Generate the correct ISO string for storage/backend use
+const correctIsoTimestamp = utcDate.toISOString();
+
+// Generate the correct display string formatted for NYC timezone
+const correctDisplayTime = format(utcDate, 'p', { timeZone }); // 'p' gives 'h:mm aa' format
+
+// --- IMPORTANT ---
+// Update the object being added to the app's 'fixedTimes' array:
+// Assign correctIsoTimestamp to the 'time' field.
+// Assign correctDisplayTime to the 'displayTime' field.
+// Remove any old/incorrect time conversion logic.
+
+// Log for verification (optional but helpful):
+console.log(`Converted time "${timeStringFromGemini}" to NYC time: ${correctDisplayTime} (${correctIsoTimestamp})`);
+Use code with caution.
+TypeScript
+Verify in server/routes.ts: Briefly check the loop in routes.ts that processes the fixedTimes. Ensure the Processing fixed time appointment step correctly parses the correctIsoTimestamp if it needs a Date object for its logic (e.g., new Date(fixedTime.time)). Make sure the Parsed ISO timestamp... log now shows the correct local time (e.g., 8:00 AM EDT).
+
+Restart the server and test with a query like 'Breakfast at 8am'. Check the logs for the new Converted time... message and verify the displayTime in the final Converted app format request is correct (e.g., '8:00 AM')

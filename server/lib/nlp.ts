@@ -160,32 +160,32 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           
           // Convert the normalized time string (HH:MM) to a proper timezone-aware datetime
           const timeZone = 'America/New_York';
-          const nowInNYC = new Date();
-          const year = nowInNYC.getFullYear();
-          const month = nowInNYC.getMonth();
-          const day = nowInNYC.getDate();
+          
+          // Create a date object for today with the desired time components
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth(); // date-fns uses 0-indexed months
+          const day = now.getDate();
           
           // Extract hours and minutes from the normalized time
           const [hours, minutes] = timeValue.split(':').map(Number);
           
-          // Construct a date string in NYC timezone format
-          const dateStringInNYCTz = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${timeValue}:00`;
+          // Create a date object in local time zone
+          const localDate = new Date(year, month, day, hours, minutes, 0, 0);
           
-          // Create a proper timezone-aware date object
-          // This date object represents the wall-clock time in NYC
-          const nycDate = toZonedTime(new Date(), timeZone);
-          nycDate.setHours(hours, minutes, 0, 0);
+          // Convert this to a NYC time zone object
+          const nycDate = toZonedTime(localDate, timeZone);
           
-          // Format the NYC date as ISO string for storage/transfer
+          // Generate the ISO timestamp for storage/backend use
           const isoTimestamp = nycDate.toISOString();
           
-          // Also store a pre-formatted NYC time string for display
+          // Generate the formatted display time string for NYC timezone
           displayTime = formatInTimeZone(nycDate, timeZone, 'h:mm a');
           
-          // Use the ISO timestamp as the time value
+          // Store the ISO timestamp for backend processing
           timeValue = isoTimestamp;
           
-          console.log(`Converted time "${originalTime}" to NYC time: ${displayTime} (${isoTimestamp})`);
+          console.log(`Converted time "${originalTime}" to NYC time: ${displayTime} (${timeValue})`);
         }
         
         // Determine the most appropriate activity type
@@ -230,31 +230,32 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           
           // Convert the normalized time string (HH:MM) to a proper timezone-aware datetime
           const timeZone = 'America/New_York';
-          const nowInNYC = new Date();
-          const year = nowInNYC.getFullYear();
-          const month = nowInNYC.getMonth();
-          const day = nowInNYC.getDate();
+          
+          // Create a date object for today with the desired time components
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = now.getMonth(); // date-fns uses 0-indexed months
+          const day = now.getDate();
           
           // Extract hours and minutes from the normalized time
           const [hours, minutes] = timeValue.split(':').map(Number);
           
-          // Construct a date string in NYC timezone format
-          const dateStringInNYCTz = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${timeValue}:00`;
+          // Create a date object in local time zone
+          const localDate = new Date(year, month, day, hours, minutes, 0, 0);
           
-          // Create a proper timezone-aware date object
-          const nycDate = toZonedTime(new Date(), timeZone);
-          nycDate.setHours(hours, minutes, 0, 0);
+          // Convert this to a NYC time zone object
+          const nycDate = toZonedTime(localDate, timeZone);
           
-          // Format the NYC date as ISO string for storage/transfer
+          // Generate the ISO timestamp for storage/backend use
           const isoTimestamp = nycDate.toISOString();
           
-          // Also store a pre-formatted NYC time string for display
+          // Generate the formatted display time string for NYC timezone
           displayTime = formatInTimeZone(nycDate, timeZone, 'h:mm a');
           
-          // Use the ISO timestamp as the time value
+          // Store the ISO timestamp for backend processing
           timeValue = isoTimestamp;
           
-          console.log(`Converted time "${originalTime}" to NYC time: ${displayTime} (${isoTimestamp})`);
+          console.log(`Converted time "${originalTime}" to NYC time: ${displayTime} (${timeValue})`);
         }
         
         // Determine the most appropriate activity type
