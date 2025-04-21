@@ -99,10 +99,48 @@ export function parseAndNormalizeTime(timeStr: string): string {
   const simpleHourMatch = timeStr.match(/\b(?:at|around|by|from)\s+(\d{1,2})\b/i);
   if (simpleHourMatch) {
     const hourNum = parseInt(simpleHourMatch[1]);
+    const fullText = timeStr.toLowerCase();
     
-    // For 1-11, assume PM (13:00-23:00), for 12 assume noon (12:00)
-    // For hours >= 13, keep as is (we're already in 24-hour format)
-    const adjusted = (hourNum >= 1 && hourNum <= 11) ? hourNum + 12 : hourNum;
+    // Context-aware time parsing
+    // For dinner, steak, evening activities, assume evening/night hours
+    const isEveningContext = fullText.includes('dinner') || 
+                            fullText.includes('steak') || 
+                            fullText.includes('evening') || 
+                            fullText.includes('night') ||
+                            fullText.includes('drinks');
+                            
+    // For breakfast, coffee, morning activities, assume morning hours
+    const isMorningContext = fullText.includes('breakfast') || 
+                            fullText.includes('coffee') ||
+                            fullText.includes('morning') ||
+                            fullText.includes('early');
+    
+    // For lunch, afternoon activities, assume afternoon hours
+    const isAfternoonContext = fullText.includes('lunch') || 
+                              fullText.includes('afternoon');
+    
+    // Make time adjustments based on context
+    let adjusted = hourNum;
+    
+    if (hourNum >= 1 && hourNum <= 11) {
+      if (isEveningContext && hourNum >= 5) {
+        // Evening context - use PM time (5-11 PM)
+        adjusted = hourNum + 12;
+        console.log(`Evening context detected in "${timeStr}", adjusted ${hourNum} to ${adjusted}:00`);
+      } else if (isMorningContext) {
+        // Morning context - keep as AM time
+        adjusted = hourNum;
+        console.log(`Morning context detected in "${timeStr}", keeping as ${adjusted}:00 AM`);
+      } else if (isAfternoonContext) {
+        // Afternoon context - use PM time for 1-5
+        adjusted = hourNum + 12;
+        console.log(`Afternoon context detected in "${timeStr}", adjusted ${hourNum} to ${adjusted}:00`);
+      } else {
+        // Default behavior - assume PM for 1-11 in absence of specific context
+        adjusted = hourNum + 12;
+        console.log(`No specific context in "${timeStr}", assuming PM, adjusted ${hourNum} to ${adjusted}:00`);
+      }
+    }
     
     return `${adjusted.toString().padStart(2, '0')}:00`;
   }

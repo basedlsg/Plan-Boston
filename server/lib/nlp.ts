@@ -96,7 +96,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   
   // Initialize the result structure
   const appFormatRequest: StructuredRequest = {
-    startLocation: geminiResult.startLocation || "Central London", // Default to Central London
+    startLocation: geminiResult.startLocation || "Midtown", // Default to Midtown Manhattan
     destinations: [],
     fixedTimes: [],
     preferences: {
@@ -229,7 +229,30 @@ function extractLocations(text: string): LocationContext[] {
   const phrases = text.split(/[,.]|\s+(?:then|and|to|at)\s+/);
 
   for (const phrase of phrases) {
-    // Look for location indicators
+    // Look for common NYC street name patterns like "Wall St" or "5th Ave"
+    const streetMatch = phrase.match(/\b(wall\s*st|fifth\s*ave|5th\s*avenue|broadway|times\s*square|madison\s*ave|lexington\s*ave|park\s*ave)\b/i);
+    if (streetMatch?.[1]) {
+      const streetName = streetMatch[1].trim();
+      console.log(`Found NYC street reference: "${streetName}"`);
+      
+      // Map common street abbreviations to full names
+      const normalizedStreet = streetName.toLowerCase()
+        .replace(/wall\s*st/, "Wall Street")
+        .replace(/5th\s*ave/, "Fifth Avenue")
+        .replace(/fifth\s*ave/, "Fifth Avenue")
+        .replace(/madison\s*ave/, "Madison Avenue")
+        .replace(/lexington\s*ave/, "Lexington Avenue")
+        .replace(/park\s*ave/, "Park Avenue");
+      
+      locations.push({
+        name: normalizedStreet,
+        confidence: 0.9,
+        type: "street"
+      });
+      continue;
+    }
+    
+    // Look for location indicators with prepositions (in, at, near, from)
     const locationMatch = phrase.match(/(?:in|at|near|from)\s+([A-Z][a-zA-Z\s]+)/);
     if (locationMatch?.[1]) {
       const location = findLocation(locationMatch[1]);
