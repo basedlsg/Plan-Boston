@@ -129,14 +129,14 @@ export async function searchPlace(
 
     // Build search query with appropriate context
     let searchQuery = normalizedLocation;
-    if (!normalizedLocation.toLowerCase().includes('london')) {
+    if (!normalizedLocation.toLowerCase().includes('new york')) {
       // Add more specific context for stations and streets
       if (normalizedLocation.toLowerCase().includes('station')) {
-        searchQuery = `${normalizedLocation}, Underground Station, London`;
+        searchQuery = `${normalizedLocation}, Subway Station, New York`;
       } else if (matchingArea) {
-        searchQuery = `${normalizedLocation}, ${matchingArea.borough || 'London'}, UK`;
+        searchQuery = `${normalizedLocation}, ${matchingArea.borough || 'New York'}, NY`;
       } else {
-        searchQuery = `${normalizedLocation}, London`;
+        searchQuery = `${normalizedLocation}, New York`;
       }
     }
 
@@ -147,7 +147,7 @@ export async function searchPlace(
       // First find the landmark
       const landmarkParams = new URLSearchParams({
         query: searchQuery,
-        region: "uk",
+        region: "us",
         key: GOOGLE_PLACES_API_KEY || "",
         language: "en",
         radius: "5000"

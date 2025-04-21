@@ -1,5 +1,27 @@
 import { nycAreas, NYCArea } from "../data/new-york-areas";
 
+// Dictionary of neighborhood name variations and colloquial references
+// This helps match common ways people refer to neighborhoods
+const NYC_NEIGHBORHOOD_VARIATIONS: Record<string, string[]> = {
+  "Harlem": ["harlem", "uptown harlem", "upper harlem", "central harlem"],
+  "East Harlem": ["spanish harlem", "el barrio", "east harlem"],
+  "West Village": ["west village", "greenwich village west", "west village nyc"],
+  "Greenwich Village": ["greenwich village", "the village", "village"],
+  "SoHo": ["soho", "so ho", "south of houston"],
+  "TriBeCa": ["tribeca", "tri beca", "triangle below canal"],
+  "Financial District": ["fidi", "financial district", "wall street area"],
+  "Upper East Side": ["ues", "upper east side", "east side"],
+  "Upper West Side": ["uws", "upper west side", "west side"],
+  "Williamsburg": ["williamsburg", "billyburg", "north brooklyn"],
+  "Dumbo": ["dumbo", "down under manhattan bridge overpass"],
+  "Times Square": ["times square", "times sq", "broadway district", "theater district"],
+  "East Village": ["east village", "alphabet city", "lower east side north"],
+  "Midtown": ["midtown", "midtown manhattan", "central manhattan"],
+  "Chelsea": ["chelsea", "chelsea nyc", "west chelsea"],
+  "Lower East Side": ["les", "lower east side", "lower manhattan east"],
+  "Murray Hill": ["murray hill", "kips bay area", "midtown east"]
+};
+
 // Common NYC stations/subway stops that should always have "station" appended
 const COMMON_STATIONS = [
   "Grand Central",
@@ -107,7 +129,14 @@ export function normalizeLocationName(location: string): string {
   
   const lowercased = trimmed.toLowerCase();
   
-  // Check for common spelling corrections first
+  // Check for colloquial neighborhood names first
+  for (const [canonicalName, variations] of Object.entries(NYC_NEIGHBORHOOD_VARIATIONS)) {
+    if (variations.includes(lowercased)) {
+      return canonicalName;
+    }
+  }
+  
+  // Check for common spelling corrections
   for (const [misspelled, correct] of Object.entries(SPELLING_CORRECTIONS)) {
     if (lowercased === misspelled) {
       return correct;
