@@ -898,6 +898,40 @@ export async function registerRoutes(app: Express) {
       res.status(500).json({ message: error.message });
     }
   });
+  
+  // Test endpoint for timezone functionality
+  app.get("/api/test-timezone", (req, res) => {
+    // Create a test with different time formats
+    const testTimes = [
+      "3pm",
+      "15:00",
+      "morning",
+      "noon",
+      "evening",
+      "at 6",
+      "around 3 PM"
+    ];
+    
+    const results = testTimes.map(timeStr => {
+      // Process the time using our new functions
+      const normalizedTime = parseAndNormalizeTime(timeStr);
+      const isoTime = timeStringToNYCISOString(timeStr);
+      const displayTime = formatISOToNYCTime(isoTime);
+      
+      return {
+        original: timeStr,
+        normalized: normalizedTime,
+        iso: isoTime,
+        display: displayTime
+      };
+    });
+    
+    res.status(200).json({
+      message: "NYC timezone test results",
+      currentNYCTime: formatInTimeZone(new Date(), NYC_TIMEZONE, 'yyyy-MM-dd h:mm:ss a zzz'),
+      results
+    });
+  });
 
   return httpServer;
 }
