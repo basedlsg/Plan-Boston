@@ -220,39 +220,25 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Check if there's a specific search preference from multiple possible locations
         let searchPreference: string | undefined = undefined;
         
-        // First check for the new top-level venuePreference field we added
-        if (entry.venuePreference) {
+        // First check for the venue preference at the top level of the Gemini response object
+        if (geminiResult.venuePreference) {
+          searchPreference = geminiResult.venuePreference;
+          console.log(`Found top-level venue preference in Gemini response: "${searchPreference}" for activity: ${entry.activity}`);
+        }
+        // Then check for the entry-specific venuePreference field directly
+        else if (entry.venuePreference) {
           searchPreference = entry.venuePreference;
-          console.log(`Found venue preference in top-level field: "${searchPreference}"`);
+          console.log(`Found entry-level venue preference: "${searchPreference}" for activity: ${entry.activity}`);
         }
         // Then check if searchParameters.venuePreference exists
         else if (entry.searchParameters?.venuePreference) {
           searchPreference = entry.searchParameters.venuePreference;
-          console.log(`Found venue preference in searchParameters: "${searchPreference}"`);
+          console.log(`Found venue preference in searchParameters: "${searchPreference}" for activity: ${entry.activity}`);
         }
-        // Finally try to extract from activity description if it contains venue-type keywords
-        else {
-          const activityDesc = entry.activity.toLowerCase();
-          const venueKeywords = [
-            "authentic", "traditional", "hipster", "trendy", "upscale", 
-            "casual", "artisanal", "specialty", "boutique", "unique"
-          ];
-          
-          for (const keyword of venueKeywords) {
-            if (activityDesc.includes(keyword)) {
-              // Extract possible venue preference from activity description
-              const words = activityDesc.split(' ');
-              const keywordIndex = words.findIndex(w => w.includes(keyword));
-              
-              if (keywordIndex !== -1 && keywordIndex < words.length - 1) {
-                // Take up to 4 words after the keyword to capture the venue preference
-                const preference = words.slice(keywordIndex, keywordIndex + 4).join(' ');
-                console.log(`Extracted venue preference from activity description: "${preference}"`);
-                searchPreference = preference;
-                break;
-              }
-            }
-          }
+        
+        // Log whether we found a preference or not, for debugging
+        if (!searchPreference) {
+          console.log(`No venue preference found in Gemini data for activity: ${entry.activity}`);
         }
         
         // Store in our map, potentially overwriting less specific entries
@@ -309,39 +295,25 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Check if there's a specific search preference from multiple possible locations
         let searchPreference: string | undefined = undefined;
         
-        // First check for the new top-level venuePreference field we added
-        if (entry.venuePreference) {
+        // First check for the venue preference at the top level of the Gemini response object
+        if (geminiResult.venuePreference) {
+          searchPreference = geminiResult.venuePreference;
+          console.log(`Found top-level venue preference in Gemini response: "${searchPreference}" for flexible activity: ${entry.activity}`);
+        }
+        // Then check for the entry-specific venuePreference field directly
+        else if (entry.venuePreference) {
           searchPreference = entry.venuePreference;
-          console.log(`Found venue preference in top-level field (flexible): "${searchPreference}"`);
+          console.log(`Found entry-level venue preference (flexible): "${searchPreference}" for activity: ${entry.activity}`);
         }
         // Then check if searchParameters.venuePreference exists
         else if (entry.searchParameters?.venuePreference) {
           searchPreference = entry.searchParameters.venuePreference;
-          console.log(`Found venue preference in searchParameters (flexible): "${searchPreference}"`);
+          console.log(`Found venue preference in searchParameters (flexible): "${searchPreference}" for activity: ${entry.activity}`);
         }
-        // Finally try to extract from activity description if it contains venue-type keywords
-        else {
-          const activityDesc = entry.activity.toLowerCase();
-          const venueKeywords = [
-            "authentic", "traditional", "hipster", "trendy", "upscale", 
-            "casual", "artisanal", "specialty", "boutique", "unique"
-          ];
-          
-          for (const keyword of venueKeywords) {
-            if (activityDesc.includes(keyword)) {
-              // Extract possible venue preference from activity description
-              const words = activityDesc.split(' ');
-              const keywordIndex = words.findIndex(w => w.includes(keyword));
-              
-              if (keywordIndex !== -1 && keywordIndex < words.length - 1) {
-                // Take up to 4 words after the keyword to capture the venue preference
-                const preference = words.slice(keywordIndex, keywordIndex + 4).join(' ');
-                console.log(`Extracted venue preference from flexible activity: "${preference}"`);
-                searchPreference = preference;
-                break;
-              }
-            }
-          }
+        
+        // Log whether we found a preference or not, for debugging
+        if (!searchPreference) {
+          console.log(`No venue preference found in Gemini data for flexible activity: ${entry.activity}`);
         }
         
         // Only add if we don't already have this activity, or if we're adding a more specific type
