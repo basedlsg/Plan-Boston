@@ -293,7 +293,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     destinations: extractedLocations.map(loc => loc.name),
     fixedTimes: extractedActivities.length > 0 ? 
       extractedActivities.map(activity => {
-        const location = extractedLocations[0]?.name || "London";
+        const location = extractedLocations[0]?.name || "Midtown";
         
         // Try to extract time from the query directly if it's a simple time reference
         const time = timeFromQuery || activity.timeContext?.preferredTime || 
@@ -310,7 +310,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       }) : 
       // If no activities extracted but we found a time, create an entry with that time
       timeFromQuery ? [{
-        location: extractedLocations[0]?.name || "London",
+        location: extractedLocations[0]?.name || "Midtown",
         time: timeFromQuery,
         type: 'activity',
         searchTerm: query
@@ -427,9 +427,9 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
           if (geminiResult.fixedTimes.length > 0) {
             for (const fixedTime of geminiResult.fixedTimes) {
               // Only process if location is generic but searchTerm contains hints
-              if ((fixedTime.location === "London" || fixedTime.location === "Central London") && fixedTime.searchTerm) {
+              if ((fixedTime.location === "New York" || fixedTime.location === "NYC" || fixedTime.location === "Midtown") && fixedTime.searchTerm) {
                 const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
-                if (enhancedLocation && enhancedLocation !== "London" && enhancedLocation !== "Central London") {
+                if (enhancedLocation && enhancedLocation !== "New York" && enhancedLocation !== "NYC" && enhancedLocation !== "Midtown") {
                   fixedTime.location = enhancedLocation;
                   console.log(`Enhanced fixed time location from generic to "${enhancedLocation}"`);
                 }
@@ -478,7 +478,7 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
         if (fallbackStructure.fixedTimes.length > 0) {
           for (const fixedTime of fallbackStructure.fixedTimes) {
             // Only process if location is explicitly set to "London" (generic) but searchTerm contains hints
-            if (fixedTime.location === "London" && fixedTime.searchTerm) {
+            if ((fixedTime.location === "New York" || fixedTime.location === "NYC" || fixedTime.location === "Midtown") && fixedTime.searchTerm) {
               const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
               if (enhancedLocation && enhancedLocation !== "London") {
                 fixedTime.location = enhancedLocation;
@@ -504,16 +504,16 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
     try {
       // Then use our comprehensive Gemini prompt for enhanced understanding
       const prompt = `
-You are a London travel planning expert with deep knowledge of London's geography, neighborhoods, and venues. Analyze this request carefully:
+You are a New York City travel planning expert with deep knowledge of NYC's geography, neighborhoods, and venues. Analyze this request carefully:
 
 "${query}"
 
-TASK: Provide a complete interpretation for creating a London itinerary with Google Places API integration.
+TASK: Provide a complete interpretation for creating a NYC itinerary with Google Places API integration.
 
-Step 1: Identify all London locations with full context:
-- Distinguish between neighborhoods (Soho, Mayfair), landmarks (British Museum), and transport hubs (King's Cross)
-- For ambiguous references, clarify which specific London location is meant
-- Recognize colloquial area names and local terminology (The City, West End, etc.)
+Step 1: Identify all NYC locations with full context:
+- Distinguish between neighborhoods (SoHo, Greenwich Village), landmarks (Empire State Building), and transport hubs (Grand Central)
+- For ambiguous references, clarify which specific NYC location is meant
+- Recognize colloquial area names and local terminology (The Village, Midtown, FiDi, etc.)
 
 Step 2: Understand all activities with venue-specific details:
 - Extract explicit activities (coffee, lunch, museum visit)
@@ -649,7 +649,7 @@ RETURN ONLY this JSON structure:
             }
             
             return {
-              location: activity.location || "London",
+              location: activity.location || "Midtown",
               time: timeValue,
               type: activity.searchParameters?.type,
               searchTerm: activity.searchParameters?.searchTerm || activity.description,
