@@ -47,11 +47,14 @@ async function testNYCLocationMatching() {
     try {
       // Test searching with Google Places API
       const searchResult = await searchPlace(location, { type: 'neighborhood' });
-      if (searchResult) {
+      if (searchResult && searchResult.primary) {
         console.log('Google Places API result:');
-        console.log(`- Name: ${searchResult.name}`);
-        console.log(`- Address: ${searchResult.address}`);
-        console.log(`- Location: ${JSON.stringify(searchResult.location)}`);
+        console.log(`- Name: ${searchResult.primary.name}`);
+        console.log(`- Address: ${searchResult.primary.address}`);
+        console.log(`- Location: ${JSON.stringify(searchResult.primary.location)}`);
+        if (searchResult.alternatives && searchResult.alternatives.length > 0) {
+          console.log(`- Found ${searchResult.alternatives.length} alternative venues`);
+        }
       } else {
         console.log('No Google Places API result found');
       }
