@@ -1,0 +1,35 @@
+Use preferences extracted by Gemini (like "sando place") to influence the keywords sent to the Google Places API.
+
+Prompt:
+"The application currently ignores user preferences for venues (e.g., 'Would love a great sando place') during the Google Places search. Gemini extracts this into searchParameters in its raw response, but it's not used.
+
+Open server/lib/nlp.ts. Find the function convertGeminiResultToAppFormat or where the Gemini response is processed.
+
+When iterating through Gemini's fixedTimeEntries or flexibleTimeEntries to create the app's fixedTimes array, access the top-level searchParameters from the raw Gemini response (e.g., rawGeminiData.searchParameters).
+
+For each app fixedTime entry being created, check if its activity (e.g., 'Lunch') corresponds to a key in the searchParameters (e.g., searchParameters.lunch).
+
+If there's a match, add a new field to the app fixedTime entry, perhaps called searchPreference, containing the preference value (e.g., searchPreference: "sando place").
+
+Open server/routes.ts. Find the loop where it processes each fixedTime appointment and prepares the searchOptions object before calling searchForPlace.
+
+Inside the loop, before defining searchOptions or just after, check if the current fixedTime item has the searchPreference field we added in step 1.
+
+If fixedTime.searchPreference exists:
+
+Add logic to translate the preference into search keywords. For MVP, a simple mapping is fine:
+
+let preferenceKeywords: string[] = [];
+if (fixedTime.searchPreference?.toLowerCase().includes('sando') || fixedTime.searchPreference?.toLowerCase().includes('sandwich')) {
+    preferenceKeywords.push('sandwich');
+} 
+// Add more 'else if' conditions for other preferences you anticipate
+Use code with caution.
+TypeScript
+Modify the creation of searchOptions.keywords. Make sure to include the preferenceKeywords along with the default keywords (like ['restaurant', 'food', 'dining']). Ensure you don't duplicate keywords. Example:
+
+// Assuming defaultKeywords = ['restaurant', 'food', 'dining'] etc.
+searchOptions.keywords = [...new Set([...defaultKeywords, ...preferenceKeywords])];
+Use code with caution.
+TypeScript
+Make sure the searchTerm in searchOptions still primarily reflects the activity (like "Lunch"), while the keywords handle the preference.

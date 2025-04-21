@@ -86,6 +86,7 @@ type FixedTimeEntry = {
   keywords?: string[];
   minRating?: number;
   displayTime?: string; // New property for formatted display time in NYC timezone
+  searchPreference?: string; // Specific user preference for the venue (e.g., "sandwich place")
 };
 
 /**
@@ -194,6 +195,15 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Create a key for this activity
         const activityKey = createActivityKey(entry.location, entry.activity);
         
+        // Check if there's a specific search preference from searchParameters
+        let searchPreference: string | undefined = undefined;
+        
+        // Check if there's a search preference in the entry
+        if (entry.searchParameters?.venuePreference) {
+          searchPreference = entry.searchParameters.venuePreference;
+          console.log(`Found venue preference in fixed time entry: "${searchPreference}"`);
+        }
+        
         // Store in our map, potentially overwriting less specific entries
         activityMap.set(activityKey, {
           location: entry.location,
@@ -202,7 +212,8 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           searchTerm: entry.activity,
           keywords: entry.searchParameters?.specificRequirements || undefined,
           minRating: 4.0, // Default to high quality
-          displayTime: displayTime // Add the display time for the frontend
+          displayTime: displayTime, // Add the display time for the frontend
+          searchPreference: searchPreference // Add user's specific venue preference
         });
         
         console.log(`Processed fixed time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}, type: ${activityType}`);
@@ -264,6 +275,15 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Create a key for this activity
         const activityKey = createActivityKey(entry.location, entry.activity);
         
+        // Check if there's a specific search preference from searchParameters
+        let searchPreference: string | undefined = undefined;
+        
+        // Check if there's a search preference in the entry
+        if (entry.searchParameters?.venuePreference) {
+          searchPreference = entry.searchParameters.venuePreference;
+          console.log(`Found venue preference in flexible time entry: "${searchPreference}"`);
+        }
+        
         // Only add if we don't already have this activity, or if we're adding a more specific type
         if (!activityMap.has(activityKey)) {
           activityMap.set(activityKey, {
@@ -272,7 +292,8 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
             type: activityType,
             searchTerm: entry.activity,
             minRating: 4.0, // Default to high quality
-            displayTime: displayTime // Add the display time for the frontend
+            displayTime: displayTime, // Add the display time for the frontend
+            searchPreference: searchPreference // Add user's specific venue preference
           });
           
           console.log(`Processed flexible time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}, type: ${activityType}`);
