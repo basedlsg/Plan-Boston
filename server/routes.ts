@@ -463,6 +463,15 @@ export async function registerRoutes(app: Express) {
             minRating: typeof timeSlot.minRating === 'number' ? timeSlot.minRating : 0
           };
           
+          // Add searchPreference to keywords if available
+          if (timeSlot.searchPreference) {
+            console.log(`Using search preference for ${timeSlot.location}: "${timeSlot.searchPreference}"`);
+            if (!searchOptions.keywords) {
+              searchOptions.keywords = [];
+            }
+            searchOptions.keywords.push(timeSlot.searchPreference);
+          }
+          
           // Only add additional context if we don't have rich search parameters already
           if ((!timeSlot.searchTerm || !timeSlot.keywords || timeSlot.keywords.length === 0) && timeSlot.type) {
             // Add keywords based on common activity types only if not provided by Gemini

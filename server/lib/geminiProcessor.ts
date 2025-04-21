@@ -22,6 +22,7 @@ const FixedTimeEntrySchema = z.object({
     ambience: z.string().optional().describe("Preferred ambience/vibe"),
     venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
     specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
+    venuePreference: z.string().optional().describe("Specific venue preference (e.g., 'sandwich place', 'sports bar')"),
   }).optional()
 });
 
@@ -37,6 +38,7 @@ const FlexibleTimeEntrySchema = z.object({
     priceLevel: z.enum(["budget", "moderate", "expensive"]).optional().describe("Price level preference"),
     venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
     specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
+    venuePreference: z.string().optional().describe("Specific venue preference (e.g., 'sandwich place', 'sports bar')"),
   }).optional()
 });
 
@@ -158,12 +160,16 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     10. Extract as much detail as possible while staying true to the user's request
     11. For incomplete information, make reasonable assumptions based on context
     12. Keep activity descriptions concise but clear
-    13. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
+    13. VENUE PREFERENCES: Always capture specific venue preferences when mentioned:
+       - If user specifies a venue type like "sandwich place" or "sports bar", include it in searchParameters.venuePreference
+       - Use venuePreference for specific venue descriptions (e.g., "hipster coffee shop", "upscale steakhouse", "family-friendly diner")
+       - This is different from venueType which should be broader categories like "restaurant", "cafe", "bar"
+    14. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
        - You MUST identify a specific NYC location (neighborhood, landmark, station, address)
        - If the user explicitly provides a valid NYC location (e.g., 'SoHo', 'The Met', 'Times Square', 'Wall St'), use that exact location string
        - If the user does NOT specify a location OR provides a vague location like 'somewhere', 'anywhere', 'New York', 'nearby', you MUST use the exact string 'Midtown'
        - The location field must NEVER be null or missing - always provide a valid string value
-    14. SCHEMA COMPLIANCE: Strictly adhere to the JSON schema. Ensure ALL required fields within fixedTimeEntries and flexibleTimeEntries (including time, activity, and location) are present and contain non-null string values.
+    15. SCHEMA COMPLIANCE: Strictly adhere to the JSON schema. Ensure ALL required fields within fixedTimeEntries and flexibleTimeEntries (including time, activity, and location) are present and contain non-null string values.
     
     SCHEMA GUIDANCE:
     - Use fixedTimeEntries for activities with specific clock times (9:00, 14:30, etc.)
@@ -172,6 +178,7 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     - Always provide reasonable defaults: use '09:00' for breakfast, '12:00' for lunch, '19:00' for dinner
     - For other activities, use '10:00' for morning, '14:00' for afternoon, '18:00' for evening
     - Always use 'Midtown' for location if unspecified
+    - Always use searchParameters.venuePreference for specific venue descriptions (e.g., "sandwich place", "trendy bar")
 
     Here's the request to analyze:
     ${query}

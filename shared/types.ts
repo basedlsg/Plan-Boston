@@ -12,6 +12,7 @@ export interface StructuredRequest {
     keywords?: string[];
     minRating?: number;
     displayTime?: string; // Format: "h:mm a" for display in NYC timezone
+    searchPreference?: string; // Specific venue preference (e.g., "sandwich place", "sports bar")
   }>;
   preferences: {
     type?: string;
