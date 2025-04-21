@@ -230,7 +230,7 @@ function extractLocations(text: string): LocationContext[] {
 
   for (const phrase of phrases) {
     // Look for common NYC street name patterns like "Wall St" or "5th Ave"
-    const streetMatch = phrase.match(/\b(wall\s*st|fifth\s*ave|5th\s*avenue|broadway|times\s*square|madison\s*ave|lexington\s*ave|park\s*ave)\b/i);
+    const streetMatch = phrase.match(/\b(wall\s*st|fifth\s*ave|5th\s*avenue|broadway|times\s*square|madison\s*ave|lexington\s*ave|park\s*ave|canal\s*st|mott\s*st|mulberry\s*st|bowery|houston\s*st|bleecker\s*st|christopher\s*st|west\s*4th|42nd\s*st|34th\s*st|14th\s*st|canal\s*st|grand\s*st|delancey\s*st)\b/i);
     if (streetMatch?.[1]) {
       const streetName = streetMatch[1].trim();
       console.log(`Found NYC street reference: "${streetName}"`);
@@ -242,7 +242,19 @@ function extractLocations(text: string): LocationContext[] {
         .replace(/fifth\s*ave/, "Fifth Avenue")
         .replace(/madison\s*ave/, "Madison Avenue")
         .replace(/lexington\s*ave/, "Lexington Avenue")
-        .replace(/park\s*ave/, "Park Avenue");
+        .replace(/park\s*ave/, "Park Avenue")
+        .replace(/canal\s*st/, "Canal Street")
+        .replace(/mott\s*st/, "Mott Street")
+        .replace(/mulberry\s*st/, "Mulberry Street")
+        .replace(/houston\s*st/, "Houston Street")
+        .replace(/bleecker\s*st/, "Bleecker Street")
+        .replace(/christopher\s*st/, "Christopher Street")
+        .replace(/west\s*4th/, "West 4th Street")
+        .replace(/42nd\s*st/, "42nd Street")
+        .replace(/34th\s*st/, "34th Street")
+        .replace(/14th\s*st/, "14th Street")
+        .replace(/grand\s*st/, "Grand Street")
+        .replace(/delancey\s*st/, "Delancey Street");
       
       locations.push({
         name: normalizedStreet,

@@ -184,13 +184,13 @@ export async function getLocationDetails(location: string): Promise<GeocodingRes
  * This provides the most accurate location information possible.
  */
 export async function processLocationWithAIAndMaps(query: string, extractedLocation?: string): Promise<string> {
-  let locationToProcess = extractedLocation || "London";
+  let locationToProcess = extractedLocation || "Midtown";
   
   try {
     // Verify with Google Maps
     const verifiedLocation = await validateAndNormalizeLocation(locationToProcess);
     
-    if (verifiedLocation && verifiedLocation !== "London") {
+    if (verifiedLocation && verifiedLocation !== "New York") {
       console.log(`Location processing result: "${locationToProcess}" -> "${verifiedLocation}"`);
       return verifiedLocation;
     }
@@ -206,13 +206,13 @@ export async function processLocationWithAIAndMaps(query: string, extractedLocat
       
       // Try to validate this extracted location
       const verifiedExplicitLocation = await validateAndNormalizeLocation(locationToProcess);
-      if (verifiedExplicitLocation && verifiedExplicitLocation !== "London") {
+      if (verifiedExplicitLocation && verifiedExplicitLocation !== "New York") {
         console.log(`Verified explicit location: "${verifiedExplicitLocation}"`);
         return verifiedExplicitLocation;
       }
     }
     
-    // If we still don't have a specific location, return the original or "London"
+    // If we still don't have a specific location, return the original or use Midtown as default
     return locationToProcess;
     
   } catch (error) {
