@@ -41,8 +41,8 @@ export async function validateAndNormalizeLocation(location: string): Promise<st
   try {
     const apiKey = getApiKey("GOOGLE_PLACES_API_KEY");
     
-    // Ensure the location is specifically within London
-    const searchQuery = `${location}, London, UK`;
+    // Ensure the location is specifically within New York City
+    const searchQuery = `${location}, New York, NY, USA`;
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
     
     console.log(`Validating location: "${location}" with Google Maps Geocoding API`);
@@ -85,7 +85,7 @@ export async function validateAndNormalizeLocation(location: string): Promise<st
       (component: AddressComponent) => component.types.includes("locality")
     );
     
-    if (locality && locality.long_name.toLowerCase() !== "london") {
+    if (locality && locality.long_name.toLowerCase() !== "new york") {
       console.log(`Validated "${location}" as locality: "${locality.long_name}"`);
       return locality.long_name;
     }
@@ -95,7 +95,7 @@ export async function validateAndNormalizeLocation(location: string): Promise<st
       (component: AddressComponent) => component.types.includes("administrative_area_level_2")
     );
     
-    if (adminArea && adminArea.long_name.toLowerCase() !== "greater london") {
+    if (adminArea && adminArea.long_name.toLowerCase() !== "new york county") {
       console.log(`Validated "${location}" as admin area: "${adminArea.long_name}"`);
       return adminArea.long_name;
     }
@@ -123,7 +123,7 @@ export async function getLocationDetails(location: string): Promise<GeocodingRes
 
   try {
     const apiKey = getApiKey("GOOGLE_PLACES_API_KEY");
-    const searchQuery = `${location}, London, UK`;
+    const searchQuery = `${location}, New York, NY, USA`;
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
     
     const response = await fetch(geocodeUrl);
