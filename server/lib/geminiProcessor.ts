@@ -149,26 +149,29 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     1. Return ONLY valid JSON that matches the schema - no extra text or markdown
     2. For time values, use 24-hour format (e.g., "09:00", "15:30") when possible
     3. If a time is mentioned without AM/PM (e.g., "at 6"), default to PM for evening activities like dinner
-    4. Include all explicitly mentioned fixed times in fixedTimeEntries
-    5. Put activities with vague times (morning, afternoon, evening) in flexibleTimeEntries
-    6. Keep location names authentic to NYC (don't change neighborhood names)
-    7. If the user mentions specific venue requirements, include them in searchParameters
-    8. If the user doesn't specify a budget level, default to "moderate"
-    9. Extract as much detail as possible while staying true to the user's request
-    10. For incomplete information, make reasonable assumptions based on context
-    11. Keep activity descriptions concise but clear
-    12. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
+    4. For vague meal times: use "09:00" for breakfast, "12:00" for lunch, and "19:00" for dinner unless a specific time is given
+    5. Include all explicitly mentioned fixed times in fixedTimeEntries
+    6. Put activities with vague times (morning, afternoon, evening) in flexibleTimeEntries
+    7. Keep location names authentic to NYC (don't change neighborhood names)
+    8. If the user mentions specific venue requirements, include them in searchParameters
+    9. If the user doesn't specify a budget level, default to "moderate"
+    10. Extract as much detail as possible while staying true to the user's request
+    11. For incomplete information, make reasonable assumptions based on context
+    12. Keep activity descriptions concise but clear
+    13. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
        - You MUST identify a specific NYC location (neighborhood, landmark, station, address)
        - If the user explicitly provides a valid NYC location (e.g., 'SoHo', 'The Met', 'Times Square', 'Wall St'), use that exact location string
        - If the user does NOT specify a location OR provides a vague location like 'somewhere', 'anywhere', 'New York', 'nearby', you MUST use the exact string 'Midtown'
        - The location field must NEVER be null or missing - always provide a valid string value
-    13. SCHEMA COMPLIANCE: Strictly adhere to the JSON schema. Ensure ALL required fields within fixedTimeEntries and flexibleTimeEntries (including time, activity, and location) are present and contain non-null string values.
+    14. SCHEMA COMPLIANCE: Strictly adhere to the JSON schema. Ensure ALL required fields within fixedTimeEntries and flexibleTimeEntries (including time, activity, and location) are present and contain non-null string values.
     
     SCHEMA GUIDANCE:
     - Use fixedTimeEntries for activities with specific clock times (9:00, 14:30, etc.)
     - Use flexibleTimeEntries for activities with time periods (morning, afternoon, etc.)
     - Both entry types MUST include: time, activity, location (never null, use 'Midtown' when unspecified)
-    - Always provide reasonable defaults: '13:00' for time if unspecified, 'Midtown' for location if unspecified
+    - Always provide reasonable defaults: use '09:00' for breakfast, '12:00' for lunch, '19:00' for dinner
+    - For other activities, use '10:00' for morning, '14:00' for afternoon, '18:00' for evening
+    - Always use 'Midtown' for location if unspecified
 
     Here's the request to analyze:
     ${query}
