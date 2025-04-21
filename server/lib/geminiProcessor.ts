@@ -216,6 +216,9 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
         // Successfully validated
         const structuredData = validationResult.data;
         
+        // Additional logging to see the raw response
+        console.log(`Raw Gemini structured data:`, JSON.stringify(structuredData, null, 2));
+        
         // Log the successful interaction
         await logAiInteraction({
           sessionId: sessionIdForLogging,
