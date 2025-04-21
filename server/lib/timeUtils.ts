@@ -31,6 +31,35 @@ export function parseAndNormalizeTime(timeStr: string): string {
   
   // Handle relative time periods (morning, afternoon, evening, night)
   const timeOfDay = timeStr.toLowerCase().trim();
+  
+  // Extract time from "around X" phrases first
+  const aroundTimeMatch = timeOfDay.match(/around\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if (aroundTimeMatch) {
+    // This matches phrases like "around 3" or "around 3pm" or "around 3:30 PM"
+    let [_, hours, minutes, meridian] = aroundTimeMatch;
+    let hoursNum = parseInt(hours);
+    
+    // Handle meridian (AM/PM) if provided
+    if (meridian) {
+      const isPM = meridian.toLowerCase().startsWith('p');
+      // Handle 12 AM -> 00:00, 12 PM -> 12:00
+      if (hoursNum === 12) {
+        hoursNum = isPM ? 12 : 0;
+      } else if (isPM) {
+        hoursNum += 12;
+      }
+    } else {
+      // If no AM/PM provided, assume PM for 1-11 during the day
+      if (hoursNum >= 1 && hoursNum <= 11) {
+        hoursNum += 12;
+      }
+    }
+    
+    const minutesNum = minutes ? parseInt(minutes) : 0;
+    return `${hoursNum.toString().padStart(2, '0')}:${minutesNum.toString().padStart(2, '0')}`;
+  }
+  
+  // Standard time periods
   if (['morning', 'breakfast', 'dawn', 'early'].some(term => timeOfDay.includes(term))) {
     return "09:00"; // 9 AM for morning
   }

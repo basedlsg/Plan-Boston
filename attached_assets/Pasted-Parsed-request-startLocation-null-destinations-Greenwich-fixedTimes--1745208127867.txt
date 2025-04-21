@@ -1,0 +1,128 @@
+Parsed request: {
+  startLocation: null,
+  destinations: [ 'Greenwich' ],
+  fixedTimes: [
+    {
+      location: 'Greenwich',
+      time: '15:00',
+      type: 'cafe',
+      searchTerm: "I'd like to have a coffee with a client on wall st at a place with a great view around noon"
+    },
+    {
+      location: 'Greenwich',
+      time: '15:00',
+      type: 'restaurant',
+      searchTerm: 'have lunch in West Village around 3 PM'
+    }
+  ],
+  preferences: { requirements: [] }
+}
+Parsed time "06:00" as "06:00" (6:00:00 AM)
+Processing fixed time appointment: {
+  location: 'Greenwich',
+  time: '15:00',
+  type: 'cafe',
+  searchTerm: "I'd like to have a coffee with a client on wall st at a place with a great view around noon",
+  keywords: undefined,
+  minRating: undefined
+}
+Parsed time "15:00" as "15:00" (3:00:00 PM)
+Search options for Greenwich: {
+  "type": "cafe",
+  "requireOpenNow": true,
+  "keywords": [
+    "coffee",
+    "espresso",
+    "cafe"
+  ],
+  "searchTerm": "I'd like to have a coffee with a client on wall st at a place with a great view around noon",
+  "minRating": 0
+}
+Original fixedTimes values: {
+  searchTerm: "I'd like to have a coffee with a client on wall st at a place with a great view around noon",
+  keywords: undefined,
+  minRating: undefined,
+  type: 'cafe'
+}
+Search request for query: "Greenwich" with options: {
+  type: 'cafe',
+  requireOpenNow: true,
+  keywords: [ 'coffee', 'espresso', 'cafe' ],
+  searchTerm: "I'd like to have a coffee with a client on wall st at a place with a great view around noon",
+  minRating: 0
+}
+Normalized location: Greenwich -> Greenwich
+Searching for cafe near Greenwich, New York (using searchType: cafe, searchKeyword: coffee shop)
+No results found for cafe near Greenwich. Trying a more generic search...
+Fallback search successful, found 3 results
+Found 2 cafe venues near Greenwich: {
+  primary: 'Witches Village Cafe',
+  alternatives: [ 'Main Street Cafe' ]
+}
+Found location: {
+  name: 'Witches Village Cafe',
+  address: '2 Washington Square, Greenwich, NY 12834, USA',
+  type: [
+    'cafe',
+    'bakery',
+    'store',
+    'restaurant',
+    'food',
+    'point_of_interest',
+    'establishment'
+  ],
+  alternatives: 1
+}
+Processing fixed time appointment: {
+  location: 'Greenwich',
+  time: '15:00',
+  type: 'restaurant',
+  searchTerm: 'have lunch in West Village around 3 PM',
+  keywords: undefined,
+  minRating: undefined
+}
+Parsed time "15:00" as "15:00" (3:00:00 PM)
+Search options for Greenwich: {
+  "type": "restaurant",
+  "requireOpenNow": true,
+  "keywords": [
+    "restaurant",
+    "food",
+    "dining"
+  ],
+  "searchTerm": "have lunch in West Village around 3 PM",
+  "minRating": 4
+}
+Original fixedTimes values: {
+  searchTerm: 'have lunch in West Village around 3 PM',
+  keywords: undefined,
+  minRating: undefined,
+  type: 'restaurant'
+}
+Search request for query: "Greenwich" with options: {
+  type: 'restaurant',
+  requireOpenNow: true,
+  keywords: [ 'restaurant', 'food', 'dining' ],
+  searchTerm: 'have lunch in West Village around 3 PM',
+  minRating: 4
+}
+Normalized location: Greenwich -> Greenwich
+Searching for restaurant near Greenwich, New York (using searchType: restaurant, searchKeyword: restaurant)
+No results found for restaurant near Greenwich. Trying a more generic search...
+Fallback search successful, found 13 results
+Found 4 restaurant venues near Greenwich: {
+  primary: 'Witches Village Cafe',
+  alternatives: [ 'Main Street Cafe', "Wallie's of Greenwich", 'Juniper' ]
+}
+Found location: {
+  name: 'Witches Village Cafe',
+  address: '2 Washington Square, Greenwich, NY 12834, USA',
+  type: [
+    'cafe',
+    'bakery',
+    'restaurant',
+    'store',
+    'food',
+    'point_of_interest',
+    'establishment'
+  ],

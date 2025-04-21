@@ -108,7 +108,7 @@ function detectActivityTypeFromQuery(query: string, activity: string): string {
  * Parse a time string to a Date object
  * Provides consistent time parsing throughout the application
  * 
- * @param timeStr Time string to parse (e.g., "3pm", "15:00", "evening", "at 6")
+ * @param timeStr Time string to parse (e.g., "3pm", "15:00", "evening", "at 6", "around noon", "around 3 PM")
  * @param baseDate Base date to use (defaults to current date)
  * @returns Date object with the specified time
  */
@@ -118,6 +118,7 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
     const currentDate = baseDate || new Date();
     
     // Get the normalized time string in 24-hour format (HH:MM)
+    // Now handles "around X" phrases properly with our improved timeUtils
     const normalizedTime = parseAndNormalizeTime(timeStr);
     
     // Extract hours and minutes

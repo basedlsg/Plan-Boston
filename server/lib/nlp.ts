@@ -131,17 +131,15 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Convert time formats
         let timeValue = entry.time || "12:00";
         
-        // Handle time periods (morning, afternoon, evening)
+        // Handle time periods using the timeUtils functions
         if (typeof timeValue === 'string') {
-          if (timeValue.toLowerCase() === 'morning') {
-            timeValue = '10:00';
-          } else if (timeValue.toLowerCase() === 'afternoon') {
-            timeValue = '14:00';
-          } else if (timeValue.toLowerCase() === 'evening') {
-            timeValue = '18:00';
-          } else if (timeValue.toLowerCase() === 'night') {
-            timeValue = '20:00';
-          }
+          // Import the parseAndNormalizeTime function from timeUtils
+          const { parseAndNormalizeTime } = require('./timeUtils');
+          
+          // This will handle "morning", "afternoon", "evening", "night"
+          // as well as "around noon", "around 3 PM", etc.
+          timeValue = parseAndNormalizeTime(timeValue);
+          console.log(`Normalized time from "${entry.time}" to "${timeValue}"`);
         }
         
         // Try to determine a reasonable type based on the activity
