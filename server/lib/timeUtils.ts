@@ -3,7 +3,15 @@
  * 
  * This module provides functions for parsing and handling time-related operations
  * for the itinerary planning application.
+ * 
+ * All time operations use America/New_York timezone unless otherwise specified.
  */
+
+import { format as formatDateFns } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+
+// Default timezone for NYC
+export const NYC_TIMEZONE = 'America/New_York';
 
 /**
  * Parse and normalize a time string into 24-hour format (HH:MM)
@@ -188,57 +196,178 @@ export function isNight(timeStr: string): boolean {
 
 /**
  * Format a time string for display (e.g. "14:30" to "2:30 PM")
+ * Uses the NYC timezone for consistent time display
+ * 
+ * @param timeStr String representation of time to format
+ * @param format Optional date-fns format string (defaults to 'h:mm a')
+ * @returns Formatted time string in NYC timezone
  */
-export function formatTimeForDisplay(timeStr: string): string {
+export function formatTimeForDisplay(timeStr: string, format: string = 'h:mm a'): string {
+  // First normalize the time string
   const normalized = parseAndNormalizeTime(timeStr);
-  const [hoursStr, minutesStr] = normalized.split(':');
   
+  // Check if timeStr is already a full ISO timestamp
+  if (timeStr.includes('T') && timeStr.includes('Z')) {
+    // If it's already an ISO string, use it directly
+    try {
+      const date = new Date(timeStr);
+      return formatInTimeZone(date, NYC_TIMEZONE, format);
+    } catch (err) {
+      console.warn(`Could not parse ISO timestamp: ${timeStr}, falling back to manual parsing`);
+      // Fall through to the manual parsing below
+    }
+  }
+  
+  // Extract hours and minutes
+  const [hoursStr, minutesStr] = normalized.split(':');
   const hours = parseInt(hoursStr);
   const minutes = parseInt(minutesStr);
   
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+  // Create a date with today's date and the parsed time
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
   
-  return `${displayHours}:${minutesStr} ${period}`;
+  // Convert to NYC timezone and format
+  const nycDate = toZonedTime(date, NYC_TIMEZONE);
+  return formatInTimeZone(nycDate, NYC_TIMEZONE, format);
 }
 
 /**
  * Add minutes to a time string and return the new time
+ * Handles timezone-aware calculations in NYC timezone
+ * 
+ * @param timeStr String representation of time
+ * @param minutesToAdd Number of minutes to add
+ * @returns New time string in HH:MM format (24-hour)
  */
 export function addMinutesToTime(timeStr: string, minutesToAdd: number): string {
+  // Check if timeStr is already an ISO timestamp
+  if (timeStr.includes('T') && timeStr.includes('Z')) {
+    try {
+      // Parse the ISO timestamp
+      const date = new Date(timeStr);
+      
+      // Convert to NYC timezone
+      const nycDate = toZonedTime(date, NYC_TIMEZONE);
+      
+      // Add minutes
+      nycDate.setMinutes(nycDate.getMinutes() + minutesToAdd);
+      
+      // Format and return as HH:MM
+      return formatInTimeZone(nycDate, NYC_TIMEZONE, 'HH:mm');
+    } catch (err) {
+      console.warn(`Could not parse ISO timestamp: ${timeStr}, falling back to manual parsing`);
+      // Fall through to the manual parsing below
+    }
+  }
+  
+  // Handle regular HH:MM time string
   const normalized = parseAndNormalizeTime(timeStr);
   const [hours, minutes] = normalized.split(':').map(Number);
   
+  // Create a date object with the current date
   const date = new Date();
+  
+  // Set the hours and minutes
   date.setHours(hours, minutes, 0, 0);
-  date.setMinutes(date.getMinutes() + minutesToAdd);
   
-  const newHours = date.getHours().toString().padStart(2, '0');
-  const newMinutes = date.getMinutes().toString().padStart(2, '0');
+  // Convert to NYC timezone
+  const nycDate = toZonedTime(date, NYC_TIMEZONE);
   
-  return `${newHours}:${newMinutes}`;
+  // Add the minutes
+  nycDate.setMinutes(nycDate.getMinutes() + minutesToAdd);
+  
+  // Return formatted time string
+  return formatInTimeZone(nycDate, NYC_TIMEZONE, 'HH:mm');
 }
 
 /**
  * Calculate the time difference in minutes between two time strings
+ * Handles timezone-aware calculations in NYC timezone
+ * 
+ * @param startTimeStr Start time string (either HH:MM or ISO timestamp)
+ * @param endTimeStr End time string (either HH:MM or ISO timestamp)
+ * @returns Number of minutes between the two times
  */
 export function getMinutesBetweenTimes(startTimeStr: string, endTimeStr: string): number {
-  const start = parseAndNormalizeTime(startTimeStr);
-  const end = parseAndNormalizeTime(endTimeStr);
-  
-  const [startHours, startMinutes] = start.split(':').map(Number);
-  const [endHours, endMinutes] = end.split(':').map(Number);
-  
-  const startDate = new Date();
-  startDate.setHours(startHours, startMinutes, 0, 0);
-  
-  const endDate = new Date();
-  endDate.setHours(endHours, endMinutes, 0, 0);
-  
-  // Handle times that cross midnight
-  if (endDate < startDate) {
-    endDate.setDate(endDate.getDate() + 1);
+  // Process start time
+  let startDate: Date;
+  if (startTimeStr.includes('T') && startTimeStr.includes('Z')) {
+    // ISO timestamp
+    startDate = new Date(startTimeStr);
+  } else {
+    // Parse HH:MM format
+    const start = parseAndNormalizeTime(startTimeStr);
+    const [startHours, startMinutes] = start.split(':').map(Number);
+    
+    startDate = new Date();
+    startDate.setHours(startHours, startMinutes, 0, 0);
   }
   
-  return Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
+  // Process end time
+  let endDate: Date;
+  if (endTimeStr.includes('T') && endTimeStr.includes('Z')) {
+    // ISO timestamp
+    endDate = new Date(endTimeStr);
+  } else {
+    // Parse HH:MM format
+    const end = parseAndNormalizeTime(endTimeStr);
+    const [endHours, endMinutes] = end.split(':').map(Number);
+    
+    endDate = new Date();
+    endDate.setHours(endHours, endMinutes, 0, 0);
+  }
+  
+  // Convert both dates to NYC timezone
+  const startNYC = toZonedTime(startDate, NYC_TIMEZONE);
+  const endNYC = toZonedTime(endDate, NYC_TIMEZONE);
+  
+  // Handle times that cross midnight
+  if (endNYC < startNYC) {
+    endNYC.setDate(endNYC.getDate() + 1);
+  }
+  
+  // Calculate difference in minutes
+  return Math.round((endNYC.getTime() - startNYC.getTime()) / (1000 * 60));
+}
+
+/**
+ * Converts a time string to an ISO timestamp in NYC timezone
+ * 
+ * @param timeStr Time string to convert (HH:MM format or natural language)
+ * @returns ISO timestamp string representing the time in NYC timezone
+ */
+export function timeStringToNYCISOString(timeStr: string): string {
+  // First normalize the time to HH:MM format
+  const normalized = parseAndNormalizeTime(timeStr);
+  
+  // Split hours and minutes
+  const [hours, minutes] = normalized.split(':').map(Number);
+  
+  // Create a date with today's date
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  
+  // Convert to NYC timezone
+  const nycDate = toZonedTime(date, NYC_TIMEZONE);
+  
+  // Return ISO string
+  return nycDate.toISOString();
+}
+
+/**
+ * Creates a formatted display time string from an ISO timestamp
+ * 
+ * @param isoTimestamp ISO timestamp to format
+ * @param format Optional format string (defaults to 'h:mm a')
+ * @returns Formatted time string in NYC timezone
+ */
+export function formatISOToNYCTime(isoTimestamp: string, format: string = 'h:mm a'): string {
+  try {
+    const date = new Date(isoTimestamp);
+    return formatInTimeZone(date, NYC_TIMEZONE, format);
+  } catch (err) {
+    console.warn(`Invalid ISO timestamp: ${isoTimestamp}, returning as-is`);
+    return isoTimestamp;
+  }
 }

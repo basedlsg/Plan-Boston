@@ -13,7 +13,12 @@ import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, NYCArea,
 import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWeatherAwareVenue } from "./lib/weatherService";
 
 // Import the timeUtils module
-import { parseAndNormalizeTime } from './lib/timeUtils';
+import { 
+  parseAndNormalizeTime, 
+  NYC_TIMEZONE, 
+  formatISOToNYCTime, 
+  timeStringToNYCISOString 
+} from './lib/timeUtils';
 
 /**
  * Detect the appropriate activity type from query and activity text
@@ -116,8 +121,26 @@ function detectActivityTypeFromQuery(query: string, activity: string): string {
  */
 function parseTimeString(timeStr: string, baseDate?: Date): Date {
   try {
+    // Using the imported constants and functions from timeUtils that are already imported at the top of the file
+    
     // Use provided base date or current date
     const currentDate = baseDate || new Date();
+    
+    // Check if we already have an ISO timestamp (contains 'T' and 'Z')
+    if (timeStr.includes('T') && timeStr.includes('Z')) {
+      try {
+        // Parse the ISO timestamp and return a Date object
+        const date = new Date(timeStr);
+        
+        // Log for debugging
+        console.log(`Parsed ISO timestamp "${timeStr}" to NYC time: ${formatInTimeZone(date, NYC_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz')}`);
+        
+        return date;
+      } catch (err) {
+        console.warn(`Failed to parse ISO timestamp: ${timeStr}, falling back to manual parsing`);
+        // Fall through to manual parsing
+      }
+    }
     
     // Get the normalized time string in 24-hour format (HH:MM)
     // Now handles "around X" phrases properly with our improved timeUtils
@@ -128,29 +151,31 @@ function parseTimeString(timeStr: string, baseDate?: Date): Date {
     const hours = parseInt(hoursStr, 10);
     const minutes = parseInt(minutesStr, 10);
     
-    // Create a new date with the specified time in UTC
+    // Create a new date with the specified time based on the provided base date
     const date = new Date(currentDate);
     date.setHours(hours, minutes, 0, 0);
     
-    // NYC timezone
-    const nycTimeZone = 'America/New_York';
-    
     // Convert to NYC timezone
-    const nycDate = toZonedTime(date, nycTimeZone);
+    const nycDate = toZonedTime(date, NYC_TIMEZONE);
     
     // Format time for logging
-    const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+    const displayTime = formatInTimeZone(nycDate, NYC_TIMEZONE, 'h:mm a');
+    const formattedTime = formatInTimeZone(nycDate, NYC_TIMEZONE, 'yyyy-MM-dd HH:mm:ss zzz');
     
-    console.log(`Parsed time "${formattedTime}" to NYC time: ${formatInTimeZone(date, nycTimeZone, 'yyyy-MM-dd HH:mm:ss zzz')}`);
+    console.log(`Parsed time "${timeStr}" to normalized time "${normalizedTime}" and NYC time: ${displayTime} (${formattedTime})`);
     
-    return date;
+    return nycDate;
   } catch (error) {
     console.error(`Error parsing time:`, error);
     // Return a default time if parsing fails
     const defaultDate = baseDate || new Date();
     // Default to 10:00 AM NYC time if parsing fails
     defaultDate.setHours(10, 0, 0, 0);
-    return defaultDate;
+    
+    // Convert to NYC timezone
+    const nycDate = toZonedTime(defaultDate, 'America/New_York');
+    
+    return nycDate;
   }
 }
 
