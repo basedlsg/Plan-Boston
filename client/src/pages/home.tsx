@@ -28,27 +28,27 @@ function validateQuery(query: string): { valid: boolean; message?: string } {
   if (query.length < 5) {
     return { 
       valid: false, 
-      message: "Please provide more details about what you'd like to do in London."
+      message: "Please provide more details about what you'd like to do in New York City."
     };
   }
   
-  // Check if query mentions a London location
-  const commonLondonLocations = [
-    "soho", "covent garden", "camden", "shoreditch", "mayfair", 
-    "piccadilly", "oxford street", "kensington", "hyde park", 
-    "westminster", "london bridge", "south bank", "notting hill",
-    "greenwich", "brixton", "islington", "hackney", "knightsbridge",
-    "central london", "london"
+  // Check if query mentions a NYC location
+  const commonNYCLocations = [
+    "soho", "times square", "central park", "brooklyn", "manhattan", 
+    "midtown", "greenwich village", "east village", "west village", 
+    "financial district", "wall street", "chelsea", "tribeca",
+    "dumbo", "williamsburg", "harlem", "chinatown", "little italy",
+    "upper east side", "upper west side", "nyc", "new york"
   ];
   
-  const hasLocation = commonLondonLocations.some(location => 
+  const hasLocation = commonNYCLocations.some(location => 
     query.toLowerCase().includes(location)
   );
   
   if (!hasLocation) {
     return { 
       valid: false, 
-      message: "Please specify at least one London location (e.g., Soho, Covent Garden, or Central London)."
+      message: "Please specify at least one NYC location (e.g., Times Square, SoHo, or Manhattan)."
     };
   }
   
@@ -77,7 +77,7 @@ function enhanceVagueQuery(query: string): string {
       lowercaseQuery.includes("sandwich") ||
       lowercaseQuery.includes("breakfast")
     ) {
-      return `${query} in Covent Garden around ${new Date().getHours() < 15 ? '13:00' : '19:00'}`;
+      return `${query} in Greenwich Village around ${new Date().getHours() < 15 ? '13:00' : '19:00'}`;
     }
     
     // Coffee/cafe queries
@@ -86,7 +86,7 @@ function enhanceVagueQuery(query: string): string {
       lowercaseQuery.includes("cafe") ||
       lowercaseQuery.includes("tea")
     ) {
-      return `${query} in Soho around ${new Date().getHours() < 12 ? '10:30' : '15:00'}`;
+      return `${query} in SoHo around ${new Date().getHours() < 12 ? '10:30' : '15:00'}`;
     }
     
     // Shopping queries
@@ -95,7 +95,7 @@ function enhanceVagueQuery(query: string): string {
       lowercaseQuery.includes("store") ||
       lowercaseQuery.includes("buy")
     ) {
-      return `${query} on Oxford Street in the afternoon`;
+      return `${query} in Midtown in the afternoon`;
     }
     
     // Attraction/sightseeing queries
@@ -104,7 +104,7 @@ function enhanceVagueQuery(query: string): string {
       lowercaseQuery.includes("visit") ||
       lowercaseQuery.includes("attraction")
     ) {
-      return `${query} near Westminster in the afternoon`;
+      return `${query} near Times Square in the afternoon`;
     }
     
     // Spa/relaxation queries
@@ -113,7 +113,7 @@ function enhanceVagueQuery(query: string): string {
       lowercaseQuery.includes("massage") ||
       lowercaseQuery.includes("relax")
     ) {
-      return `${query} in Mayfair in the afternoon`;
+      return `${query} in Upper East Side in the afternoon`;
     }
     
     // Nightlife queries
@@ -123,12 +123,12 @@ function enhanceVagueQuery(query: string): string {
       lowercaseQuery.includes("drink") ||
       lowercaseQuery.includes("club")
     ) {
-      return `${query} in Soho around 20:00`;
+      return `${query} in East Village around 20:00`;
     }
     
     // For any other very short queries, make a generic enhancement
     if (lowercaseQuery.length < 10) {
-      return `${query} in Central London in the ${new Date().getHours() < 12 ? 'afternoon' : 'evening'}`;
+      return `${query} in Manhattan in the ${new Date().getHours() < 12 ? 'afternoon' : 'evening'}`;
     }
   }
   
@@ -293,8 +293,8 @@ export default function Home() {
                           <FormControl>
                             <Textarea
                               placeholder={window.innerWidth < 640 ? 
-                                "e.g. Kings Cross 9am, brunch in Covent Garden, British Museum, dinner at The Ivy 7pm" : 
-                                "e.g. Start at Kings Cross at 9am, café near Covent Garden for brunch, then British Museum until dinner at The Ivy at 7pm."
+                                "e.g. Times Square 9am, brunch in SoHo, Metropolitan Museum, dinner at Carbone 7pm" : 
+                                "e.g. Start at Grand Central at 9am, café near SoHo for brunch, then Met Museum until dinner at Carbone at 7pm."
                               }
                               className="min-h-[100px] resize-y"
                               {...field}

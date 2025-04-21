@@ -9,7 +9,18 @@ const COMMON_STATIONS = [
   "World Trade Center",
   "Atlantic Terminal",
   "Columbus Circle",
-  "Herald Square"
+  "Herald Square",
+  "Bryant Park",
+  "Fulton Street",
+  "Canal Street",
+  "Wall Street",
+  "Chambers Street",
+  "Jay Street",
+  "Borough Hall",
+  "Rockefeller Center",
+  "14th Street",
+  "Lexington Avenue",
+  "34th Street"
 ] as const;
 
 // Common activity mappings to Google Places API types
@@ -58,9 +69,32 @@ const SPELLING_CORRECTIONS: Record<string, string> = {
   'soho': 'SoHo',
   'williamsburg': 'Williamsburg',
   'dumbo': 'DUMBO',
+  'down under manhattan bridge': 'DUMBO',
   'downtown brooklyn': 'Downtown Brooklyn',
   'upper east': 'Upper East Side',
-  'upper west': 'Upper West Side'
+  'upper west': 'Upper West Side',
+  'west village': 'West Village',
+  'east village': 'East Village',
+  'financial district': 'Financial District',
+  'fin district': 'Financial District',
+  'fidi': 'Financial District',
+  'midtown': 'Midtown',
+  'mid town': 'Midtown',
+  'china town': 'Chinatown',
+  'chelsea': 'Chelsea',
+  'gramercy': 'Gramercy',
+  'gramercy park': 'Gramercy Park',
+  'hells kitchen': 'Hell\'s Kitchen',
+  'hell\'s kitchen': 'Hell\'s Kitchen',
+  'tribeca': 'Tribeca',
+  'little italy': 'Little Italy',
+  'nolita': 'NoLita',
+  'noho': 'NoHo',
+  'flatbush': 'Flatbush',
+  'brooklyn heights': 'Brooklyn Heights',
+  'park slope': 'Park Slope',
+  'grand central': 'Grand Central Station',
+  'penn sta': 'Penn Station'
 };
 
 // Helper to normalize location names with improved spelling corrections

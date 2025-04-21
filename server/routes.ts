@@ -8,7 +8,7 @@ import { StructuredRequest } from "@shared/types";
 import { insertPlaceSchema, insertItinerarySchema, Place, PlaceDetails } from "@shared/schema";
 import { z } from "zod";
 import { format } from 'date-fns';
-import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, LondonArea, londonAreas } from "./data/london-areas";
+import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, NYCArea, nycAreas } from "./data/new-york-areas";
 import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWeatherAwareVenue } from "./lib/weatherService";
 
 // Import the timeUtils module
@@ -216,9 +216,9 @@ export function findInterestingActivities(
   };
 
   // Try to get area information for weather-aware suggestions
-  let areaInfo: LondonArea | undefined;
+  let areaInfo: NYCArea | undefined;
   try {
-    const possibleArea = londonAreas.find((a: LondonArea) => 
+    const possibleArea = nycAreas.find((a: NYCArea) => 
       a.name.toLowerCase() === location.toLowerCase() || 
       a.neighbors.some((n: string) => n.toLowerCase() === location.toLowerCase())
     );
