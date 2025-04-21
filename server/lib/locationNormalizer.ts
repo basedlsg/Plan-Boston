@@ -1,14 +1,15 @@
-import { londonAreas, LondonArea } from "../data/london-areas";
+import { nycAreas, NYCArea } from "../data/new-york-areas";
 
-// Common London stations that should always have "station" appended
+// Common NYC stations/subway stops that should always have "station" appended
 const COMMON_STATIONS = [
-  "Bank",
-  "Embankment",
-  "Liverpool Street",
-  "Charing Cross",
-  "Victoria",
-  "Waterloo",
-  "London Bridge"
+  "Grand Central",
+  "Penn Station",
+  "Times Square",
+  "Union Square",
+  "World Trade Center",
+  "Atlantic Terminal",
+  "Columbus Circle",
+  "Herald Square"
 ] as const;
 
 // Common activity mappings to Google Places API types
