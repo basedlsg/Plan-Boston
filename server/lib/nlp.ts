@@ -106,6 +106,40 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
     }
   };
   
+  // Create a map to track unique activities by location and similar activity text
+  // This will help us avoid duplicates from both fixedTimeEntries and flexibleTimeEntries
+  const activityMap = new Map<string, FixedTimeEntry>();
+  
+  // Helper function to determine the most specific activity type
+  const determineActivityType = (activityText: string): string => {
+    const activityLower = activityText.toLowerCase();
+    
+    if (activityLower.includes('museum') || activityLower.includes('gallery') || activityLower.includes('exhibition')) {
+      return "museum";
+    } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || 
+               activityLower.includes('breakfast') || activityLower.includes('eat') || 
+               activityLower.includes('restaurant') || activityLower.includes('food')) {
+      return "restaurant";
+    } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
+      return "cafe";
+    } else if (activityLower.includes('park') || activityLower.includes('garden')) {
+      return "park";
+    } else if (activityLower.includes('shop') || activityLower.includes('store') || activityLower.includes('mall')) {
+      return "shopping_mall";
+    } else {
+      return "attraction";
+    }
+  };
+  
+  // Helper function to create a unique key for an activity at a location
+  const createActivityKey = (location: string, activityText: string): string => {
+    // Normalize the location and activity text to avoid case-sensitive duplicates
+    const normalizedLocation = location.toLowerCase();
+    const normalizedActivity = activityText.toLowerCase();
+    
+    return `${normalizedLocation}|${determineActivityType(normalizedActivity)}`;
+  };
+  
   // Process fixed time entries if present
   if (geminiResult.fixedTimeEntries && Array.isArray(geminiResult.fixedTimeEntries)) {
     for (const entry of geminiResult.fixedTimeEntries) {
@@ -121,15 +155,23 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           console.log(`Fixed time entry: Normalized time from "${originalTime}" to "${timeValue}"`);
         }
         
-        appFormatRequest.fixedTimes.push({
+        // Determine the most appropriate activity type
+        const activityType = entry.searchParameters?.venueType || determineActivityType(entry.activity);
+        
+        // Create a key for this activity
+        const activityKey = createActivityKey(entry.location, entry.activity);
+        
+        // Store in our map, potentially overwriting less specific entries
+        activityMap.set(activityKey, {
           location: entry.location,
           time: timeValue,
-          type: entry.searchParameters?.venueType || "activity",
+          type: activityType,
           searchTerm: entry.activity,
           keywords: entry.searchParameters?.specificRequirements || undefined,
           minRating: 4.0 // Default to high quality
         });
-        console.log(`Added fixed time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}`);
+        
+        console.log(`Processed fixed time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}, type: ${activityType}`);
       }
     }
   }
@@ -151,31 +193,31 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           console.log(`Normalized time from "${entry.time}" to "${timeValue}"`);
         }
         
-        // Try to determine a reasonable type based on the activity
-        let activityType = "attraction";
-        const activityLower = entry.activity?.toLowerCase() || '';
+        // Determine the most appropriate activity type
+        const activityType = determineActivityType(entry.activity);
         
-        if (activityLower.includes('museum') || activityLower.includes('gallery')) {
-          activityType = "museum";
-        } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || activityLower.includes('eat')) {
-          activityType = "restaurant";
-        } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
-          activityType = "cafe";
+        // Create a key for this activity
+        const activityKey = createActivityKey(entry.location, entry.activity);
+        
+        // Only add if we don't already have this activity, or if we're adding a more specific type
+        if (!activityMap.has(activityKey)) {
+          activityMap.set(activityKey, {
+            location: entry.location,
+            time: timeValue,
+            type: activityType,
+            searchTerm: entry.activity,
+            minRating: 4.0 // Default to high quality
+          });
+          
+          console.log(`Processed flexible time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}, type: ${activityType}`);
         }
-        
-        // Add to fixed times
-        appFormatRequest.fixedTimes.push({
-          location: entry.location,
-          time: timeValue,
-          type: activityType,
-          searchTerm: entry.activity,
-          minRating: 4.0 // Default to high quality
-        });
-        
-        console.log(`Added flexible time entry to fixedTimes: ${entry.location} at ${timeValue}, activity: ${entry.activity}`);
       }
     }
   }
+  
+  // Convert our map of unique activities to the fixedTimes array
+  appFormatRequest.fixedTimes = Array.from(activityMap.values());
+  console.log(`Final de-duplicated activities count: ${appFormatRequest.fixedTimes.length}`);
   
   // If we have no start location but have activities, use the first activity location
   if (!appFormatRequest.startLocation && appFormatRequest.fixedTimes.length > 0) {
@@ -366,59 +408,11 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
       const geminiResult = convertGeminiToAppFormat(rawGeminiResult);
       
       if (geminiResult) {
-        // Process flexible time entries - KEY FIX for activities without specific times
-        if (rawGeminiResult.flexibleTimeEntries && Array.isArray(rawGeminiResult.flexibleTimeEntries)) {
-          console.log("Found flexibleTimeEntries in Gemini response:", rawGeminiResult.flexibleTimeEntries);
-          
-          for (const entry of rawGeminiResult.flexibleTimeEntries) {
-            if (entry && typeof entry === 'object' && entry.location) {
-              // Convert time formats
-              let timeValue = entry.time;
-              
-              // Handle time periods (morning, afternoon, evening)
-              if (typeof timeValue === 'string') {
-                if (timeValue.toLowerCase() === 'morning') {
-                  timeValue = '10:00';
-                } else if (timeValue.toLowerCase() === 'afternoon') {
-                  timeValue = '14:00';
-                } else if (timeValue.toLowerCase() === 'evening') {
-                  timeValue = '18:00';
-                } else if (timeValue.toLowerCase() === 'night') {
-                  timeValue = '20:00';
-                }
-              }
-              
-              // Try to determine a reasonable type based on the activity
-              let activityType = "attraction";
-              const activityLower = entry.activity?.toLowerCase() || '';
-              
-              if (activityLower.includes('museum') || activityLower.includes('gallery')) {
-                activityType = "museum";
-              } else if (activityLower.includes('lunch') || activityLower.includes('dinner') || activityLower.includes('eat')) {
-                activityType = "restaurant";
-              } else if (activityLower.includes('coffee') || activityLower.includes('cafe')) {
-                activityType = "cafe";
-              }
-              
-              // Add to fixed times if not already there
-              const existingTimeEntry = geminiResult.fixedTimes.find(ft => 
-                ft.location === entry.location && ft.type === activityType
-              );
-              
-              if (!existingTimeEntry) {
-                geminiResult.fixedTimes.push({
-                  location: entry.location,
-                  time: timeValue,
-                  type: activityType,
-                  searchTerm: entry.activity,
-                  minRating: 4.0 // Default to high quality
-                });
-                
-                console.log(`Added flexible time entry to fixedTimes: ${entry.location} at ${timeValue}, activity: ${entry.activity}`);
-              }
-            }
-          }
-        }
+        // We don't need to process flexible time entries here again.
+        // The convertGeminiToAppFormat function we just updated already 
+        // handles both fixedTimeEntries and flexibleTimeEntries with proper de-duplication.
+        console.log("Using optimized Gemini result that was converted by convertGeminiToAppFormat function");
+        console.log(`Gemini result contains ${geminiResult.fixedTimes.length} de-duplicated activities`);
         
         // Sort fixed times chronologically if they exist
         if (geminiResult.fixedTimes) {
