@@ -16,6 +16,8 @@ import { getApiKey, isFeatureEnabled, validateApiKey } from "../config";
 import { processWithGemini, StructuredRequest as GeminiStructuredRequest } from './geminiProcessor';
 import { validateAndNormalizeLocation, processLocationWithAIAndMaps } from './mapGeocoding';
 import { parseAndNormalizeTime } from './timeUtils';
+import { format as formatDateFns } from 'date-fns';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 // Configure Gemini model with safety settings
 let genAI: GoogleGenerativeAI | null = null;
@@ -83,6 +85,7 @@ type FixedTimeEntry = {
   searchTerm?: string;
   keywords?: string[];
   minRating?: number;
+  displayTime?: string; // New property for formatted display time in NYC timezone
 };
 
 /**
@@ -146,6 +149,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
       if (entry && typeof entry === 'object' && entry.location && entry.time) {
         // Parse time expressions using our enhanced timeUtils
         let timeValue = entry.time;
+        let displayTime = '';
         
         // Process time values with our improved parser
         if (typeof timeValue === 'string') {
@@ -153,6 +157,35 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           const originalTime = timeValue;
           timeValue = parseAndNormalizeTime(timeValue);
           console.log(`Fixed time entry: Normalized time from "${originalTime}" to "${timeValue}"`);
+          
+          // Convert the normalized time string (HH:MM) to a proper timezone-aware datetime
+          const timeZone = 'America/New_York';
+          const nowInNYC = new Date();
+          const year = nowInNYC.getFullYear();
+          const month = nowInNYC.getMonth();
+          const day = nowInNYC.getDate();
+          
+          // Extract hours and minutes from the normalized time
+          const [hours, minutes] = timeValue.split(':').map(Number);
+          
+          // Construct a date string in NYC timezone format
+          const dateStringInNYCTz = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${timeValue}:00`;
+          
+          // Create a proper timezone-aware date object
+          // This date object represents the wall-clock time in NYC
+          const nycDate = toZonedTime(new Date(), timeZone);
+          nycDate.setHours(hours, minutes, 0, 0);
+          
+          // Format the NYC date as ISO string for storage/transfer
+          const isoTimestamp = nycDate.toISOString();
+          
+          // Also store a pre-formatted NYC time string for display
+          displayTime = formatInTimeZone(nycDate, timeZone, 'h:mm a');
+          
+          // Use the ISO timestamp as the time value
+          timeValue = isoTimestamp;
+          
+          console.log(`Converted time "${originalTime}" to NYC time: ${displayTime} (${isoTimestamp})`);
         }
         
         // Determine the most appropriate activity type
@@ -168,7 +201,8 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           type: activityType,
           searchTerm: entry.activity,
           keywords: entry.searchParameters?.specificRequirements || undefined,
-          minRating: 4.0 // Default to high quality
+          minRating: 4.0, // Default to high quality
+          displayTime: displayTime // Add the display time for the frontend
         });
         
         console.log(`Processed fixed time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}, type: ${activityType}`);
@@ -184,13 +218,43 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
       if (entry && typeof entry === 'object' && entry.location) {
         // Convert time formats
         let timeValue = entry.time || "12:00";
+        let displayTime = '';
         
         // Handle time periods using the timeUtils functions
         if (typeof timeValue === 'string') {
           // This will handle "morning", "afternoon", "evening", "night"
           // as well as "around noon", "around 3 PM", etc.
+          const originalTime = timeValue;
           timeValue = parseAndNormalizeTime(timeValue);
-          console.log(`Normalized time from "${entry.time}" to "${timeValue}"`);
+          console.log(`Normalized time from "${originalTime}" to "${timeValue}"`);
+          
+          // Convert the normalized time string (HH:MM) to a proper timezone-aware datetime
+          const timeZone = 'America/New_York';
+          const nowInNYC = new Date();
+          const year = nowInNYC.getFullYear();
+          const month = nowInNYC.getMonth();
+          const day = nowInNYC.getDate();
+          
+          // Extract hours and minutes from the normalized time
+          const [hours, minutes] = timeValue.split(':').map(Number);
+          
+          // Construct a date string in NYC timezone format
+          const dateStringInNYCTz = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${timeValue}:00`;
+          
+          // Create a proper timezone-aware date object
+          const nycDate = toZonedTime(new Date(), timeZone);
+          nycDate.setHours(hours, minutes, 0, 0);
+          
+          // Format the NYC date as ISO string for storage/transfer
+          const isoTimestamp = nycDate.toISOString();
+          
+          // Also store a pre-formatted NYC time string for display
+          displayTime = formatInTimeZone(nycDate, timeZone, 'h:mm a');
+          
+          // Use the ISO timestamp as the time value
+          timeValue = isoTimestamp;
+          
+          console.log(`Converted time "${originalTime}" to NYC time: ${displayTime} (${isoTimestamp})`);
         }
         
         // Determine the most appropriate activity type
@@ -206,7 +270,8 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
             time: timeValue,
             type: activityType,
             searchTerm: entry.activity,
-            minRating: 4.0 // Default to high quality
+            minRating: 4.0, // Default to high quality
+            displayTime: displayTime // Add the display time for the frontend
           });
           
           console.log(`Processed flexible time entry: ${entry.activity} at ${entry.location}, time: ${timeValue}, type: ${activityType}`);

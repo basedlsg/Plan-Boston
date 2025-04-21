@@ -1,0 +1,48 @@
+Now that date-fns-tz is installed, we need to ensure times are treated as New York time (America/New_York).
+
+Open server/lib/nlp.ts. Find the function convertGeminiResultToAppFormat (or where the Gemini response fixedTimeEntries and flexibleTimeEntries are processed and converted into the app's fixedTimes array).
+
+Import necessary functions: At the top, add import { zonedTimeToUtc, format } from 'date-fns-tz';
+
+Modify Time Handling: When processing each time string (e.g., "14:00") from Gemini:
+
+Define the target timezone: const timeZone = 'America/New_York';
+
+Parse the time as if it's in NYC time for today's date. This is tricky because we only have HH:MM. A common approach is to combine it with today's date in the target timezone.
+
+Instead of just passing the "HH:MM" string, let's store and pass a full ISO timestamp string that represents that time in UTC, but derived from the NYC time. Example logic:
+
+// Inside the loop processing Gemini entries
+const timeStringFromGemini = entry.time; // e.g., "14:00"
+const timeZone = 'America/New_York';
+
+// Get today's date components in NYC timezone
+const nowInNYC = new Date(); // Or get a reference date if needed
+const year = nowInNYC.getFullYear();
+const month = nowInNYC.getMonth();
+const day = nowInNYC.getDate();
+const [hour, minute] = timeStringFromGemini.split(':').map(Number);
+
+// Construct a Date object assuming it's NYC time components
+// NOTE: This standard Date constructor uses LOCAL system time interpretation initially.
+// We need date-fns-tz to correctly interpret these components IN NYC time.
+// A better way with date-fns-tz: Construct the date string first
+const dateStringInNYCTz = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T${timeStringFromGemini}:00`;
+
+// Convert this date/time string (interpreted in NYC) to a UTC Date object
+const utcDate = zonedTimeToUtc(dateStringInNYCTz, timeZone);
+
+// Format the UTC date back to an ISO string for storage/transfer
+const isoTimestamp = utcDate.toISOString(); 
+
+// In the 'fixedTimes' object being built for the app, use isoTimestamp instead of timeStringFromGemini
+// Example:
+appFixedTimeEntry.time = isoTimestamp; // Store the full timestamp
+appFixedTimeEntry.displayTime = format(utcDate, 'p', { timeZone }); // Store a pre-formatted NYC time string for display
+Use code with caution.
+TypeScript
+Adapt the fixedTimes structure: The objects within the fixedTimes array in Converted app format request should now contain the full isoTimestamp (e.g., time: '2025-04-21T18:00:00.000Z' for 2 PM EDT) and potentially a displayTime field (e.g., displayTime: '2:00 PM').
+
+Open server/routes.ts. Ensure that when scheduling (Processing fixed time appointment), it correctly uses the full timestamp if needed for calculations or comparisons. If it was just using the HH:MM string before, update it.
+
+(Self-correction: Directly creating a Date object and hoping it represents NYC time is unreliable. Converting using zonedTimeToUtc is the correct path).

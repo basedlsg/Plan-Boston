@@ -5,12 +5,13 @@ export interface StructuredRequest {
   destinations: string[];
   fixedTimes: Array<{
     location: string;
-    time: string;  // Format: "HH:MM" (24-hour)
+    time: string;  // Format: ISO timestamp or "HH:MM" (24-hour)
     type?: string; // e.g., "restaurant", "cafe"
     // Additional parameters for enhanced search
     searchTerm?: string;
     keywords?: string[];
     minRating?: number;
+    displayTime?: string; // Format: "h:mm a" for display in NYC timezone
   }>;
   preferences: {
     type?: string;
