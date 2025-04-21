@@ -15,6 +15,7 @@ import {
 import { getApiKey, isFeatureEnabled, validateApiKey } from "../config";
 import { processWithGemini, StructuredRequest as GeminiStructuredRequest } from './geminiProcessor';
 import { validateAndNormalizeLocation, processLocationWithAIAndMaps } from './mapGeocoding';
+import { parseAndNormalizeTime } from './timeUtils';
 
 // Configure Gemini model with safety settings
 let genAI: GoogleGenerativeAI | null = null;
@@ -114,8 +115,6 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         
         // Process time values with our improved parser
         if (typeof timeValue === 'string') {
-          const { parseAndNormalizeTime } = require('./timeUtils');
-          
           // Parse times like "noon", "around 3 PM", etc.
           const originalTime = timeValue;
           timeValue = parseAndNormalizeTime(timeValue);
@@ -146,9 +145,6 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         
         // Handle time periods using the timeUtils functions
         if (typeof timeValue === 'string') {
-          // Import the parseAndNormalizeTime function from timeUtils
-          const { parseAndNormalizeTime } = require('./timeUtils');
-          
           // This will handle "morning", "afternoon", "evening", "night"
           // as well as "around noon", "around 3 PM", etc.
           timeValue = parseAndNormalizeTime(timeValue);
