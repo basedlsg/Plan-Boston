@@ -1,6 +1,6 @@
 import type { PlaceDetails, VenueSearchResult, SearchParameters } from "@shared/schema";
 import { normalizeLocationName, verifyPlaceMatch, suggestSimilarLocations } from "./locationNormalizer";
-import { londonAreas, findAreasByCharacteristics } from "../data/london-areas";
+import { nycAreas, findAreasByCharacteristics } from "../data/new-york-areas";
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
@@ -118,7 +118,7 @@ export async function searchPlace(
     }
     
     // First check if this matches any of our known areas
-    const matchingArea = londonAreas.find(area => 
+    const matchingArea = nycAreas.find(area => 
       area.name.toLowerCase() === query.toLowerCase() ||
       area.neighbors.some(n => n.toLowerCase() === query.toLowerCase())
     );
@@ -474,7 +474,7 @@ export async function searchPlace(
       // Regular landmark search
       const params = new URLSearchParams({
         query: searchQuery,
-        region: "uk",
+        region: "us",
         key: GOOGLE_PLACES_API_KEY || "",
         language: "en",
         radius: "50000" // 50km radius from London center

@@ -132,6 +132,7 @@ export function normalizeLocationName(location: string): string {
   // Check for colloquial neighborhood names first
   for (const [canonicalName, variations] of Object.entries(NYC_NEIGHBORHOOD_VARIATIONS)) {
     if (variations.includes(lowercased)) {
+      console.log(`Matched colloquial name: "${location}" -> "${canonicalName}"`);
       return canonicalName;
     }
   }
@@ -202,6 +203,24 @@ export function verifyPlaceMatch(
   // Exact match
   if (normalized === returnedNormalized) {
     return true;
+  }
+  
+  // Check if this is a known neighborhood variation
+  for (const [canonicalName, variations] of Object.entries(NYC_NEIGHBORHOOD_VARIATIONS)) {
+    // If the requested location is a variation of this canonical neighborhood name
+    if (variations.includes(normalized)) {
+      // Check if the returned name matches or contains the canonical form
+      if (returnedNormalized.includes(canonicalName.toLowerCase())) {
+        console.log(`Matched variation "${normalized}" to canonical "${canonicalName}"`);
+        return true;
+      }
+    }
+    
+    // If the returned location contains any of the variations
+    if (variations.some(variation => returnedNormalized.includes(variation))) {
+      console.log(`Matched returned location "${returnedNormalized}" to a variation of "${canonicalName}"`);
+      return true;
+    }
   }
 
   // Check if the returned place contains the normalized name or vice versa
@@ -295,7 +314,28 @@ export function suggestSimilarLocations(location: string): string[] {
   const normalized = location.toLowerCase().trim();
   const suggestions = new Set<string>();
 
-  // First check stations
+  // First check if this is a neighborhood variation
+  for (const [canonicalName, variations] of Object.entries(NYC_NEIGHBORHOOD_VARIATIONS)) {
+    // If the requested location is similar to any of the variations
+    if (variations.some(variation => 
+      variation.includes(normalized) || normalized.includes(variation)
+    )) {
+      suggestions.add(canonicalName);
+      
+      // If we have a direct match, also suggest the neighboring areas
+      if (variations.includes(normalized)) {
+        const matchingArea = nycAreas.find(area => area.name === canonicalName);
+        if (matchingArea && matchingArea.neighbors) {
+          // Add a few neighboring areas as suggestions
+          matchingArea.neighbors.slice(0, 2).forEach(neighbor => {
+            suggestions.add(neighbor);
+          });
+        }
+      }
+    }
+  }
+  
+  // Then check stations
   for (const station of COMMON_STATIONS) {
     const stationLower = station.toLowerCase();
     if (stationLower.includes(normalized) || normalized.includes(stationLower)) {
