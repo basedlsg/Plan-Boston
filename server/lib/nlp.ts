@@ -480,9 +480,9 @@ export async function parseItineraryRequest(query: string): Promise<StructuredRe
             // Only process if location is explicitly set to "London" (generic) but searchTerm contains hints
             if ((fixedTime.location === "New York" || fixedTime.location === "NYC" || fixedTime.location === "Midtown") && fixedTime.searchTerm) {
               const enhancedLocation = await processLocationWithAIAndMaps(fixedTime.searchTerm);
-              if (enhancedLocation && enhancedLocation !== "London") {
+              if (enhancedLocation && enhancedLocation !== "New York" && enhancedLocation !== "NYC" && enhancedLocation !== "Midtown") {
                 fixedTime.location = enhancedLocation;
-                console.log(`Enhanced fixed time location from "London" to "${enhancedLocation}"`);
+                console.log(`Enhanced fixed time location from generic NYC reference to "${enhancedLocation}"`);
               }
             } else if (fixedTime.location) {
               const validatedLocation = await validateAndNormalizeLocation(fixedTime.location);

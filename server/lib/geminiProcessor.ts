@@ -14,7 +14,7 @@ import { getApiKey, isFeatureEnabled } from '../config';
 const FixedTimeEntrySchema = z.object({
   time: z.string().describe("The time for this activity (e.g., '9:00', '15:30')"),
   activity: z.string().describe("The activity description"),
-  location: z.string().describe("The specific location or area in London"),
+  location: z.string().describe("The specific location or area in NYC"),
   venue: z.string().optional().describe("A specific venue name if mentioned"),
   searchParameters: z.object({
     cuisine: z.string().optional().describe("Type of cuisine if food-related"),
@@ -29,7 +29,7 @@ const FixedTimeEntrySchema = z.object({
 const FlexibleTimeEntrySchema = z.object({
   time: z.string().describe("The time period for this activity (e.g., 'morning', 'afternoon')"),
   activity: z.string().describe("The activity description"),
-  location: z.string().describe("The specific location or area in London"),
+  location: z.string().describe("The specific location or area in NYC"),
   venue: z.string().optional().describe("A specific venue name if mentioned"),
   day: z.string().optional().describe("The day for this activity if different from the main date"),
   searchParameters: z.object({
