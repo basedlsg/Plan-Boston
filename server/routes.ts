@@ -463,9 +463,13 @@ export async function registerRoutes(app: Express) {
             minRating: typeof timeSlot.minRating === 'number' ? timeSlot.minRating : 0
           };
           
-          // Add searchPreference to keywords if available
+          // Add searchPreference directly to the search options if available
           if (timeSlot.searchPreference) {
             console.log(`Using search preference for ${timeSlot.location}: "${timeSlot.searchPreference}"`);
+            // Add as a dedicated property for direct usage in the Google Places search
+            searchOptions.searchPreference = timeSlot.searchPreference;
+            
+            // Also add to keywords for broader matching
             if (!searchOptions.keywords) {
               searchOptions.keywords = [];
             }

@@ -14,6 +14,7 @@ interface SearchOptions {
   keywords?: string[];
   requireOpenNow?: boolean;
   checkReviewsForKeywords?: boolean; // Whether to perform the more intensive review check
+  searchPreference?: string; // Specific venue preference (e.g., "hipster coffee shop", "authentic Jewish deli")
 }
 
 // Helper function to calculate distance between two points using Haversine formula
@@ -89,8 +90,13 @@ export async function searchPlace(
     let searchKeyword = '';
     let keywordsList: string[] = [];
     
-    // Use enhanced search parameters if available
-    if (options.searchTerm) {
+    // Use search preference as the highest priority if available
+    if (options.searchPreference) {
+      console.log(`Using specific venue preference as primary search term: "${options.searchPreference}"`);
+      searchKeyword = options.searchPreference;
+    } 
+    // Otherwise use regular searchTerm if available
+    else if (options.searchTerm) {
       searchKeyword = options.searchTerm;
     } else {
       // Ensure we have at least a basic search term for all searches
@@ -99,6 +105,12 @@ export async function searchPlace(
     
     if (options.keywords && Array.isArray(options.keywords)) {
       keywordsList = options.keywords;
+    }
+    
+    // If we have a searchPreference, add it to the keywords list as well for maximum effect
+    if (options.searchPreference && (!keywordsList.includes(options.searchPreference))) {
+      if (!keywordsList) keywordsList = [];
+      keywordsList.push(options.searchPreference);
     }
 
     // Extract better search terms from complex activity types
