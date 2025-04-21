@@ -530,7 +530,8 @@ export async function registerRoutes(app: Express) {
               scheduledTime: lunchTime.toISOString(),
             });
 
-            scheduledPlaces.add(lunchPlace.place_id);
+            // Use composite key with lunch location
+            scheduledPlaces.add(`${lunchPlace.place_id}:lunch`);
             itineraryPlaces.push({
               place: newPlace,
               time: lunchTime,
@@ -640,8 +641,11 @@ export async function registerRoutes(app: Express) {
             alternatives: venueResult.alternatives.length
           });
 
-          if (scheduledPlaces.has(place.place_id)) {
-            console.log("Skipping duplicate location:", place.name);
+          // Create a composite key using place_id + locationName to allow the same venue for different activities
+          const compositeKey = `${place.place_id}:${timeSlot.location}`;
+          
+          if (scheduledPlaces.has(compositeKey)) {
+            console.log("Skipping duplicate location-activity combination:", place.name, "at", timeSlot.location);
             continue;
           }
 
@@ -673,7 +677,7 @@ export async function registerRoutes(app: Express) {
             }
           }
 
-          scheduledPlaces.add(place.place_id);
+          scheduledPlaces.add(compositeKey);
           itineraryPlaces.push({
             place: newPlace,
             time: appointmentTime,
@@ -821,7 +825,10 @@ export async function registerRoutes(app: Express) {
                 // Use the primary venue from the result
                 let suggestedPlace = venueResult.primary;
 
-                if (suggestedPlace && !scheduledPlaces.has(suggestedPlace.place_id)) {
+                // Create composite key for gap activities including the activity name
+                const gapActivityKey = `${suggestedPlace.place_id}:${activity}`;
+                
+                if (suggestedPlace && !scheduledPlaces.has(gapActivityKey)) {
                 // Calculate evenly spaced time for this activity
                 // First activity starts after 90 mins, subsequent activities are spaced evenly
                 const activityOffset = 90 * 60 * 1000 + (i + 1) * timeSpacing;
@@ -916,7 +923,7 @@ export async function registerRoutes(app: Express) {
                   }
                 }
 
-                scheduledPlaces.add(suggestedPlace.place_id);
+                scheduledPlaces.add(gapActivityKey);
                 itineraryPlaces.push({
                   place: newPlace,
                   time: new Date(activityTime),
@@ -1032,8 +1039,8 @@ export async function registerRoutes(app: Express) {
                     isFixed: false
                   });
                   
-                  // Mark this place as scheduled
-                  scheduledPlaces.add(venueResult.primary.place_id);
+                  // Mark this place as scheduled with composite key
+                  scheduledPlaces.add(`${venueResult.primary.place_id}:${activity.description}`);
                   existingTimes.push(activityTime.getTime());
                 }
               } catch (error) {
