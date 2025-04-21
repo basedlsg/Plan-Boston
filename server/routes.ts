@@ -1219,8 +1219,9 @@ export async function registerRoutes(app: Express) {
               isFixed: false
             });
             
-            // Mark this place as scheduled
-            scheduledPlaces.add(venueResult.primary.place_id);
+            // Mark this place as scheduled with composite key for preference type
+            const preferenceType = parsed.preferences.type || 'general';
+            scheduledPlaces.add(`${venueResult.primary.place_id}:${preferenceType}`);
           }
         } catch (error) {
           console.error(`Error finding venue for preference ${parsed.preferences.type}:`, error);
