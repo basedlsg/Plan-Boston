@@ -16,13 +16,15 @@ const FixedTimeEntrySchema = z.object({
   activity: z.string().describe("The activity description"),
   location: z.string().describe("The specific location or area in NYC"),
   venue: z.string().optional().describe("A specific venue name if mentioned"),
+  // Also extract venue preference directly from the schema for simpler access
+  venuePreference: z.string().optional().describe("EXTRACT THIS FROM THE QUERY: Specific venue type preference (e.g., 'authentic Jewish deli', 'hipster coffee shop', 'traditional Italian restaurant')"),
   searchParameters: z.object({
     cuisine: z.string().optional().describe("Type of cuisine if food-related"),
     priceLevel: z.enum(["budget", "moderate", "expensive"]).optional().describe("Price level preference"),
     ambience: z.string().optional().describe("Preferred ambience/vibe"),
     venueType: z.string().optional().describe("Type of venue (pub, restaurant, etc.)"),
     specificRequirements: z.array(z.string()).optional().describe("Any specific requirements"),
-    venuePreference: z.string().optional().describe("Specific venue preference (e.g., 'sandwich place', 'sports bar')"),
+    venuePreference: z.string().optional().describe("DUPLICATE THIS FROM venuePreference FIELD ABOVE: Specific venue preference (e.g., 'sandwich place', 'sports bar')"),
   }).optional().describe("IMPORTANT: Use venuePreference for specific venue types like 'hipster coffee shop' or 'authentic Jewish deli'")
 });
 
@@ -140,7 +142,8 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
   
   const sessionIdForLogging = sessionId || generateSessionId();
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  // The newest Gemini model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
   
   try {
     // Prepare the prompt with schema details and examples

@@ -205,13 +205,42 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Create a key for this activity
         const activityKey = createActivityKey(entry.location, entry.activity);
         
-        // Check if there's a specific search preference from searchParameters
+        // Check if there's a specific search preference from multiple possible locations
         let searchPreference: string | undefined = undefined;
         
-        // Check if there's a search preference in the entry
-        if (entry.searchParameters?.venuePreference) {
+        // First check for the new top-level venuePreference field we added
+        if (entry.venuePreference) {
+          searchPreference = entry.venuePreference;
+          console.log(`Found venue preference in top-level field: "${searchPreference}"`);
+        }
+        // Then check if searchParameters.venuePreference exists
+        else if (entry.searchParameters?.venuePreference) {
           searchPreference = entry.searchParameters.venuePreference;
-          console.log(`Found venue preference in fixed time entry: "${searchPreference}"`);
+          console.log(`Found venue preference in searchParameters: "${searchPreference}"`);
+        }
+        // Finally try to extract from activity description if it contains venue-type keywords
+        else {
+          const activityDesc = entry.activity.toLowerCase();
+          const venueKeywords = [
+            "authentic", "traditional", "hipster", "trendy", "upscale", 
+            "casual", "artisanal", "specialty", "boutique", "unique"
+          ];
+          
+          for (const keyword of venueKeywords) {
+            if (activityDesc.includes(keyword)) {
+              // Extract possible venue preference from activity description
+              const words = activityDesc.split(' ');
+              const keywordIndex = words.findIndex(w => w.includes(keyword));
+              
+              if (keywordIndex !== -1 && keywordIndex < words.length - 1) {
+                // Take up to 4 words after the keyword to capture the venue preference
+                const preference = words.slice(keywordIndex, keywordIndex + 4).join(' ');
+                console.log(`Extracted venue preference from activity description: "${preference}"`);
+                searchPreference = preference;
+                break;
+              }
+            }
+          }
         }
         
         // Store in our map, potentially overwriting less specific entries
@@ -285,13 +314,42 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
         // Create a key for this activity
         const activityKey = createActivityKey(entry.location, entry.activity);
         
-        // Check if there's a specific search preference from searchParameters
+        // Check if there's a specific search preference from multiple possible locations
         let searchPreference: string | undefined = undefined;
         
-        // Check if there's a search preference in the entry
-        if (entry.searchParameters?.venuePreference) {
+        // First check for the new top-level venuePreference field we added
+        if (entry.venuePreference) {
+          searchPreference = entry.venuePreference;
+          console.log(`Found venue preference in top-level field (flexible): "${searchPreference}"`);
+        }
+        // Then check if searchParameters.venuePreference exists
+        else if (entry.searchParameters?.venuePreference) {
           searchPreference = entry.searchParameters.venuePreference;
-          console.log(`Found venue preference in flexible time entry: "${searchPreference}"`);
+          console.log(`Found venue preference in searchParameters (flexible): "${searchPreference}"`);
+        }
+        // Finally try to extract from activity description if it contains venue-type keywords
+        else {
+          const activityDesc = entry.activity.toLowerCase();
+          const venueKeywords = [
+            "authentic", "traditional", "hipster", "trendy", "upscale", 
+            "casual", "artisanal", "specialty", "boutique", "unique"
+          ];
+          
+          for (const keyword of venueKeywords) {
+            if (activityDesc.includes(keyword)) {
+              // Extract possible venue preference from activity description
+              const words = activityDesc.split(' ');
+              const keywordIndex = words.findIndex(w => w.includes(keyword));
+              
+              if (keywordIndex !== -1 && keywordIndex < words.length - 1) {
+                // Take up to 4 words after the keyword to capture the venue preference
+                const preference = words.slice(keywordIndex, keywordIndex + 4).join(' ');
+                console.log(`Extracted venue preference from flexible activity: "${preference}"`);
+                searchPreference = preference;
+                break;
+              }
+            }
+          }
         }
         
         // Only add if we don't already have this activity, or if we're adding a more specific type
