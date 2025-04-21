@@ -1,6 +1,6 @@
 import { z } from "zod";
 import Fuse from 'fuse.js';
-import { londonAreas, LondonArea } from "../data/london-areas";
+import { nycAreas, NYCArea } from "../data/new-york-areas";
 import { ACTIVITY_TYPE_MAPPINGS } from "./locationNormalizer";
 import { parseAndNormalizeTime } from './timeUtils';
 
@@ -31,7 +31,7 @@ export type ActivityContext = {
 };
 
 // Initialize fuzzy search for locations
-const locationSearcher = new Fuse(londonAreas, {
+const locationSearcher = new Fuse(nycAreas, {
   keys: ['name', 'characteristics', 'neighbors'],
   includeScore: true,
   threshold: 0.4
@@ -74,7 +74,7 @@ const DURATION_EXPRESSIONS: Record<DurationExpression, number> = {
 export function findLocation(query: string): LocationContext | null {
   try {
     // First try exact match in our areas data
-    const exactMatch = londonAreas.find(area => 
+    const exactMatch = nycAreas.find((area: NYCArea) => 
       area.name.toLowerCase() === query.toLowerCase()
     );
 
@@ -95,15 +95,16 @@ export function findLocation(query: string): LocationContext | null {
     const fuzzyResults = locationSearcher.search(query);
     if (fuzzyResults.length > 0) {
       const bestMatch = fuzzyResults[0];
+      const item = bestMatch.item as NYCArea;
       return {
-        name: bestMatch.item.name,
+        name: item.name,
         type: 'neighborhood',
         confidence: 1 - (bestMatch.score || 0),
-        alternatives: fuzzyResults.slice(1, 4).map(r => r.item.name),
+        alternatives: fuzzyResults.slice(1, 4).map(r => (r.item as NYCArea).name),
         context: {
-          nearbyAreas: bestMatch.item.neighbors,
-          borough: bestMatch.item.borough,
-          characteristics: bestMatch.item.characteristics
+          nearbyAreas: item.neighbors,
+          borough: item.borough,
+          characteristics: item.characteristics
         }
       };
     }

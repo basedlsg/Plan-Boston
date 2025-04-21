@@ -46,19 +46,21 @@ export const ACTIVITY_TYPE_MAPPINGS = {
 type ActivityType = keyof typeof ACTIVITY_TYPE_MAPPINGS;
 type Station = typeof COMMON_STATIONS[number];
 
-// Common misspellings and variants of London locations
+// Common misspellings and variants of NYC locations
 const SPELLING_CORRECTIONS: Record<string, string> = {
-  'picadilly': 'Piccadilly',
-  'piccadily': 'Piccadilly',
-  'liecester': 'Leicester',
-  'liecester square': 'Leicester Square',
-  'leiscester': 'Leicester',
-  'leicster': 'Leicester',
-  'kings cross': 'King\'s Cross',
-  'kings-cross': 'King\'s Cross',
-  'covent-garden': 'Covent Garden',
-  'covent garden': 'Covent Garden',
-  'coventgarden': 'Covent Garden'
+  'greenwhich': 'Greenwich',
+  'greenwich village': 'Greenwich Village',
+  'green village': 'Greenwich Village',
+  'times sq': 'Times Square',
+  'time square': 'Times Square',
+  'timesquare': 'Times Square',
+  'central pk': 'Central Park',
+  'soho': 'SoHo',
+  'williamsburg': 'Williamsburg',
+  'dumbo': 'DUMBO',
+  'downtown brooklyn': 'Downtown Brooklyn',
+  'upper east': 'Upper East Side',
+  'upper west': 'Upper West Side'
 };
 
 // Helper to normalize location names with improved spelling corrections
@@ -176,8 +178,8 @@ export function verifyPlaceMatch(
       }
     }
     
-    // Check if it's a known London area in our database
-    const matchingArea = londonAreas.find(area => {
+    // Check if it's a known NYC area in our database
+    const matchingArea = nycAreas.find((area: NYCArea) => {
       const areaLower = area.name.toLowerCase();
       
       // Check the area name
@@ -190,7 +192,7 @@ export function verifyPlaceMatch(
       
       // Check the neighboring areas if available
       if (area.neighbors && Array.isArray(area.neighbors)) {
-        return area.neighbors.some(n => {
+        return area.neighbors.some((n: string) => {
           if (typeof n !== 'string') return false;
           const nLower = n.toLowerCase();
           return nLower === normalized || 
@@ -224,7 +226,7 @@ export function verifyPlaceMatch(
 export function suggestSimilarLocations(location: string): string[] {
   // Handle null, undefined, or empty string
   if (!location || typeof location !== 'string' || location.trim() === '') {
-    return ['Covent Garden', 'Soho', 'Camden']; // Default popular areas
+    return ['Times Square', 'SoHo', 'Central Park']; // Default popular areas
   }
   
   const normalized = location.toLowerCase().trim();
@@ -242,7 +244,7 @@ export function suggestSimilarLocations(location: string): string[] {
   const requestWords = normalized.split(/\s+/).filter(word => word.length > 2);
 
   // Check areas, preserving original area names from our database
-  for (const area of londonAreas) {
+  for (const area of nycAreas) {
     const areaLower = area.name.toLowerCase();
     
     // Full or partial location matching
@@ -273,7 +275,7 @@ export function suggestSimilarLocations(location: string): string[] {
   
   // If we didn't find any matches, return popular areas
   if (suggestions.size === 0) {
-    return ['Covent Garden', 'Soho', 'Camden'];
+    return ['Times Square', 'SoHo', 'Greenwich Village'];
   }
 
   // Convert to array and sort by relevance
