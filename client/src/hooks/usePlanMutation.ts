@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '../lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { formatInTimeZone } from 'date-fns-tz';
 
 interface PlanFormData {
   date: string;
@@ -29,10 +30,27 @@ export function usePlanMutation() {
       const venues = responseData.places.map((place: any) => {
         // Convert API response format to Venue format expected by the UI
         const venueDetails = place.details || {};
+        
+        // Parse and format the time with timezone awareness
+        let formattedTime;
+        if (place.displayTime) {
+          // If displayTime is provided from the backend, use it directly
+          formattedTime = place.displayTime;
+        } else if (place.scheduledTime) {
+          // Otherwise, format the ISO timestamp with NYC timezone
+          formattedTime = formatInTimeZone(
+            new Date(place.scheduledTime),
+            'America/New_York',
+            'h:mm a'
+          );
+        } else {
+          // Fallback if no time information is available
+          formattedTime = "Time not specified";
+        }
+        
         return {
           name: place.name,
-          // Use displayTime if available or parse the scheduledTime from ISO string
-          time: place.displayTime || new Date(place.scheduledTime).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit', hour12: true}),
+          time: formattedTime, // This will be properly formatted for NYC timezone
           address: place.address,
           rating: venueDetails.rating || 0,
           categories: venueDetails.types || []

@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
+import { format, formatInTimeZone } from 'date-fns-tz';
 
 interface Venue {
   name: string;
-  time: string;
+  time: string; // Can be either displayTime (formatted) or ISO timestamp
   address: string;
   rating: number;
   categories: string[];
@@ -75,7 +76,10 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
                 </h2>
                 
                 <div className="space-y-3 mb-5">
-                  <p className="text-lg font-semibold venue-time" style={{ fontFamily: "'Inter', sans-serif" }}>{venue.time}</p>
+                  <p className="text-lg font-semibold venue-time" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    {/* Display time with ET (Eastern Time) suffix */}
+                    {venue.time.includes('ET') ? venue.time : `${venue.time} ET`}
+                  </p>
                   <p className="text-gray-500 text-sm venue-address" style={{ fontFamily: "'Inter', sans-serif", textTransform: 'none' }}>{venue.address}</p>
                   <p className="text-gray-500 text-sm venue-rating" style={{ fontFamily: "'Inter', sans-serif" }}>Rating: {venue.rating || 'N/A'}</p>
                 </div>
