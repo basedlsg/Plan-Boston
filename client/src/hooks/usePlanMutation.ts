@@ -31,7 +31,8 @@ export function usePlanMutation() {
         const venueDetails = place.details || {};
         return {
           name: place.name,
-          time: new Date(place.scheduledTime).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'}),
+          // Parse the scheduledTime from ISO string and respect the actual time from the backend
+          time: new Date(place.scheduledTime).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit', hour12: true}),
           address: place.address,
           rating: venueDetails.rating || 0,
           categories: venueDetails.types || []

@@ -48,7 +48,7 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
             color: 'var(--color-text-black)',
             fontSize: '1.875rem' // text-3xl is 1.875rem, which is ~20% bigger than text-2xl (1.5rem)
           }}>
-            Your London Itinerary
+            Your NYC Itinerary
           </h1>
 
           <button
