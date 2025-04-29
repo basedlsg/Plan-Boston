@@ -9,7 +9,7 @@ import { insertPlaceSchema, insertItinerarySchema, Place, PlaceDetails } from "@
 import { z } from "zod";
 import { format } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
-import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, NYCArea, nycAreas } from "./data/new-york-areas";
+import { findAreasByCharacteristics, findQuietAreas, getAreaCrowdLevel, BostonArea, bostonAreas } from "./data/boston-areas";
 import { getWeatherForecast, isVenueOutdoor, isWeatherSuitableForOutdoor, getWeatherAwareVenue } from "./lib/weatherService";
 
 // Import the timeUtils module
@@ -189,7 +189,7 @@ export function findInterestingActivities(
   console.log("Finding activities based on preferences:", preferences);
   
   // Check for area matches first
-  const possibleArea = nycAreas.find((a: NYCArea) => 
+  const possibleArea = bostonAreas.find((a: BostonArea) => 
     a.name.toLowerCase().includes(currentLocation.toLowerCase()) ||
     a.keywords.some(k => currentLocation.toLowerCase().includes(k))
   );
@@ -199,8 +199,8 @@ export function findInterestingActivities(
   // Start with empty results, we'll fill based on what we find
   const results = [];
   
-  // Attempt to find an area in NYC that matches the specified preferences
-  let matchedAreas: NYCArea[] = [];
+  // Attempt to find an area in Boston that matches the specified preferences
+  let matchedAreas: BostonArea[] = [];
   
   // If we have specific requirements, use them for filtering
   if (preferences?.requirements && preferences.requirements.length > 0) {
@@ -275,7 +275,7 @@ export function findInterestingActivities(
     // Default suggestion - tourist_attraction is a good generic fallback
     results.push({
       activity: "See interesting sights",
-      location: possibleArea ? possibleArea.name : "NYC",
+      location: possibleArea ? possibleArea.name : "Boston",
       duration: Math.round(Math.min(2, availableHours) * 60), // Convert to minutes
       type: "tourist_attraction",
       description: "Explore interesting attractions and sights in the area."

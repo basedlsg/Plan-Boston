@@ -10,7 +10,7 @@ export function exportToCalendar(venues: any[]) {
   let icalContent = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//NYC Day Planner//EN',
+    'PRODID:-//Boston Day Planner//EN',
     'CALSCALE:GREGORIAN',
   ];
 
@@ -61,8 +61,8 @@ export function exportToCalendar(venues: any[]) {
       `DTSTART:${formatDate(startTime)}`,
       `DTEND:${formatDate(endTime)}`,
       `SUMMARY:${venue.name}`,
-      `LOCATION:${venue.address || 'New York, NY, USA'}`,
-      `DESCRIPTION:${venue.categories?.join(', ') || 'NYC Day Planner event'}`,
+      `LOCATION:${venue.address || 'Boston, MA, USA'}`,
+      `DESCRIPTION:${venue.categories?.join(', ') || 'Boston Day Planner event'}`,
       'END:VEVENT'
     ]);
   });
@@ -74,5 +74,5 @@ export function exportToCalendar(venues: any[]) {
     type: 'text/calendar;charset=utf-8' 
   });
   
-  saveAs(blob, 'nyc-day-planner.ics');
+  saveAs(blob, 'boston-day-planner.ics');
 }

@@ -10,8 +10,11 @@
 import { format as formatDateFns } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
-// Default timezone for NYC
-export const NYC_TIMEZONE = 'America/New_York';
+// Default timezone for Boston (same as NYC)
+export const BOSTON_TIMEZONE = 'America/New_York';
+
+// For backwards compatibility
+export const NYC_TIMEZONE = BOSTON_TIMEZONE;
 
 /**
  * Parse and normalize a time string into 24-hour format (HH:MM)

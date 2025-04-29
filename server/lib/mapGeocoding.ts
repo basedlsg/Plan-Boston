@@ -41,8 +41,8 @@ export async function validateAndNormalizeLocation(location: string): Promise<st
   try {
     const apiKey = getApiKey("GOOGLE_PLACES_API_KEY");
     
-    // Ensure the location is specifically within New York City
-    const searchQuery = `${location}, New York, NY, USA`;
+    // Ensure the location is specifically within Boston
+    const searchQuery = `${location}, Boston, MA, USA`;
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
     
     console.log(`Validating location: "${location}" with Google Maps Geocoding API`);
@@ -85,9 +85,9 @@ export async function validateAndNormalizeLocation(location: string): Promise<st
       (component: AddressComponent) => component.types.includes("locality")
     );
     
-    if (locality && locality.long_name.toLowerCase() !== "new york") {
-      console.log(`Validated "${location}" as locality: "${locality.long_name}"`);
-      return locality.long_name;
+    if (locality && locality.long_name.toLowerCase() !== "boston") {
+      console.log(`Location "${location}" is outside Boston (in ${locality.long_name})`);
+      return "";
     }
     
     // Check for administrative area as last resort
@@ -95,9 +95,9 @@ export async function validateAndNormalizeLocation(location: string): Promise<st
       (component: AddressComponent) => component.types.includes("administrative_area_level_2")
     );
     
-    if (adminArea && adminArea.long_name.toLowerCase() !== "new york county") {
-      console.log(`Validated "${location}" as admin area: "${adminArea.long_name}"`);
-      return adminArea.long_name;
+    if (adminArea && adminArea.long_name.toLowerCase() !== "suffolk county") {
+      console.log(`Location "${location}" is outside Suffolk County (in ${adminArea.long_name})`);
+      return "";
     }
     
     // If we couldn't find a specific component, just return the original
@@ -123,7 +123,7 @@ export async function getLocationDetails(location: string): Promise<GeocodingRes
 
   try {
     const apiKey = getApiKey("GOOGLE_PLACES_API_KEY");
-    const searchQuery = `${location}, New York, NY, USA`;
+    const searchQuery = `${location}, Boston, MA, USA`;
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`;
     
     const response = await fetch(geocodeUrl);
@@ -190,9 +190,9 @@ export async function processLocationWithAIAndMaps(query: string, extractedLocat
     // Verify with Google Maps
     const verifiedLocation = await validateAndNormalizeLocation(locationToProcess);
     
-    if (verifiedLocation && verifiedLocation !== "New York") {
-      console.log(`Location processing result: "${locationToProcess}" -> "${verifiedLocation}"`);
-      return verifiedLocation;
+    if (verifiedLocation && verifiedLocation !== "Boston") {
+      console.log(`Verified broader location "${verifiedLocation}" is not Boston`);
+      return "";
     }
     
     // If we couldn't verify with Maps or got a generic "London" result,
@@ -206,9 +206,9 @@ export async function processLocationWithAIAndMaps(query: string, extractedLocat
       
       // Try to validate this extracted location
       const verifiedExplicitLocation = await validateAndNormalizeLocation(locationToProcess);
-      if (verifiedExplicitLocation && verifiedExplicitLocation !== "New York") {
-        console.log(`Verified explicit location: "${verifiedExplicitLocation}"`);
-        return verifiedExplicitLocation;
+      if (verifiedExplicitLocation && verifiedExplicitLocation !== "Boston") {
+        console.log(`Verified explicit location "${verifiedExplicitLocation}" is not Boston`);
+        return "";
       }
     }
     

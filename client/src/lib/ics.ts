@@ -5,8 +5,9 @@ export function generateICS(itinerary: Itinerary): void {
   let icsContent = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//NYC Day Planner//EN",
     "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "PRODID:-//Boston Day Planner//EN",
   ];
 
   itinerary.places.forEach((place) => {
@@ -31,5 +32,5 @@ export function generateICS(itinerary: Itinerary): void {
     type: "text/calendar;charset=utf-8",
   });
 
-  saveAs(blob, "nyc-itinerary.ics");
+  saveAs(blob, "boston-itinerary.ics");
 }

@@ -1,6 +1,6 @@
 import type { PlaceDetails, VenueSearchResult, SearchParameters } from "@shared/schema";
 import { normalizeLocationName, verifyPlaceMatch, suggestSimilarLocations } from "./locationNormalizer";
-import { nycAreas, findAreasByCharacteristics } from "../data/new-york-areas";
+import { bostonAreas, findAreasByCharacteristics } from "../data/boston-areas";
 
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 const PLACES_API_BASE = "https://maps.googleapis.com/maps/api/place";
@@ -132,7 +132,7 @@ export async function searchPlace(
     }
     
     // First check if this matches any of our known areas
-    const matchingArea = nycAreas.find(area => 
+    const matchingArea = bostonAreas.find(area => 
       area.name.toLowerCase() === query.toLowerCase() ||
       area.neighbors.some(n => n.toLowerCase() === query.toLowerCase())
     );
@@ -143,14 +143,14 @@ export async function searchPlace(
 
     // Build search query with appropriate context
     let searchQuery = normalizedLocation;
-    if (!normalizedLocation.toLowerCase().includes('new york')) {
+    if (!normalizedLocation.toLowerCase().includes('boston')) {
       // Add more specific context for stations and streets
       if (normalizedLocation.toLowerCase().includes('station')) {
-        searchQuery = `${normalizedLocation}, Subway Station, New York`;
+        searchQuery = `${normalizedLocation}, T Station, Boston`;
       } else if (matchingArea) {
-        searchQuery = `${normalizedLocation}, ${matchingArea.borough || 'New York'}, NY`;
+        searchQuery = `${normalizedLocation}, ${matchingArea.region || 'Boston'}, MA`;
       } else {
-        searchQuery = `${normalizedLocation}, New York`;
+        searchQuery = `${normalizedLocation}, Boston`;
       }
     }
 

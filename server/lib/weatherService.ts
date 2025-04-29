@@ -14,6 +14,14 @@ interface CacheEntry {
 const weatherCache = new Map<string, CacheEntry>();
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
+// Default coordinates for Boston
+const BOSTON_DEFAULT_LAT = 42.3601;
+const BOSTON_DEFAULT_LNG = -71.0589;
+
+// For backwards compatibility
+const NYC_DEFAULT_LAT = BOSTON_DEFAULT_LAT;
+const NYC_DEFAULT_LNG = BOSTON_DEFAULT_LNG;
+
 /**
  * Generate a cache key from coordinates (rounded to avoid excessive API calls for nearby locations)
  */

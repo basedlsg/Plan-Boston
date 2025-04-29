@@ -44,12 +44,8 @@ const ItineraryScreen: React.FC<ItineraryScreenProps> = ({
       <div className="w-full max-w-md px-4 pb-12">
         {/* Header - only shown when we have venues */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-8 itinerary-title" style={{ 
-            fontFamily: "'Rozha One', serif", /* Keep this font for the title to match the app's branding */
-            color: 'var(--color-text-black)',
-            fontSize: '1.875rem' // text-3xl is 1.875rem, which is ~20% bigger than text-2xl (1.5rem)
-          }}>
-            Your NYC Itinerary
+          <h1 className="text-3xl font-bold tracking-tight mb-6">
+            Your Boston Itinerary
           </h1>
 
           <button

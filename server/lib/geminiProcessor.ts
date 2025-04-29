@@ -148,7 +148,7 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
   try {
     // Prepare the prompt with schema details and examples
     const prompt = `
-    You are a travel planning assistant for New York City. Extract structured information from this itinerary request. 
+    You are a travel planning assistant for Boston. Extract structured information from this itinerary request. 
     
     IMPORTANT RULES:
     1. Return ONLY valid JSON that matches the schema - no extra text or markdown
@@ -157,31 +157,31 @@ async function attemptGeminiProcessing(query: string, temperature: number, sessi
     4. For vague meal times: use "09:00" for breakfast, "12:00" for lunch, and "19:00" for dinner unless a specific time is given
     5. Include all explicitly mentioned fixed times in fixedTimeEntries
     6. Put activities with vague times (morning, afternoon, evening) in flexibleTimeEntries
-    7. Keep location names authentic to NYC (don't change neighborhood names)
+    7. Keep location names authentic to Boston (don't change neighborhood names)
     8. If the user mentions specific venue requirements, include them in searchParameters
     9. If the user doesn't specify a budget level, default to "moderate"
     10. Extract as much detail as possible while staying true to the user's request
     11. For incomplete information, make reasonable assumptions based on context
     12. Keep activity descriptions concise but clear
     13. VENUE PREFERENCES: Always capture specific venue preferences when mentioned:
-       - If user specifies a venue type like "sandwich place", "sports bar", "authentic Jewish deli", "trendy cafe", include it in searchParameters.venuePreference
-       - Use venuePreference for ANY specific venue descriptions (e.g., "hipster coffee shop", "upscale steakhouse", "family-friendly diner", "authentic Jamaican restaurant")
+       - If user specifies a venue type like "sandwich place", "sports bar", "authentic seafood restaurant", "trendy cafe", include it in searchParameters.venuePreference
+       - Use venuePreference for ANY specific venue descriptions (e.g., "hipster coffee shop", "upscale steakhouse", "family-friendly diner", "authentic Italian restaurant")
        - This is different from venueType which should be broader categories like "restaurant", "cafe", "bar"
-       - Examples: for "I want to get a real NY bagel from an authentic Jewish deli", set venuePreference to "authentic Jewish deli"
+       - Examples: for "I want to get a lobster roll from an authentic seafood place", set venuePreference to "authentic seafood place"
     14. LOCATION HANDLING: For EACH activity in both fixedTimeEntries and flexibleTimeEntries:
-       - You MUST identify a specific NYC location (neighborhood, landmark, station, address)
-       - If the user explicitly provides a valid NYC location (e.g., 'SoHo', 'The Met', 'Times Square', 'Wall St'), use that exact location string
-       - If the user does NOT specify a location OR provides a vague location like 'somewhere', 'anywhere', 'New York', 'nearby', you MUST use the exact string 'Midtown'
+       - You MUST identify a specific Boston location (neighborhood, landmark, station, address)
+       - If the user explicitly provides a valid Boston location (e.g., 'Back Bay', 'Fenway', 'North End', 'Harvard Square'), use that exact location string
+       - If the user does NOT specify a location OR provides a vague location like 'somewhere', 'anywhere', 'Boston', 'nearby', you MUST use the exact string 'Downtown'
        - The location field must NEVER be null or missing - always provide a valid string value
     15. SCHEMA COMPLIANCE: Strictly adhere to the JSON schema. Ensure ALL required fields within fixedTimeEntries and flexibleTimeEntries (including time, activity, and location) are present and contain non-null string values.
     
     SCHEMA GUIDANCE:
     - Use fixedTimeEntries for activities with specific clock times (9:00, 14:30, etc.)
     - Use flexibleTimeEntries for activities with time periods (morning, afternoon, etc.)
-    - Both entry types MUST include: time, activity, location (never null, use 'Midtown' when unspecified)
+    - Both entry types MUST include: time, activity, location (never null, use 'Downtown' when unspecified)
     - Always provide reasonable defaults: use '09:00' for breakfast, '12:00' for lunch, '19:00' for dinner
     - For other activities, use '10:00' for morning, '14:00' for afternoon, '18:00' for evening
-    - Always use 'Midtown' for location if unspecified
+    - Always use 'Downtown' for location if unspecified
     - Always use searchParameters.venuePreference for specific venue descriptions (e.g., "sandwich place", "trendy bar")
 
     Here's the request to analyze:
@@ -309,7 +309,7 @@ function processGeminiResponse(
 
   // Set default start location if not provided
   if (!structuredData.startLocation) {
-    structuredData.startLocation = "Midtown";
+    structuredData.startLocation = "Downtown";
   }
   
   // First process fixed time entries with duplicate detection

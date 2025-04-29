@@ -1,73 +1,61 @@
-# NYC Day Planner
+# Boston Day Planner
 
-An intelligent day planner that generates personalized, time-optimized itineraries for exploring New York City using advanced natural language processing and the Google Places API.
+An intelligent day planning application for Boston that generates personalized, time-optimized itineraries through natural language processing.
 
 ## Features
 
-- **Natural Language Input**: Simply describe your plans in plain English (e.g., "I'm at Brooklyn Bridge and need a coffee shop to work until my dinner at Carbone in Greenwich Village at 8pm")
-- **Smart Scheduling**: Automatically fills your day with interesting activities based on location and time
-- **Time-Aware Planning**: 
-  - Supports both 12-hour and 24-hour time formats
-  - Considers typical activity durations
-  - Automatically schedules lunch during appropriate hours
-  - Accounts for travel time between locations
-- **Contextual Recommendations**:
-  - Morning activities (bakeries, markets, coffee spots)
-  - Midday venues (museums, galleries, parks)
-  - Afternoon activities (shopping, cafes, walks)
-  - Evening entertainment (bars, theaters, live music)
+- **Natural Language Input:** Describe your plans in plain English
+- **Smart Scheduling:** Automatically fills gaps with interesting activities
+- **Time-Aware Planning:** Considers standard durations, meal times, and travel times
+- **Contextual Recommendations:** Suggests activities based on time of day and location
+- **Weather-Aware Planning:** Adjusts recommendations based on weather conditions
+- **Export Options:** Calendar export functionality
 
-## How It Works
+## Technology Stack
 
-1. **Input Your Plans**:
-   - Select your preferred date
-   - Choose a start time
-   - Describe your plans in the text area
+- **Frontend:** React with TypeScript, TailwindCSS, Shadcn UI components
+- **Backend:** Express.js with TypeScript
+- **AI Integration:** Google's Generative AI for natural language processing
+- **External APIs:** Google Places API for location search and verification
+- **Database:** PostgreSQL with Drizzle ORM
+- **Authentication:** Passport.js for user management
 
-2. **Get Your Itinerary**:
-   - The app analyzes your input to identify:
-     - Starting location
-     - Fixed appointments (e.g., dinner reservations)
-     - Specific preferences (e.g., "quiet coffee shop")
-   - Generates a sequential itinerary with:
-     - Verified locations from Google Places
-     - Estimated travel times
-     - Suggested activities for free time periods
+## Installation
 
-3. **Export Options**:
-   - Export to calendar (ICS format)
-   - View travel times between locations
+1. Clone the repository
+2. Install dependencies:
+```bash
+npm install
+```
+3. Set up environment variables (see `.env.example` for required variables)
+4. Initialize the database:
+```bash
+npm run db:migrate
+```
+5. Start the development server:
+```bash
+npm run dev
+```
 
-## Technical Architecture
+## Usage
 
-### Frontend
-- React with TypeScript
-- Real-time form validation
-- Dynamic itinerary display
-- Responsive design for all devices
+1. Visit the homepage
+2. Enter your plans in natural language (e.g., "I want to visit Fenway Park in the morning, have lunch in the North End, and spend the afternoon at the Boston Public Garden")
+3. Review and adjust the generated itinerary
+4. Export to your calendar if desired
 
-### Backend
-- Express server
-- Natural language processing for request parsing
-- Google Places API integration
-- Smart scheduling algorithm
-- PostgreSQL database for storing itineraries
+## API Keys
 
-### Key Components
-- Time verification system
-- Location-aware activity suggestions
-- Travel time calculations
-- Intelligent gap filling for unscheduled periods
+You'll need to obtain API keys for:
+- Google Places API
+- Google Geocoding API
+- Google Generative AI (Gemini)
+- OpenWeatherMap API
 
-## Example Use Cases
+## Contributing
 
-1. **Work & Dinner Plans**:
-   "I'm at Grand Central Station and need a quiet café to work until my dinner at Carbone in Greenwich Village at 8pm"
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-2. **Tourist Day Out**:
-   "Starting from Times Square at 10am, I want to see some museums and have dinner in SoHo at 7pm"
+## License
 
-3. **Shopping & Entertainment**:
-   "Meeting friends at Fifth Avenue at 11am for shopping, then we have theater tickets for 7:30pm in Broadway"
-
-The app will create a balanced itinerary that includes appropriate meal times, interesting activities, and accounts for travel between locations.
+This project is licensed under the MIT License - see the LICENSE file for details.

@@ -241,6 +241,14 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           console.log(`No venue preference found in Gemini data for activity: ${entry.activity}`);
         }
         
+        // Update references to NYC/Midtown to Downtown Boston
+        if (entry.location && entry.location !== "Boston" && entry.location !== "Downtown" && entry.location !== "Downtown Boston") {
+          // Keep the location as is
+        } else {
+          // Use default location
+          entry.location = "Downtown Boston";
+        }
+        
         // Store in our map, potentially overwriting less specific entries
         activityMap.set(activityKey, {
           location: entry.location,
@@ -316,6 +324,14 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
           console.log(`No venue preference found in Gemini data for flexible activity: ${entry.activity}`);
         }
         
+        // Update references to NYC/Midtown to Downtown Boston
+        if (entry.location && entry.location !== "Boston" && entry.location !== "Downtown" && entry.location !== "Downtown Boston") {
+          // Keep the location as is
+        } else {
+          // Use default location
+          entry.location = "Downtown Boston";
+        }
+        
         // Only add if we don't already have this activity, or if we're adding a more specific type
         if (!activityMap.has(activityKey)) {
           activityMap.set(activityKey, {
@@ -367,7 +383,7 @@ function convertGeminiToAppFormat(geminiResult: GeminiStructuredRequest | null):
   // Create destinations array from fixed time locations
   const uniqueLocations = new Set<string>();
   appFormatRequest.fixedTimes.forEach(entry => {
-    if (entry.location && entry.location !== "New York" && entry.location !== "NYC" && entry.location !== "Midtown") {
+    if (entry.location && entry.location !== "Boston" && entry.location !== "Downtown" && entry.location !== "Downtown Boston") {
       uniqueLocations.add(entry.location);
     }
   });

@@ -23,37 +23,34 @@ import { Link } from "wouter";
  * Validates query for better user experience and clearer error messages
  * Checks for minimal length and location information
  */
-function validateQuery(query: string): { valid: boolean; message?: string } {
-  // Check for minimal query length
-  if (query.length < 5) {
-    return { 
-      valid: false, 
-      message: "Please provide more details about what you'd like to do in New York City."
+const validateQuery = (query: string): { isValid: boolean; message?: string } => {
+  if (!query || query.trim().length < 10) {
+    return {
+      isValid: false,
+      message: "Please provide more details about what you'd like to do in Boston."
     };
   }
-  
-  // Check if query mentions a NYC location
-  const commonNYCLocations = [
-    "soho", "times square", "central park", "brooklyn", "manhattan", 
-    "midtown", "greenwich village", "east village", "west village", 
-    "financial district", "wall street", "chelsea", "tribeca",
-    "dumbo", "williamsburg", "harlem", "chinatown", "little italy",
-    "upper east side", "upper west side", "nyc", "new york"
+
+  // Check if query mentions a Boston location
+  const commonBostonLocations = [
+    "back bay", "beacon hill", "north end", "fenway",
+    "seaport", "downtown", "south end", "cambridge",
+    "somerville", "harvard square", "faneuil hall", "boston"
   ];
-  
-  const hasLocation = commonNYCLocations.some(location => 
+
+  const hasLocation = commonBostonLocations.some(location =>
     query.toLowerCase().includes(location)
   );
-  
+
   if (!hasLocation) {
-    return { 
-      valid: false, 
-      message: "Please specify at least one NYC location (e.g., Times Square, SoHo, or Manhattan)."
+    return {
+      isValid: false,
+      message: "Please specify at least one Boston location (e.g., Back Bay, Fenway, or North End)."
     };
   }
-  
-  return { valid: true };
-}
+
+  return { isValid: true };
+};
 
 /**
  * Enhances vague queries by adding location and time information
@@ -229,7 +226,7 @@ export default function Home() {
                   onSubmit={form.handleSubmit((data) => {
                     // Add validation before form submission
                     const validation = validateQuery(data.query);
-                    if (!validation.valid) {
+                    if (!validation.isValid) {
                       toast({
                         title: "Please enhance your request",
                         description: validation.message,
