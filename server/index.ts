@@ -52,7 +52,10 @@ app.use('/api/config', configRoutes);
 // Register itineraries routes
 app.use('/api/itineraries', itinerariesRoutes);
 
-app.use('/NYC', express.static('dist/public')); // Added static file serving for NYC route
+// Serve static files for NYC route
+app.use('/NYC', express.static('dist/public'));
+// Also serve at root for custom domain access
+app.use('/', express.static('dist/public'));
 
 app.use((req, res, next) => {
   const start = Date.now();
